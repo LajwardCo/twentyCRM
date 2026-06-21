@@ -23,6 +23,7 @@ import { RolePermissionFlagEntity } from 'src/engine/metadata-modules/role-permi
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { RowLevelPermissionPredicateGroupEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate-group.entity';
 import { RowLevelPermissionPredicateEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate.entity';
+import { OWNER_SCOPED_OBJECTS } from 'src/engine/twenty-orm/owner-scope/owner-scoped-objects.constant';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import { WorkspaceCache } from 'src/engine/workspace-cache/decorators/workspace-cache.decorator';
@@ -132,6 +133,7 @@ export class WorkspaceRolesPermissionsCacheService extends WorkspaceCacheProvide
           id: objectMetadataId,
           isSystem,
           universalIdentifier,
+          nameSingular,
         } = objectMetadata;
 
         let canRead = role.canReadAllObjectRecords;
@@ -241,6 +243,9 @@ export class WorkspaceRolesPermissionsCacheService extends WorkspaceCacheProvide
                 rowLevelPermissionPredicateGroup.objectMetadataId ===
                 objectMetadataId,
             ),
+          canOnlyAccessOwnedRecords:
+            role.canOnlyAccessOwnedRecords === true &&
+            OWNER_SCOPED_OBJECTS[nameSingular] !== undefined,
         };
       }
 
@@ -260,6 +265,7 @@ export class WorkspaceRolesPermissionsCacheService extends WorkspaceCacheProvide
       select: [
         'id',
         'isSystem',
+        'nameSingular',
         'universalIdentifier',
         'labelIdentifierFieldMetadataId',
       ],

@@ -7,6 +7,7 @@ import {
   type EntityTarget,
   type ObjectLiteral,
   type UpdateResult,
+  type WhereExpressionBuilder,
 } from 'typeorm';
 import { type QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { type WhereClause } from 'typeorm/query-builder/WhereClause';
@@ -31,6 +32,7 @@ import { validateQueryIsPermittedOrThrow } from 'src/engine/twenty-orm/repositor
 import { type WorkspaceDeleteQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-delete-query-builder';
 import { WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
 import { type WorkspaceSoftDeleteQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-soft-delete-query-builder';
+import { applyOwnerScopeFilter } from 'src/engine/twenty-orm/owner-scope/apply-owner-scope-filter.util';
 import { applyRowLevelPermissionPredicates } from 'src/engine/twenty-orm/utils/apply-row-level-permission-predicates.util';
 import { applyTableAliasOnWhereCondition } from 'src/engine/twenty-orm/utils/apply-table-alias-on-where-condition';
 import { computeEventSelectQueryBuilder } from 'src/engine/twenty-orm/utils/compute-event-select-query-builder.util';
@@ -213,6 +215,7 @@ export class WorkspaceUpdateQueryBuilder<
       }
 
       this.applyRowLevelPermissionPredicates();
+      this.applyOwnerScopeFilter();
 
       const valuesSet = this.expressionMap.valuesSet ?? {};
       const updatedRecords: T[] = before.map(
@@ -426,6 +429,7 @@ export class WorkspaceUpdateQueryBuilder<
         this.where({ id: input.criteria });
 
         this.applyRowLevelPermissionPredicates();
+        this.applyOwnerScopeFilter();
 
         const beforeRecord = beforeRecordById.get(input.criteria);
         const updatedRecords = beforeRecord
@@ -617,6 +621,29 @@ export class WorkspaceUpdateQueryBuilder<
     }));
 
     return this;
+  }
+
+  private applyOwnerScopeFilter(): void {
+    if (this.shouldBypassPermissionChecks) {
+      return;
+    }
+
+    const mainAliasTarget = this.getMainAliasTarget();
+
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      mainAliasTarget,
+      this.internalContext,
+    );
+
+    applyOwnerScopeFilter({
+      queryBuilder: this as unknown as WhereExpressionBuilder,
+      alias: this.alias,
+      objectMetadataNameSingular: objectMetadata.nameSingular,
+      objectMetadataId: objectMetadata.id,
+      objectRecordsPermissions: this.objectRecordsPermissions,
+      authContext: this.authContext,
+      shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+    });
   }
 
   private applyRowLevelPermissionPredicates(): void {

@@ -41,6 +41,8 @@ export const fromCreateRoleInputToFlatRoleToCreate = ({
       createRoleInput.canSoftDeleteAllObjectRecords ?? false,
     canDestroyAllObjectRecords:
       createRoleInput.canDestroyAllObjectRecords ?? false,
+    canOnlyAccessOwnedRecords:
+      createRoleInput.canOnlyAccessOwnedRecords ?? false,
     canBeAssignedToUsers: createRoleInput.canBeAssignedToUsers ?? true,
     canBeAssignedToAgents: createRoleInput.canBeAssignedToAgents ?? true,
     canBeAssignedToApiKeys: createRoleInput.canBeAssignedToApiKeys ?? true,

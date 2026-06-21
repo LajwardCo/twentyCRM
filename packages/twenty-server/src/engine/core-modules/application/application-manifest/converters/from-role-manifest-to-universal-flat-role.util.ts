@@ -25,6 +25,7 @@ export const fromRoleManifestToUniversalFlatRole = ({
       roleManifest.canSoftDeleteAllObjectRecords ?? false,
     canDestroyAllObjectRecords:
       roleManifest.canDestroyAllObjectRecords ?? false,
+    canOnlyAccessOwnedRecords: false,
     isEditable: true,
     canBeAssignedToUsers: roleManifest.canBeAssignedToUsers ?? true,
     canBeAssignedToAgents: roleManifest.canBeAssignedToAgents ?? true,

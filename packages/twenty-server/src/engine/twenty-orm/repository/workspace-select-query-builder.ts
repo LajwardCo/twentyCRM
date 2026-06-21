@@ -19,6 +19,7 @@ import {
   TwentyORMException,
   TwentyORMExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
+import { applyOwnerScopeFilter } from 'src/engine/twenty-orm/owner-scope/apply-owner-scope-filter.util';
 import { validateQueryIsPermittedOrThrow } from 'src/engine/twenty-orm/repository/permissions.utils';
 import { WorkspaceDeleteQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-delete-query-builder';
 import { WorkspaceInsertQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-insert-query-builder';
@@ -341,6 +342,7 @@ export class WorkspaceSelectQueryBuilder<
 
   private validatePermissions(): void {
     this.applyRowLevelPermissionPredicates();
+    this.applyOwnerScopeFilter();
     validateQueryIsPermittedOrThrow({
       expressionMap: this.expressionMap,
       objectsPermissions: this.objectRecordsPermissions,
@@ -364,6 +366,33 @@ export class WorkspaceSelectQueryBuilder<
     }
 
     return mainAliasTarget;
+  }
+
+  private applyOwnerScopeFilter(): void {
+    if (this.shouldBypassPermissionChecks) {
+      return;
+    }
+
+    if (this.expressionMap.mainAlias?.subQuery) {
+      return;
+    }
+
+    const mainAliasTarget = this.getMainAliasTarget();
+
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      mainAliasTarget,
+      this.internalContext,
+    );
+
+    applyOwnerScopeFilter({
+      queryBuilder: this,
+      alias: this.alias,
+      objectMetadataNameSingular: objectMetadata.nameSingular,
+      objectMetadataId: objectMetadata.id,
+      objectRecordsPermissions: this.objectRecordsPermissions,
+      authContext: this.authContext,
+      shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+    });
   }
 
   private applyRowLevelPermissionPredicates(): void {

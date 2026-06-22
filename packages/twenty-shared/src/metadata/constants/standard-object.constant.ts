@@ -1951,6 +1951,7 @@ export const STANDARD_OBJECTS = {
       listMemberships: {
         universalIdentifier: '8b8d1be0-4c94-4413-a2c9-c7ede205a81d',
       },
+      owner: { universalIdentifier: '2683cbdb-7611-42fe-9185-e8f94e14d02a' },
       searchVector: {
         universalIdentifier: '57d1d7ad-fa10-44fc-82f3-ad0959ec2534',
       },
@@ -2951,6 +2952,9 @@ export const STANDARD_OBJECTS = {
       },
       ownedOpportunities: {
         universalIdentifier: '20202020-9e4d-4b3a-8c1f-6d7e8f9a0b1c',
+      },
+      ownedPeople: {
+        universalIdentifier: '6b132166-341c-4268-a742-a78ef0ba5618',
       },
       accountOwnerForCompanies: {
         universalIdentifier: '20202020-dc29-4bd4-a3c1-29eafa324bee',

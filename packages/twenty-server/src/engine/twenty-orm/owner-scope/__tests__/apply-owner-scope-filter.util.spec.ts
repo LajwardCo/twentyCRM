@@ -23,7 +23,9 @@ describe('applyOwnerScopeFilter', () => {
       alias: 'person',
       objectMetadataNameSingular: 'person',
       objectMetadataId: 'obj-person',
-      objectRecordsPermissions: { 'obj-person': { canOnlyAccessOwnedRecords: true } } as any,
+      objectRecordsPermissions: {
+        'obj-person': { canOnlyAccessOwnedRecords: true },
+      } as any,
       authContext: userCtx,
       shouldBypassPermissionChecks: false,
     });
@@ -41,7 +43,9 @@ describe('applyOwnerScopeFilter', () => {
       alias: 'person',
       objectMetadataNameSingular: 'person',
       objectMetadataId: 'obj-person',
-      objectRecordsPermissions: { 'obj-person': { canOnlyAccessOwnedRecords: false } } as any,
+      objectRecordsPermissions: {
+        'obj-person': { canOnlyAccessOwnedRecords: false },
+      } as any,
       authContext: userCtx,
       shouldBypassPermissionChecks: false,
     });
@@ -57,7 +61,9 @@ describe('applyOwnerScopeFilter', () => {
       alias: 'person',
       objectMetadataNameSingular: 'person',
       objectMetadataId: 'obj-person',
-      objectRecordsPermissions: { 'obj-person': { canOnlyAccessOwnedRecords: true } } as any,
+      objectRecordsPermissions: {
+        'obj-person': { canOnlyAccessOwnedRecords: true },
+      } as any,
       authContext: userCtx,
       shouldBypassPermissionChecks: true,
     });
@@ -73,7 +79,9 @@ describe('applyOwnerScopeFilter', () => {
       alias: 'person',
       objectMetadataNameSingular: 'person',
       objectMetadataId: 'obj-person',
-      objectRecordsPermissions: { 'obj-person': { canOnlyAccessOwnedRecords: true } } as any,
+      objectRecordsPermissions: {
+        'obj-person': { canOnlyAccessOwnedRecords: true },
+      } as any,
       authContext: { type: 'apiKey' } as any,
       shouldBypassPermissionChecks: false,
     });
@@ -90,7 +98,9 @@ describe('applyOwnerScopeFilter', () => {
       alias: 'company',
       objectMetadataNameSingular: 'company',
       objectMetadataId: 'obj-company',
-      objectRecordsPermissions: { 'obj-company': { canOnlyAccessOwnedRecords: true } } as any,
+      objectRecordsPermissions: {
+        'obj-company': { canOnlyAccessOwnedRecords: true },
+      } as any,
       authContext: userCtx,
       shouldBypassPermissionChecks: false,
     });

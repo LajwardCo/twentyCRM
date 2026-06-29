@@ -47,6 +47,7 @@ export const fromRoleEntityToFlatRole = ({
     canUpdateAllObjectRecords: roleEntity.canUpdateAllObjectRecords,
     canSoftDeleteAllObjectRecords: roleEntity.canSoftDeleteAllObjectRecords,
     canDestroyAllObjectRecords: roleEntity.canDestroyAllObjectRecords,
+    canOnlyAccessOwnedRecords: roleEntity.canOnlyAccessOwnedRecords,
     canBeAssignedToUsers: roleEntity.canBeAssignedToUsers,
     canBeAssignedToAgents: roleEntity.canBeAssignedToAgents,
     canBeAssignedToApiKeys: roleEntity.canBeAssignedToApiKeys,

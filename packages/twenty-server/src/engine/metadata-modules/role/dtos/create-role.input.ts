@@ -59,6 +59,11 @@ export class CreateRoleInput {
   @IsBoolean()
   @IsOptional()
   @Field({ nullable: true })
+  canOnlyAccessOwnedRecords?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Field({ nullable: true })
   canBeAssignedToUsers?: boolean;
 
   @IsBoolean()

@@ -4,6 +4,7 @@ import {
   type InsertQueryBuilder,
   type ObjectLiteral,
   type UpdateResult,
+  type WhereExpressionBuilder,
 } from 'typeorm';
 import { SoftDeleteQueryBuilder } from 'typeorm/query-builder/SoftDeleteQueryBuilder';
 import { type WhereClause } from 'typeorm/query-builder/WhereClause';
@@ -18,6 +19,7 @@ import {
   TwentyORMException,
   TwentyORMExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
+import { applyOwnerScopeFilter } from 'src/engine/twenty-orm/owner-scope/apply-owner-scope-filter.util';
 import { validateQueryIsPermittedOrThrow } from 'src/engine/twenty-orm/repository/permissions.utils';
 import { type WorkspaceDeleteQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-delete-query-builder';
 import { type WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
@@ -73,6 +75,7 @@ export class WorkspaceSoftDeleteQueryBuilder<
   override async execute(): Promise<UpdateResult> {
     try {
       this.applyRowLevelPermissionPredicates();
+      this.applyOwnerScopeFilter();
       validateQueryIsPermittedOrThrow({
         expressionMap: this.expressionMap,
         objectsPermissions: this.objectRecordsPermissions,
@@ -194,6 +197,29 @@ export class WorkspaceSoftDeleteQueryBuilder<
     }
 
     return mainAliasTarget;
+  }
+
+  private applyOwnerScopeFilter(): void {
+    if (this.shouldBypassPermissionChecks) {
+      return;
+    }
+
+    const mainAliasTarget = this.getMainAliasTarget();
+
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      mainAliasTarget,
+      this.internalContext,
+    );
+
+    applyOwnerScopeFilter({
+      queryBuilder: this as unknown as WhereExpressionBuilder,
+      alias: this.alias,
+      objectMetadataNameSingular: objectMetadata.nameSingular,
+      objectMetadataId: objectMetadata.id,
+      objectRecordsPermissions: this.objectRecordsPermissions,
+      authContext: this.authContext,
+      shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+    });
   }
 
   private applyRowLevelPermissionPredicates(): void {

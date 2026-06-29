@@ -22,6 +22,7 @@ import { type UpsertOptions } from 'typeorm/repository/UpsertOptions';
 import { type FeatureFlagMap } from 'src/engine/core-modules/feature-flag/interfaces/feature-flag-map.interface';
 import { type WorkspaceInternalContext } from 'src/engine/twenty-orm/interfaces/workspace-internal-context.interface';
 
+import { isUserAuthContext } from 'src/engine/core-modules/auth/guards/is-user-auth-context.guard';
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import {
   PermissionsException,
@@ -30,6 +31,7 @@ import {
 import { type DeepPartialWithNestedRelationFields } from 'src/engine/twenty-orm/entity-manager/types/deep-partial-entity-with-nested-relation-fields.type';
 import { type QueryDeepPartialEntityWithNestedRelationFields } from 'src/engine/twenty-orm/entity-manager/types/query-deep-partial-entity-with-nested-relation-fields.type';
 import { type WorkspaceEntityManager } from 'src/engine/twenty-orm/entity-manager/workspace-entity-manager';
+import { OWNER_SCOPED_OBJECTS } from 'src/engine/twenty-orm/owner-scope/owner-scoped-objects.constant';
 import { WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
 import { formatData } from 'src/engine/twenty-orm/utils/format-data.util';
 import { getObjectMetadataFromEntityTarget } from 'src/engine/twenty-orm/utils/get-object-metadata-from-entity-target.util';
@@ -274,6 +276,8 @@ export class WorkspaceRepository<
     options?: SaveOptions | (SaveOptions & { reload: false }),
     entityManager?: WorkspaceEntityManager,
   ): Promise<U | U[]> {
+    this.applyOwnerOnCreate(entityOrEntities);
+
     const manager = entityManager || this.manager;
     let result: U | U[];
 
@@ -300,6 +304,66 @@ export class WorkspaceRepository<
     }
 
     return result;
+  }
+
+  /**
+   * For an owner-scoped role, force the owner column of new records to the
+   * current workspace member so (a) the scoped user can see what they create
+   * and (b) they cannot create records owned by someone else.
+   */
+  private applyOwnerOnCreate(entityOrEntities: unknown): void {
+    if (this.shouldBypassPermissionChecks || !this.objectRecordsPermissions) {
+      return;
+    }
+
+    // Fast path: if no permission is owner-scoped, skip before resolving
+    // metadata so non-scoped roles never pay the lookup cost and creates keep
+    // working even when object metadata is unavailable.
+    const hasAnyOwnerScopedPermission = Object.values(
+      this.objectRecordsPermissions,
+    ).some((permission) => permission.canOnlyAccessOwnedRecords === true);
+
+    if (!hasAnyOwnerScopedPermission) {
+      return;
+    }
+
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      this.target,
+      this.internalContext,
+    );
+
+    const objectPermission = this.objectRecordsPermissions[objectMetadata.id];
+
+    if (objectPermission?.canOnlyAccessOwnedRecords !== true) {
+      return;
+    }
+
+    const ownerColumn = OWNER_SCOPED_OBJECTS[objectMetadata.nameSingular];
+
+    if (ownerColumn === undefined) {
+      return;
+    }
+
+    const workspaceMemberId =
+      this.authContext !== undefined && isUserAuthContext(this.authContext)
+        ? this.authContext.workspaceMemberId
+        : null;
+
+    if (workspaceMemberId === null) {
+      return;
+    }
+
+    const assign = (entity: unknown) => {
+      if (entity !== null && typeof entity === 'object') {
+        (entity as Record<string, unknown>)[ownerColumn] = workspaceMemberId;
+      }
+    };
+
+    if (Array.isArray(entityOrEntities)) {
+      entityOrEntities.forEach(assign);
+    } else {
+      assign(entityOrEntities);
+    }
   }
 
   /**
@@ -561,6 +625,8 @@ export class WorkspaceRepository<
     entityManager?: WorkspaceEntityManager,
     selectedColumns?: string[],
   ): Promise<InsertResult> {
+    this.applyOwnerOnCreate(entity);
+
     const manager = entityManager || this.manager;
 
     const permissionOptions = {

@@ -25,6 +25,7 @@ const WORKSPACE_MEMBER_OBJECT_METADATA_ID =
   '22222222-2222-4222-8222-222222222222';
 const WORKFLOW_OBJECT_METADATA_ID = '33333333-3333-4333-8333-333333333333';
 const PERSON_OBJECT_METADATA_ID = '44444444-4444-4444-8444-444444444444';
+const COMPANY_OBJECT_METADATA_ID = '55555555-5555-4555-8555-555555555555';
 
 const createBaseRole = (
   overrides: Partial<RoleEntity> &
@@ -71,19 +72,29 @@ describe('WorkspaceRolesPermissionsCacheService', () => {
     {
       id: WORKSPACE_MEMBER_OBJECT_METADATA_ID,
       isSystem: true,
+      nameSingular: 'workspaceMember',
       universalIdentifier: STANDARD_OBJECTS.workspaceMember.universalIdentifier,
       labelIdentifierFieldMetadataId: null,
     } as ObjectMetadataEntity,
     {
       id: WORKFLOW_OBJECT_METADATA_ID,
       isSystem: true,
+      nameSingular: 'workflow',
       universalIdentifier: STANDARD_OBJECTS.workflow.universalIdentifier,
       labelIdentifierFieldMetadataId: null,
     } as ObjectMetadataEntity,
     {
       id: PERSON_OBJECT_METADATA_ID,
       isSystem: false,
+      nameSingular: 'person',
       universalIdentifier: STANDARD_OBJECTS.person.universalIdentifier,
+      labelIdentifierFieldMetadataId: null,
+    } as ObjectMetadataEntity,
+    {
+      id: COMPANY_OBJECT_METADATA_ID,
+      isSystem: false,
+      nameSingular: 'company',
+      universalIdentifier: STANDARD_OBJECTS.company.universalIdentifier,
       labelIdentifierFieldMetadataId: null,
     } as ObjectMetadataEntity,
   ];
@@ -314,6 +325,53 @@ describe('WorkspaceRolesPermissionsCacheService', () => {
       expect(personPermissions.canUpdateObjectRecords).toBe(true);
       expect(personPermissions.canSoftDeleteObjectRecords).toBe(true);
       expect(personPermissions.canDestroyObjectRecords).toBe(true);
+    });
+  });
+
+  describe('canOnlyAccessOwnedRecords (owner scoping)', () => {
+    it('should set canOnlyAccessOwnedRecords true for an owner-scopable object (person) when the role enables it', async () => {
+      roleRepository.find.mockResolvedValue([
+        createBaseRole({
+          canOnlyAccessOwnedRecords: true,
+          rolePermissionFlags: [],
+          objectPermissions: [],
+        }),
+      ]);
+
+      const result = await service.computeForCache(WORKSPACE_ID);
+      const personPermissions = result[ROLE_ID][PERSON_OBJECT_METADATA_ID];
+
+      expect(personPermissions.canOnlyAccessOwnedRecords).toBe(true);
+    });
+
+    it('should set canOnlyAccessOwnedRecords false for a non-owner-scopable object (company) even when the role enables it', async () => {
+      roleRepository.find.mockResolvedValue([
+        createBaseRole({
+          canOnlyAccessOwnedRecords: true,
+          rolePermissionFlags: [],
+          objectPermissions: [],
+        }),
+      ]);
+
+      const result = await service.computeForCache(WORKSPACE_ID);
+      const companyPermissions = result[ROLE_ID][COMPANY_OBJECT_METADATA_ID];
+
+      expect(companyPermissions.canOnlyAccessOwnedRecords).toBe(false);
+    });
+
+    it('should set canOnlyAccessOwnedRecords false for person when the role does not enable owner scoping', async () => {
+      roleRepository.find.mockResolvedValue([
+        createBaseRole({
+          canOnlyAccessOwnedRecords: false,
+          rolePermissionFlags: [],
+          objectPermissions: [],
+        }),
+      ]);
+
+      const result = await service.computeForCache(WORKSPACE_ID);
+      const personPermissions = result[ROLE_ID][PERSON_OBJECT_METADATA_ID];
+
+      expect(personPermissions.canOnlyAccessOwnedRecords).toBe(false);
     });
   });
 });

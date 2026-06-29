@@ -18,6 +18,7 @@ export type CreateStandardRoleContext = {
   canUpdateAllObjectRecords: boolean;
   canSoftDeleteAllObjectRecords: boolean;
   canDestroyAllObjectRecords: boolean;
+  canOnlyAccessOwnedRecords: boolean;
   canBeAssignedToUsers: boolean;
   canBeAssignedToAgents: boolean;
   canBeAssignedToApiKeys: boolean;
@@ -40,6 +41,7 @@ export const createStandardRoleFlatMetadata = ({
     canUpdateAllObjectRecords,
     canSoftDeleteAllObjectRecords,
     canDestroyAllObjectRecords,
+    canOnlyAccessOwnedRecords,
     canBeAssignedToUsers,
     canBeAssignedToAgents,
     canBeAssignedToApiKeys,
@@ -63,6 +65,7 @@ export const createStandardRoleFlatMetadata = ({
     canUpdateAllObjectRecords,
     canSoftDeleteAllObjectRecords,
     canDestroyAllObjectRecords,
+    canOnlyAccessOwnedRecords,
     canBeAssignedToUsers,
     canBeAssignedToAgents,
     canBeAssignedToApiKeys,

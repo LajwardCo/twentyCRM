@@ -6,6 +6,7 @@ import {
   type EntityTarget,
   type InsertQueryBuilder,
   type ObjectLiteral,
+  type WhereExpressionBuilder,
 } from 'typeorm';
 import { type QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { type WhereClause } from 'typeorm/query-builder/WhereClause';
@@ -20,6 +21,7 @@ import {
   TwentyORMException,
   TwentyORMExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
+import { applyOwnerScopeFilter } from 'src/engine/twenty-orm/owner-scope/apply-owner-scope-filter.util';
 import { validateQueryIsPermittedOrThrow } from 'src/engine/twenty-orm/repository/permissions.utils';
 import { type WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
 import { type WorkspaceSoftDeleteQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-soft-delete-query-builder';
@@ -74,6 +76,7 @@ export class WorkspaceDeleteQueryBuilder<
   override async execute(): Promise<DeleteResult & { generatedMaps: T[] }> {
     try {
       this.applyRowLevelPermissionPredicates();
+      this.applyOwnerScopeFilter();
       validateQueryIsPermittedOrThrow({
         expressionMap: this.expressionMap,
         objectsPermissions: this.objectRecordsPermissions,
@@ -165,6 +168,29 @@ export class WorkspaceDeleteQueryBuilder<
     }
 
     return mainAliasTarget;
+  }
+
+  private applyOwnerScopeFilter(): void {
+    if (this.shouldBypassPermissionChecks) {
+      return;
+    }
+
+    const mainAliasTarget = this.getMainAliasTarget();
+
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      mainAliasTarget,
+      this.internalContext,
+    );
+
+    applyOwnerScopeFilter({
+      queryBuilder: this as unknown as WhereExpressionBuilder,
+      alias: this.alias,
+      objectMetadataNameSingular: objectMetadata.nameSingular,
+      objectMetadataId: objectMetadata.id,
+      objectRecordsPermissions: this.objectRecordsPermissions,
+      authContext: this.authContext,
+      shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+    });
   }
 
   private applyRowLevelPermissionPredicates(): void {

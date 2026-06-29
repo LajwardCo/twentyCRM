@@ -1,55 +1,42 @@
 #!/bin/bash
-# Build + deploy the Twenty fork on the hamagan-management box (crm.hamagan.com).
-# Invoked over SSH by .github/workflows/deploy-hamagan-crm.yaml after the repo
-# has been rsynced to /opt/twenty. Safe to run by hand too.
+# Pull-based deploy of the Twenty fork on the hamagan-management box.
+# The image is built + pushed to GHCR by CI; here we only pull, retag to the
+# name the compose file expects, and (re)start the stack. Env in:
+#   IMAGE      full GHCR ref, e.g. ghcr.io/lajwardco/twenty-crm:<sha>
+#   REG_USER   GHCR username (github.actor)
+#   REG_TOKEN  GHCR token (GITHUB_TOKEN, valid for the run)
 set -euo pipefail
 
-APP_DIR=/opt/twenty
-DOCKER_DIR="$APP_DIR/packages/twenty-docker"
-DF="$DOCKER_DIR/twenty/Dockerfile"
-TAG=fork
+IMAGE="${IMAGE:?IMAGE required}"
+REG_USER="${REG_USER:?REG_USER required}"
+REG_TOKEN="${REG_TOKEN:?REG_TOKEN required}"
+DOCKER_DIR=/opt/twenty/packages/twenty-docker
 
-cd "$APP_DIR"
+echo ">> login GHCR + pull $IMAGE"
+echo "$REG_TOKEN" | docker login ghcr.io -u "$REG_USER" --password-stdin
+docker pull "$IMAGE"
+docker logout ghcr.io || true
 
-# --- Box-specific workaround -------------------------------------------------
-# This host's Docker daemon DNS is misconfigured (daemon.json -> 192.168.203.2,
-# unreachable), so build containers can't resolve package registries. We can't
-# restart dockerd here (it would blip the Mailu mail stack on the same box), so
-# instead point every build RUN step at public resolvers. Idempotent: only
-# patches a fresh (rsynced) Dockerfile that doesn't already carry the fix.
-if ! grep -q 'etc/resolv.conf' "$DF"; then
-  echo ">> patching Dockerfile RUN steps with working DNS"
-  python3 - "$DF" <<'PY'
-import sys
-p = sys.argv[1]
-lines = open(p).read().split('\n')
-fix = "printf 'nameserver 1.1.1.1\\nnameserver 8.8.8.8\\n' > /etc/resolv.conf && "
-out = ['RUN ' + fix + l[4:] if l.startswith('RUN ') and 'resolv.conf' not in l else l
-       for l in lines]
-open(p, 'w').write('\n'.join(out))
-PY
-fi
+# compose references twentycrm/twenty:${TAG}; retag the pulled image to match
+docker tag "$IMAGE" twentycrm/twenty:fork
 
-echo ">> building twentycrm/twenty:$TAG"
-docker build --target twenty -f "$DF" \
-  --build-arg APP_VERSION="${GITHUB_SHA:-manual-$(date +%Y%m%d%H%M)}" \
-  -t "twentycrm/twenty:$TAG" .
-
-echo ">> deploying stack"
+echo ">> compose up"
 cd "$DOCKER_DIR"
-TAG=$TAG docker compose up -d
+TAG=fork docker compose -f docker-compose.yml -f docker-compose.hamagan.yml up -d
 
-echo ">> waiting for health"
+echo ">> wait for health"
 for i in $(seq 1 40); do
   if curl -fsS -m 4 http://127.0.0.1:3000/healthz >/dev/null 2>&1; then
     echo ">> healthy after ${i} checks"
-    docker compose ps
+    docker compose -f docker-compose.yml -f docker-compose.hamagan.yml ps
+    # prune old dangling images to save disk
+    docker image prune -f >/dev/null 2>&1 || true
     exit 0
   fi
   sleep 5
 done
 
 echo "!! server did not become healthy in time" >&2
-docker compose ps
-docker compose logs --tail=60 server || true
+docker compose -f docker-compose.yml -f docker-compose.hamagan.yml ps
+docker compose -f docker-compose.yml -f docker-compose.hamagan.yml logs --tail=80 server || true
 exit 1

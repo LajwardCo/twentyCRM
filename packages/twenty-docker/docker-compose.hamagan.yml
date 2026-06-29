@@ -1,0 +1,28 @@
+# hamagan-management overrides for crm.hamagan.com:
+#  - bind the server to localhost only (host nginx terminates TLS in front)
+#  - surface @hamagan.com SMTP env (empty -> Twenty falls back to no-send;
+#    set EMAIL_* in /opt/twenty/packages/twenty-docker/.env to enable)
+name: twenty
+
+services:
+  server:
+    ports: !override
+      - "127.0.0.1:3000:3000"
+    environment:
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
+      EMAIL_DRIVER: ${EMAIL_DRIVER:-}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
+
+  worker:
+    environment:
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
+      EMAIL_DRIVER: ${EMAIL_DRIVER:-}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}

@@ -24,16 +24,16 @@ echo ">> compose up"
 cd "$DOCKER_DIR"
 TAG=fork docker compose -f docker-compose.yml -f docker-compose.hamagan.yml up -d
 
-echo ">> wait for health"
-for i in $(seq 1 40); do
+echo ">> wait for health (first boot runs DB migrations, can take several minutes)"
+for i in $(seq 1 90); do
   if curl -fsS -m 4 http://127.0.0.1:3000/healthz >/dev/null 2>&1; then
-    echo ">> healthy after ${i} checks"
+    echo ">> healthy after $((i*10))s"
     docker compose -f docker-compose.yml -f docker-compose.hamagan.yml ps
     # prune old dangling images to save disk
     docker image prune -f >/dev/null 2>&1 || true
     exit 0
   fi
-  sleep 5
+  sleep 10
 done
 
 echo "!! server did not become healthy in time" >&2

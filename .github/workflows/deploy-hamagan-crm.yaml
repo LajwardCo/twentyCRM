@@ -58,7 +58,7 @@ jobs:
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
           build-args: |
-            APP_VERSION=${{ github.sha }}
+            APP_VERSION=0.2.1
 
       - name: Configure SSH
         run: |

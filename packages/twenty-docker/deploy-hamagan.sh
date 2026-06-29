@@ -20,9 +20,16 @@ docker logout ghcr.io || true
 # compose references twentycrm/twenty:${TAG}; retag the pulled image to match
 docker tag "$IMAGE" twentycrm/twenty:fork
 
-echo ">> compose up"
 cd "$DOCKER_DIR"
-TAG=fork docker compose -f docker-compose.yml -f docker-compose.hamagan.yml up -d
+COMPOSE="docker compose -f docker-compose.yml -f docker-compose.hamagan.yml"
+
+if [ "${RESET_DB:-false}" = "true" ]; then
+  echo ">> RESET_DB=true: tearing down stack + WIPING volumes (db + storage)"
+  TAG=fork $COMPOSE down -v || true
+fi
+
+echo ">> compose up"
+TAG=fork $COMPOSE up -d
 
 echo ">> wait for health (first boot runs DB migrations, can take several minutes)"
 for i in $(seq 1 90); do

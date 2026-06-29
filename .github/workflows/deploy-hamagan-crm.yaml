@@ -19,6 +19,11 @@ on:
       - 'packages/twenty-docker/**'
       - '.github/workflows/deploy-hamagan-crm.yaml'
   workflow_dispatch:
+    inputs:
+      reset_db:
+        description: 'Wipe the DB volume before deploy (DESTROYS ALL DATA — first-time/recovery only)'
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-hamagan-crm
@@ -82,4 +87,5 @@ jobs:
             "IMAGE='${{ env.IMAGE }}:${{ github.sha }}' \
              REG_USER='${{ github.actor }}' \
              REG_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
+             RESET_DB='${{ github.event.inputs.reset_db }}' \
              bash /opt/twenty/packages/twenty-docker/deploy-hamagan.sh"

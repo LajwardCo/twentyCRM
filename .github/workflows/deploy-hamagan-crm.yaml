@@ -1,0 +1,57 @@
+name: Deploy CRM (hamagan-management)
+
+# Build + deploy the fork to crm.hamagan.com on the hamagan-management box.
+# Builds happen on the box itself (it has the 9G swap + proven environment);
+# the runner only ships the code over rsync and triggers the build/deploy.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/twenty-server/**'
+      - 'packages/twenty-front/**'
+      - 'packages/twenty-ui/**'
+      - 'packages/twenty-shared/**'
+      - 'packages/twenty-emails/**'
+      - 'packages/twenty-sdk/**'
+      - 'packages/twenty-client-sdk/**'
+      - 'packages/twenty-front-component-renderer/**'
+      - 'packages/twenty-docker/**'
+      - '.github/workflows/deploy-hamagan-crm.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hamagan-crm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HAMAGAN_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.HAMAGAN_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rsync code to box
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='node_modules/' --exclude='**/node_modules/' \
+            --exclude='.nx/' --exclude='.swc/' --exclude='.cache/' \
+            --exclude='.yarn/cache/' --exclude='.yarn/install-state.gz' \
+            --exclude='packages/*/dist/' --exclude='packages/*/build/' \
+            --exclude='packages/twenty-docker/.env' \
+            --exclude='build.log' --exclude='autodeploy.*' --exclude='*.bak' \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
+            ./ "${{ secrets.HAMAGAN_USER }}@${{ secrets.HAMAGAN_HOST }}:/opt/twenty/"
+
+      - name: Build & deploy on box
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new \
+            "${{ secrets.HAMAGAN_USER }}@${{ secrets.HAMAGAN_HOST }}" \
+            'GITHUB_SHA=${{ github.sha }} bash /opt/twenty/packages/twenty-docker/deploy-hamagan.sh'

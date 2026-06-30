@@ -19,6 +19,7 @@ import { messages as deMessages } from 'src/engine/core-modules/i18n/locales/gen
 import { messages as elMessages } from 'src/engine/core-modules/i18n/locales/generated/el-GR';
 import { messages as enMessages } from 'src/engine/core-modules/i18n/locales/generated/en';
 import { messages as esMessages } from 'src/engine/core-modules/i18n/locales/generated/es-ES';
+import { messages as faMessages } from 'src/engine/core-modules/i18n/locales/generated/fa-AF';
 import { messages as fiMessages } from 'src/engine/core-modules/i18n/locales/generated/fi-FI';
 import { messages as frMessages } from 'src/engine/core-modules/i18n/locales/generated/fr-FR';
 import { messages as heMessages } from 'src/engine/core-modules/i18n/locales/generated/he-IL';
@@ -67,6 +68,7 @@ export class I18nService implements OnModuleInit {
       'de-DE': deMessages,
       'el-GR': elMessages,
       'es-ES': esMessages,
+      'fa-AF': faMessages,
       'fi-FI': fiMessages,
       'fr-FR': frMessages,
       'he-IL': heMessages,

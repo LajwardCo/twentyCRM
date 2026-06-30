@@ -24,6 +24,10 @@ export const getDateFnsLocaleImport = (locale: AppLocale) => {
       return import('date-fns/locale/en-US');
     case 'es-ES':
       return import('date-fns/locale/es');
+    case 'fa-AF':
+      // date-fns has no Afghan-specific Persian locale; fa-IR (Iranian Persian)
+      // shares the script and month names, so it's the closest match for Dari.
+      return import('date-fns/locale/fa-IR');
     case 'fi-FI':
       return import('date-fns/locale/fi');
     case 'fr-FR':

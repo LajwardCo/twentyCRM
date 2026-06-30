@@ -11,6 +11,7 @@ export const APP_LOCALES = {
   'de-DE': 'de-DE',
   'el-GR': 'el-GR',
   'es-ES': 'es-ES',
+  'fa-AF': 'fa-AF',
   'fi-FI': 'fi-FI',
   'fr-FR': 'fr-FR',
   'he-IL': 'he-IL',

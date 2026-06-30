@@ -23,6 +23,23 @@ docker tag "$IMAGE" twentycrm/twenty:fork
 cd "$DOCKER_DIR"
 COMPOSE="docker compose -f docker-compose.yml -f docker-compose.hamagan.yml"
 
+# Upsert CI-provided secrets into the box .env so they persist across deploys.
+# Only writes when the var is non-empty, so a deploy that doesn't pass them
+# leaves existing values untouched.
+upsert_env() {
+  local key="$1" val="$2"
+  [ -z "$val" ] && return 0
+  touch .env
+  if grep -q "^${key}=" .env; then
+    # use a non-/ delimiter; secret values may contain / but not |
+    sed -i "s|^${key}=.*|${key}=${val}|" .env
+  else
+    printf '%s=%s\n' "$key" "$val" >> .env
+  fi
+  echo ">> set ${key} in .env"
+}
+upsert_env ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+
 if [ "${RESET_DB:-false}" = "true" ]; then
   echo ">> RESET_DB=true: tearing down stack + WIPING volumes (db + storage)"
   TAG=fork $COMPOSE down -v || true

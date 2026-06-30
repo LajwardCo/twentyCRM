@@ -1,17 +1,25 @@
 # hamagan-management overrides for crm.hamagan.com:
 #  - bind the server to localhost only (host nginx terminates TLS in front)
-#  - surface @hamagan.com SMTP env (empty -> Twenty falls back to no-send;
-#    set EMAIL_* in /opt/twenty/packages/twenty-docker/.env to enable)
+#  - single-workspace (invite-only signup), AI via Anthropic, @hamagan.com SMTP
+#  Secrets (ANTHROPIC_API_KEY, EMAIL_SMTP_PASSWORD) live in the box .env, which
+#  CI upserts from GitHub Actions secrets; never committed here.
 name: twenty
 
 services:
   server:
     ports: !override
       - "127.0.0.1:3000:3000"
+    healthcheck:
+      # first boot runs DB migrations; give it room before counting failures
+      start_period: 240s
     environment:
       # Twenty requires a valid semver; CI bakes the git SHA which fails
       # config validation, so pin a semver here at runtime.
       APP_VERSION: ${APP_VERSION:-0.2.1}
+      # single workspace -> public sign-up auto-closes after the first user
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
+      # AI assistant (Claude). Key comes from box .env (CI-injected secret).
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
       EMAIL_DRIVER: ${EMAIL_DRIVER:-}
@@ -23,6 +31,8 @@ services:
   worker:
     environment:
       APP_VERSION: ${APP_VERSION:-0.2.1}
+      IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
       EMAIL_DRIVER: ${EMAIL_DRIVER:-}

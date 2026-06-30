@@ -1,8 +1,12 @@
 # hamagan-management overrides for crm.hamagan.com:
 #  - bind the server to localhost only (host nginx terminates TLS in front)
-#  - single-workspace (invite-only signup), AI via Anthropic, @hamagan.com SMTP
+#  - single-workspace (invite-only signup), Claude AI, @hamagan.com SMTP
 #  Secrets (ANTHROPIC_API_KEY, EMAIL_SMTP_PASSWORD) live in the box .env, which
 #  CI upserts from GitHub Actions secrets; never committed here.
+#
+#  SMTP note: mail relays via box.lajward.dev:465 (the Mailu box, valid cert for
+#  *.lajward.dev) authenticating as crm-auto@hamagan.com. Mailu DKIM-signs as
+#  hamagan.com (From domain), so DMARC (p=reject, strict) passes via DKIM.
 name: twenty
 
 services:
@@ -20,12 +24,13 @@ services:
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
       # AI assistant (Claude). Key comes from box .env (CI-injected secret).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
-      EMAIL_DRIVER: ${EMAIL_DRIVER:-}
-      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
-      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-}
-      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      # transactional email (invites, password reset, notifications)
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-crm-auto@hamagan.com}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Hamagan CRM}
+      EMAIL_DRIVER: ${EMAIL_DRIVER:-smtp}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-box.lajward.dev}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-465}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-crm-auto@hamagan.com}
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
 
   worker:
@@ -33,10 +38,10 @@ services:
       APP_VERSION: ${APP_VERSION:-0.2.1}
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-}
-      EMAIL_DRIVER: ${EMAIL_DRIVER:-}
-      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
-      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-}
-      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-crm-auto@hamagan.com}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Hamagan CRM}
+      EMAIL_DRIVER: ${EMAIL_DRIVER:-smtp}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-box.lajward.dev}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-465}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-crm-auto@hamagan.com}
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}

@@ -39,6 +39,7 @@ upsert_env() {
   echo ">> set ${key} in .env"
 }
 upsert_env ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+upsert_env EMAIL_SMTP_PASSWORD "${EMAIL_SMTP_PASSWORD:-}"
 
 if [ "${RESET_DB:-false}" = "true" ]; then
   echo ">> RESET_DB=true: tearing down stack + WIPING volumes (db + storage)"

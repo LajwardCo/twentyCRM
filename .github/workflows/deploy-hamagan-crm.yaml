@@ -89,4 +89,5 @@ jobs:
              REG_TOKEN='${{ secrets.GITHUB_TOKEN }}' \
              RESET_DB='${{ github.event.inputs.reset_db }}' \
              ANTHROPIC_API_KEY='${{ secrets.ANTHROPIC_API_KEY }}' \
+             EMAIL_SMTP_PASSWORD='${{ secrets.EMAIL_SMTP_PASSWORD }}' \
              bash /opt/twenty/packages/twenty-docker/deploy-hamagan.sh"

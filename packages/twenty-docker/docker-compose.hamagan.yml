@@ -25,12 +25,14 @@ services:
       # AI assistant (Claude). Key comes from box .env (CI-injected secret).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # transactional email (invites, password reset, notifications)
-      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-crm-auto@hamagan.com}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Hamagan CRM}
-      EMAIL_DRIVER: ${EMAIL_DRIVER:-smtp}
-      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-box.lajward.dev}
-      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-465}
-      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-crm-auto@hamagan.com}
+      # NOTE: pinned literals (not ${VAR:-}) so a stale box .env can't override
+      # them; only the password comes from .env (CI-injected secret).
+      EMAIL_FROM_ADDRESS: crm-auto@hamagan.com
+      EMAIL_FROM_NAME: Hamagan CRM
+      EMAIL_DRIVER: smtp
+      EMAIL_SMTP_HOST: box.lajward.dev
+      EMAIL_SMTP_PORT: "465"
+      EMAIL_SMTP_USER: crm-auto@hamagan.com
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
 
   worker:
@@ -38,10 +40,10 @@ services:
       APP_VERSION: ${APP_VERSION:-0.2.1}
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-crm-auto@hamagan.com}
-      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Hamagan CRM}
-      EMAIL_DRIVER: ${EMAIL_DRIVER:-smtp}
-      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-box.lajward.dev}
-      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-465}
-      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-crm-auto@hamagan.com}
+      EMAIL_FROM_ADDRESS: crm-auto@hamagan.com
+      EMAIL_FROM_NAME: Hamagan CRM
+      EMAIL_DRIVER: smtp
+      EMAIL_SMTP_HOST: box.lajward.dev
+      EMAIL_SMTP_PORT: "465"
+      EMAIL_SMTP_USER: crm-auto@hamagan.com
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}

@@ -61,7 +61,7 @@ const StyledUsageValue = styled.span`
   font-family: ${themeCssVariables.font.family};
   font-size: ${themeCssVariables.font.size.sm};
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: end;
 `;
 
 const StyledToolList = styled.div`

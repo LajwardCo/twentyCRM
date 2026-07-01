@@ -23,7 +23,7 @@ import { getOsControlSymbol } from 'twenty-ui/utilities';
 
 const StyledContainer = styled.div`
   background: ${themeCssVariables.background.secondary};
-  border-right: 1px solid ${themeCssVariables.border.color.light};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.light};
   display: flex;
   flex-direction: column;
   height: 100%;

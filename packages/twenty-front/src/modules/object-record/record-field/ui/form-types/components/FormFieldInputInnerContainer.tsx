@@ -23,7 +23,7 @@ const StyledFormFieldInputInnerContainer = styled.div<
   border-bottom-left-radius: ${themeCssVariables.border.radius.sm};
   border-bottom-right-radius: ${({ multiline, hasRightElement }) =>
     multiline || !hasRightElement ? themeCssVariables.border.radius.sm : '0'};
-  border-right: ${({ multiline, hasRightElement }) =>
+  border-inline-end: ${({ multiline, hasRightElement }) =>
     multiline || !hasRightElement
       ? `1px solid ${themeCssVariables.border.color.medium}`
       : 'none'};

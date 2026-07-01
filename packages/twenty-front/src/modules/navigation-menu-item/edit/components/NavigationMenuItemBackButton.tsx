@@ -17,10 +17,10 @@ const StyledBackButton = styled.button`
   font-weight: ${themeCssVariables.font.weight.medium};
   gap: ${themeCssVariables.spacing[2]};
   padding-bottom: ${themeCssVariables.spacing[1]};
-  padding-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${themeCssVariables.spacing[0.5]};
+  padding-inline-end: ${themeCssVariables.spacing[0.5]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
   padding-top: ${themeCssVariables.spacing[1]};
-  text-align: left;
+  text-align: start;
   width: 100%;
 
   &:hover {

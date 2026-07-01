@@ -27,7 +27,7 @@ const StyledContent = styled.div<{ hasCloseButton: boolean }>`
   flex: 1;
   gap: ${themeCssVariables.spacing[3]};
   justify-content: center;
-  margin-left: ${({ hasCloseButton }) => (hasCloseButton ? '24px' : '0')};
+  margin-inline-start: ${({ hasCloseButton }) => (hasCloseButton ? '24px' : '0')};
 `;
 
 export const InformationBanner = ({

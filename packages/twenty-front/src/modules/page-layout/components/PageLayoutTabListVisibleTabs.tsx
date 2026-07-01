@@ -32,7 +32,7 @@ const StyledTabContainer = styled.div`
   position: relative;
 
   > *:not(:last-child) {
-    margin-right: ${TAB_LIST_GAP}px;
+    margin-inline-end: ${TAB_LIST_GAP}px;
   }
 `;
 

@@ -55,7 +55,7 @@ const StyledContainer = styled.div`
   box-sizing: border-box;
   display: flex;
   height: ${TAB_LIST_HEIGHT};
-  padding-left: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   position: relative;
   user-select: none;
   width: 100%;
@@ -80,7 +80,7 @@ const StyledAddButton = styled.div`
   align-items: center;
   display: flex;
   height: ${TAB_LIST_HEIGHT};
-  margin-left: ${TAB_LIST_GAP}px;
+  margin-inline-start: ${TAB_LIST_GAP}px;
 `;
 
 type PageLayoutTabListProps = Omit<TabListProps, 'tabs'> & {

@@ -41,7 +41,7 @@ const StyledForm = styled.form`
 const StyledSlot = styled.div<{ isActive: boolean }>`
   align-items: center;
   border-bottom: 1px solid ${themeCssVariables.border.color.medium};
-  border-right: 1px solid ${themeCssVariables.border.color.medium};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.medium};
   border-top: 1px solid ${themeCssVariables.border.color.medium};
   display: flex;
   font-size: 2rem;
@@ -56,7 +56,7 @@ const StyledSlot = styled.div<{ isActive: boolean }>`
 
   &:first-of-type {
     border-bottom-left-radius: 0.375rem;
-    border-left: 1px solid ${themeCssVariables.border.color.medium};
+    border-inline-start: 1px solid ${themeCssVariables.border.color.medium};
     border-top-left-radius: 0.375rem;
   }
 

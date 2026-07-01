@@ -124,7 +124,7 @@ const StyledToolRowLabel = styled.div`
 `;
 
 const StyledReasoningContainer = styled.div`
-  padding-left: calc(
+  padding-inline-start: calc(
     ${themeCssVariables.icon.size.sm} * 1px + ${themeCssVariables.spacing[2]}
   );
 `;
@@ -186,7 +186,7 @@ const StyledToolRowButton = styled.button<{ isExpandable: boolean }>`
   gap: ${themeCssVariables.spacing[2]};
   min-height: 24px;
   padding: 0;
-  text-align: left;
+  text-align: start;
   transition: color calc(${themeCssVariables.animation.duration.fast} * 1s)
     ease-in-out;
   width: 100%;
@@ -208,14 +208,14 @@ const StyledToolDetailsContainer = styled.div`
   background: ${themeCssVariables.background.transparent.lighter};
   border: 1px solid ${themeCssVariables.border.color.light};
   border-radius: ${themeCssVariables.border.radius.sm};
-  margin-left: ${themeCssVariables.spacing[3]};
+  margin-inline-start: ${themeCssVariables.spacing[3]};
   min-width: 0;
   overflow: hidden;
 `;
 
 const StyledToolTabListContainer = styled.div`
   background-color: ${themeCssVariables.background.secondary};
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledToolDetailsContent = styled.div`

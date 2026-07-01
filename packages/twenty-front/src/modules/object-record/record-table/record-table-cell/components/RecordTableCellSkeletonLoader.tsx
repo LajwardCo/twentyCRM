@@ -5,8 +5,8 @@ import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 const StyledSkeletonContainer = styled.div`
-  padding-left: ${themeCssVariables.spacing[2]};
-  padding-right: ${themeCssVariables.spacing[2]};
+  padding-inline-end: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   padding-top: ${themeCssVariables.spacing['1.5']};
 `;
 

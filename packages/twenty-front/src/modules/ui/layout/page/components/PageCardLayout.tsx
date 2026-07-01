@@ -22,9 +22,9 @@ const StyledMainCardWrapper = styled.div`
   box-sizing: border-box;
   display: flex;
   flex: 1 1 0;
-  margin-left: -3px;
+  margin-inline-start: -3px;
   min-width: 0;
-  padding-left: 4px;
+  padding-inline-start: 4px;
   width: 0;
 `;
 

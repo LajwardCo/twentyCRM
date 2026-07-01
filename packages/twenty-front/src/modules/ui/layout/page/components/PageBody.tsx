@@ -18,12 +18,12 @@ const StyledMainContainer = styled.div`
   gap: ${themeCssVariables.spacing[2]};
   min-height: 0;
   padding-bottom: ${themeCssVariables.spacing[3]};
-  padding-left: 0;
-  padding-right: ${themeCssVariables.spacing[3]};
+  padding-inline-end: ${themeCssVariables.spacing[3]};
+  padding-inline-start: 0;
   width: 100%;
 
   @media (max-width: ${MOBILE_VIEWPORT}px) {
-    padding-left: ${themeCssVariables.spacing[3]};
+    padding-inline-start: ${themeCssVariables.spacing[3]};
   }
 `;
 

@@ -50,7 +50,7 @@ const StyledCheckboxHeaderColumn = styled.div`
   flex-shrink: 0;
   height: ${BACKGROUND_MOCK_TABLE_DIMENSIONS.rowHeight}px;
   justify-content: center;
-  padding-right: ${themeCssVariables.spacing[1]};
+  padding-inline-end: ${themeCssVariables.spacing[1]};
   width: ${BACKGROUND_MOCK_TABLE_DIMENSIONS.checkboxColumnWidth}px;
 `;
 
@@ -58,7 +58,7 @@ const StyledHeaderCell = styled.div<{ width: number }>`
   align-items: center;
   background: ${themeCssVariables.background.primary};
   border-bottom: 1px solid ${themeCssVariables.border.color.light};
-  border-right: 1px solid ${themeCssVariables.border.color.light};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.light};
   box-sizing: border-box;
   color: ${themeCssVariables.font.color.tertiary};
   display: flex;

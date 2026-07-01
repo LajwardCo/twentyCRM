@@ -21,14 +21,14 @@ const StyledRecordTableTd = styled.div<{
   border-bottom: 1px solid
     ${({ borderColor, hasBottomBorder, isDragging }) =>
       hasBottomBorder && !isDragging ? borderColor : 'transparent'};
-  border-right: ${({ borderColor, hasRightBorder }) =>
+  border-inline-end: ${({ borderColor, hasRightBorder }) =>
     hasRightBorder ? `1px solid ${borderColor}` : 'none'};
 
   color: ${({ fontColor }) => fontColor};
 
   padding: 0;
 
-  text-align: left;
+  text-align: start;
 
   z-index: ${({ zIndex }) => zIndex};
 `;

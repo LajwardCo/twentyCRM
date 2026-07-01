@@ -24,9 +24,9 @@ export const StyledDropdownButtonContainer = styled.div<StyledDropdownButtonProp
   display: flex;
 
   padding: ${themeCssVariables.spacing[1]};
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-end: ${themeCssVariables.spacing[2]};
 
-  padding-right: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
   user-select: none;
 
   &:hover {

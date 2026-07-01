@@ -58,7 +58,7 @@ const StyledLink = styled.a`
   font-family: inherit;
   font-size: inherit;
   padding: 0;
-  text-align: left;
+  text-align: start;
   text-decoration: none;
   width: 100%;
 

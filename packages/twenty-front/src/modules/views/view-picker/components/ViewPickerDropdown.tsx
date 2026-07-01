@@ -35,11 +35,11 @@ const StyledDropdownLabelAdornments = styled.span`
   display: flex;
   flex-shrink: 0;
   gap: ${themeCssVariables.spacing[1]};
-  margin-left: ${themeCssVariables.spacing[1]};
+  margin-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledViewName = styled.span`
-  margin-left: ${themeCssVariables.spacing[1]};
+  margin-inline-start: ${themeCssVariables.spacing[1]};
   max-width: 130px;
   min-width: 0;
   overflow: hidden;

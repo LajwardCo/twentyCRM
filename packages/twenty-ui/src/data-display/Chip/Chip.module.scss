@@ -97,7 +97,7 @@
 }
 
 .paddingLeftNone {
-  padding-left: var(--t-spacing-0);
+  padding-inline-start: var(--t-spacing-0);
 }
 
 .emptyLabel {
@@ -106,5 +106,5 @@
 
 .rightComponentDivider {
   align-self: stretch;
-  border-left: 1px solid var(--t-border-color-light);
+  border-inline-start: 1px solid var(--t-border-color-light);
 }

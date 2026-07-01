@@ -66,8 +66,8 @@ const StyledContainer = styled.div<{
   @media (max-width: ${MOBILE_VIEWPORT}px) {
     gap: ${themeCssVariables.spacing[4]};
     width: 100%;
-    padding-left: ${themeCssVariables.spacing[2]};
-    padding-right: ${themeCssVariables.spacing[2]};
+    padding-inline-start: ${themeCssVariables.spacing[2]};
+    padding-inline-end: ${themeCssVariables.spacing[2]};
   }
 `;
 

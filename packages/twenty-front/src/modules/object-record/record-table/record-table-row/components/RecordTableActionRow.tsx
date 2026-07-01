@@ -52,7 +52,7 @@ const StyledRecordTableDraggableTr = styled.div`
 const StyledIconContainer = styled.div`
   align-items: center;
   background-color: transparent;
-  border-right: none;
+  border-inline-end: none;
   color: ${themeCssVariables.font.color.secondary};
   display: flex;
   height: ${RECORD_TABLE_ROW_HEIGHT}px;
@@ -66,7 +66,7 @@ const StyledIconContainer = styled.div`
 const StyledActionTextContainer = styled.div<{ width: number }>`
   align-items: center;
 
-  border-right: none;
+  border-inline-end: none;
   display: flex;
 
   height: ${RECORD_TABLE_ROW_HEIGHT}px;
@@ -80,9 +80,9 @@ const StyledActionTextContainer = styled.div<{ width: number }>`
 const StyledText = styled.span`
   color: ${themeCssVariables.font.color.tertiary};
   font-size: ${themeCssVariables.font.size.md};
-  margin-left: ${themeCssVariables.spacing[2]};
+  margin-inline-start: ${themeCssVariables.spacing[2]};
   position: absolute;
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 
   white-space: nowrap;

@@ -38,7 +38,7 @@ const StyledUploadArea = styled.div<{ hasFiles: boolean; hasPicker: boolean }>`
   border-bottom-left-radius: ${themeCssVariables.border.radius.sm};
   border-bottom-right-radius: ${({ hasPicker }) =>
     hasPicker ? '0' : themeCssVariables.border.radius.sm};
-  border-right: ${({ hasPicker }) =>
+  border-inline-end: ${({ hasPicker }) =>
     hasPicker ? 'none' : `1px solid ${themeCssVariables.border.color.medium}`};
   border-top-left-radius: ${themeCssVariables.border.radius.sm};
   border-top-right-radius: ${({ hasPicker }) =>
@@ -49,8 +49,8 @@ const StyledUploadArea = styled.div<{ hasFiles: boolean; hasPicker: boolean }>`
   justify-content: center;
   min-height: ${({ hasFiles }) => (hasFiles ? 'auto' : '24px')};
   padding-bottom: ${themeCssVariables.spacing[1]};
-  padding-left: ${themeCssVariables.spacing[2]};
-  padding-right: ${themeCssVariables.spacing[2]};
+  padding-inline-end: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   padding-top: ${themeCssVariables.spacing[1]};
 
   &:hover {

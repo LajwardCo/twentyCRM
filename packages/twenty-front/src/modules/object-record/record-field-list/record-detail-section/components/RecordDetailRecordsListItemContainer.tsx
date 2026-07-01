@@ -12,10 +12,10 @@ const StyledListItem = styled.div<{
   gap: ${themeCssVariables.spacing[1]};
   height: ${themeCssVariables.spacing[10]};
   justify-content: space-between;
-  padding-left: ${({ noHorizontalPadding }) =>
-    noHorizontalPadding ? 0 : themeCssVariables.spacing[3]};
-  padding-right: ${({ noHorizontalPadding }) =>
+  padding-inline-end: ${({ noHorizontalPadding }) =>
     noHorizontalPadding ? 0 : themeCssVariables.spacing[2]};
+  padding-inline-start: ${({ noHorizontalPadding }) =>
+    noHorizontalPadding ? 0 : themeCssVariables.spacing[3]};
 
   .displayOnHover {
     opacity: ${({ isDropdownOpen }) => (isDropdownOpen ? 1 : 0)};

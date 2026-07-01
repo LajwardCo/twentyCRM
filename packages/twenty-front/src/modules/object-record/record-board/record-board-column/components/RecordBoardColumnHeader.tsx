@@ -38,7 +38,7 @@ const StyledHeader = styled.div`
 
 const StyledHeaderActions = styled.div`
   display: flex;
-  margin-left: auto;
+  margin-inline-start: auto;
 `;
 
 const StyledHeaderContainer = styled.div`

@@ -26,7 +26,7 @@ import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import { useIsMobile } from 'twenty-ui/utilities';
 const StyledCommandMenuBase = styled.div`
   background: ${themeCssVariables.background.primary};
-  border-left: 1px solid ${themeCssVariables.border.color.medium};
+  border-inline-start: 1px solid ${themeCssVariables.border.color.medium};
   box-shadow: ${themeCssVariables.boxShadow.strong};
   display: flex;
   flex-direction: column;

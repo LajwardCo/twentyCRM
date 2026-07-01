@@ -104,14 +104,14 @@ const StyledIcon = styled.div`
 const StyledActions = styled.div`
   align-items: center;
   display: flex;
-  margin-left: auto;
+  margin-inline-start: auto;
 `;
 
 const StyledDescription = styled.div`
   color: ${themeCssVariables.font.color.tertiary};
   font-size: ${themeCssVariables.font.size.sm};
   overflow: hidden;
-  padding-left: ${themeCssVariables.spacing[6]};
+  padding-inline-start: ${themeCssVariables.spacing[6]};
   text-overflow: ellipsis;
   width: 200px;
 `;

@@ -127,7 +127,7 @@
 .indicator {
   display: block;
   height: var(--checkbox-icon-size);
-  left: 0;
+  inset-inline-start: 0;
   position: absolute;
   top: 0;
   width: var(--checkbox-icon-size);

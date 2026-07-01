@@ -4,9 +4,9 @@
 }
 
 .itemContainer {
-  margin-right: -3px;
+  margin-inline-end: -3px;
 
   &:last-child {
-    margin-right: 0;
+    margin-inline-end: 0;
   }
 }

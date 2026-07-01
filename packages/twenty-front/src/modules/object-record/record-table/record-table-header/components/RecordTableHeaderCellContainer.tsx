@@ -13,7 +13,7 @@ const StyledHeaderCell = styled.div<{
     shouldDisplayBorderBottom
       ? `1px solid ${themeCssVariables.border.color.light}`
       : 'none'};
-  border-right: 1px solid ${themeCssVariables.border.color.light};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.light};
 
   color: ${themeCssVariables.font.color.tertiary};
 
@@ -26,7 +26,7 @@ const StyledHeaderCell = styled.div<{
 
   position: relative;
 
-  text-align: left;
+  text-align: start;
 
   &:hover {
     background: ${({ isResizing, isReadOnly }) =>

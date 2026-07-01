@@ -28,7 +28,7 @@ const StyledDomainFormWrapper = styled.div`
 
 const StyledButtonGroupContainer = styled.div`
   > * > :not(:first-of-type) > button {
-    border-left: none;
+    border-inline-start: none;
   }
 `;
 

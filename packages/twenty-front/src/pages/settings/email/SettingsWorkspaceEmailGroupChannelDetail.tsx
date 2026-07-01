@@ -40,7 +40,7 @@ const StyledForwardingRow = styled.div`
 
 const StyledForwardingInputContainer = styled.div`
   flex: 1;
-  margin-right: ${themeCssVariables.spacing[2]};
+  margin-inline-end: ${themeCssVariables.spacing[2]};
 `;
 
 export const SettingsWorkspaceEmailGroupChannelDetail = () => {

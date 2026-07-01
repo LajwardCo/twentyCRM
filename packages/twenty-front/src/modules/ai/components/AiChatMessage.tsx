@@ -86,7 +86,7 @@ const StyledMessageText = styled.div<{ isUser?: boolean }>`
   ol {
     line-height: 1.4em;
     margin: ${themeCssVariables.spacing[1]} 0;
-    padding-left: ${themeCssVariables.spacing[4]};
+    padding-inline-start: ${themeCssVariables.spacing[4]};
   }
 
   ul {
@@ -101,10 +101,10 @@ const StyledMessageText = styled.div<{ isUser?: boolean }>`
   }
 
   blockquote {
-    border-left: 3px solid ${themeCssVariables.border.color.medium};
+    border-inline-start: 3px solid ${themeCssVariables.border.color.medium};
     color: ${themeCssVariables.font.color.secondary};
     margin: ${themeCssVariables.spacing[2]} 0;
-    padding-left: ${themeCssVariables.spacing[2]};
+    padding-inline-start: ${themeCssVariables.spacing[2]};
   }
 `;
 

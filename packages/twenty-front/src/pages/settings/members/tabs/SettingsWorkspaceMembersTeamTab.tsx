@@ -52,7 +52,7 @@ const StyledTableContainer = styled.div<{ hasMoreRows?: boolean }>`
 const StyledIconWrapper = styled.div`
   align-items: center;
   display: flex;
-  margin-right: ${themeCssVariables.spacing[2]};
+  margin-inline-end: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledTextContainerWithEllipsis = styled.div`

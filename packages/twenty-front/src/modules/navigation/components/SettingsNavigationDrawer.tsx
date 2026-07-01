@@ -22,14 +22,14 @@ import { PermissionFlagType } from '~/generated-metadata/graphql';
 const StyledAdvancedToggleFixedContent = styled.div<{ isMobile: boolean }>`
   flex-shrink: 0;
   margin-top: auto;
-  padding-left: ${({ isMobile }) =>
+  padding-inline-end: ${({ isMobile }) =>
     isMobile ? themeCssVariables.spacing[5] : '0'};
-  padding-right: ${({ isMobile }) =>
+  padding-inline-start: ${({ isMobile }) =>
     isMobile ? themeCssVariables.spacing[5] : '0'};
 `;
 
 const advancedSettingsToggleClassName = css`
-  padding-right: 0;
+  padding-inline-end: 0;
 `;
 
 export const SettingsNavigationDrawer = ({

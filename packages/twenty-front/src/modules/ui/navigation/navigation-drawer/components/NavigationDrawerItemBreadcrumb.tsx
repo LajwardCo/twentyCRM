@@ -9,8 +9,8 @@ export type NavigationDrawerItemBreadcrumbProps = {
 const StyledNavigationDrawerItemBreadcrumbContainer = styled.div`
   height: 28px;
 
-  margin-left: 7.5px;
-  margin-right: ${themeCssVariables.spacing[2]};
+  margin-inline-end: ${themeCssVariables.spacing[2]};
+  margin-inline-start: 7.5px;
   width: 9px;
 
   @media (max-width: ${MOBILE_VIEWPORT}px) {
@@ -55,7 +55,7 @@ const StyledRoundedProtrusion = styled.div<{ darker: boolean }>`
         : themeCssVariables.border.color.strong};
   border-bottom-left-radius: 4px;
 
-  border-right: none;
+  border-inline-end: none;
 
   border-top: none;
 

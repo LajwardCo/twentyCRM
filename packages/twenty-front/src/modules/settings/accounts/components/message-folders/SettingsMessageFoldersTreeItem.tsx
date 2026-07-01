@@ -51,7 +51,7 @@ const StyledTreeItemContent = styled.div<{ depth: number }>`
   cursor: pointer;
   display: flex;
   height: 28px;
-  padding-left: ${({ depth }) => depth * BREADCRUMB_WIDTH}px;
+  padding-inline-start: ${({ depth }) => depth * BREADCRUMB_WIDTH}px;
   transition: background-color
     calc(${themeCssVariables.animation.duration.instant} * 1s);
   user-select: none;
@@ -67,8 +67,8 @@ const StyledFolderContent = styled.div`
   flex: 1;
   gap: ${themeCssVariables.spacing[2]};
   min-width: 0;
-  padding-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${themeCssVariables.spacing[1]};
+  padding-inline-end: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledFolderInfo = styled.div`
@@ -92,14 +92,14 @@ const StyledRightSection = styled.div`
   display: flex;
   flex-shrink: 0;
   gap: ${themeCssVariables.spacing[1]};
-  margin-left: auto;
+  margin-inline-start: auto;
 `;
 
 const StyledChildCount = styled.span`
   color: ${themeCssVariables.font.color.tertiary};
   font-size: ${themeCssVariables.font.size.sm};
   min-width: ${themeCssVariables.spacing[3]};
-  text-align: right;
+  text-align: end;
 `;
 
 const StyledExpandButton = styled.button`

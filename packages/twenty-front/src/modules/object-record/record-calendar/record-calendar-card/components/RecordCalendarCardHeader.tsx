@@ -17,7 +17,7 @@ import { isRecordCalendarCardSelectedComponentFamilyState } from '@/object-recor
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 const StyledCheckboxContainer = styled.div`
-  margin-left: auto;
+  margin-inline-start: auto;
 `;
 
 const StyledRecordChipContainer = styled.div`

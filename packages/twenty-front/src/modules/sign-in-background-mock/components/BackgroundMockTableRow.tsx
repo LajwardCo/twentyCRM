@@ -35,21 +35,21 @@ const StyledCheckboxColumn = styled.div`
   flex-shrink: 0;
   height: ${BACKGROUND_MOCK_TABLE_DIMENSIONS.rowHeight}px;
   justify-content: center;
-  padding-right: ${themeCssVariables.spacing[1]};
+  padding-inline-end: ${themeCssVariables.spacing[1]};
   width: ${BACKGROUND_MOCK_TABLE_DIMENSIONS.checkboxColumnWidth}px;
 `;
 
 const StyledCell = styled.div<{ width: number }>`
   align-items: center;
   border-bottom: 1px solid ${themeCssVariables.border.color.light};
-  border-right: 1px solid ${themeCssVariables.border.color.light};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.light};
   box-sizing: border-box;
   color: ${themeCssVariables.font.color.primary};
   display: flex;
   flex-shrink: 0;
   height: ${BACKGROUND_MOCK_TABLE_DIMENSIONS.rowHeight}px;
   overflow: hidden;
-  padding-left: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   white-space: nowrap;
   width: ${({ width }) => width}px;
 `;

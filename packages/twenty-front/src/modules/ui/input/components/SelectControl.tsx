@@ -24,7 +24,7 @@ export const StyledControlContainer = styled.div<{
   border-bottom-left-radius: ${themeCssVariables.border.radius.sm};
   border-bottom-right-radius: ${({ hasRightElement }) =>
     hasRightElement ? '0' : themeCssVariables.border.radius.sm};
-  border-right: ${({ hasRightElement }) =>
+  border-inline-end: ${({ hasRightElement }) =>
     hasRightElement
       ? 'none'
       : `1px solid ${themeCssVariables.border.color.medium}`};
@@ -51,7 +51,7 @@ export const StyledControlContainer = styled.div<{
 
   max-width: 100%;
   padding: 0 ${themeCssVariables.spacing[2]};
-  text-align: left;
+  text-align: start;
 `;
 
 const StyledIconChevronDownWrapper = styled.div<{

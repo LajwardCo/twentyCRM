@@ -19,9 +19,9 @@ const StyledChip = styled.div<{ deletable: boolean; danger: boolean }>`
   flex-direction: row;
   flex-shrink: 0;
   height: 20px;
-  padding-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${({ deletable }) =>
+  padding-inline-end: ${({ deletable }) =>
     deletable ? '0' : themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 
   user-select: none;
   white-space: nowrap;

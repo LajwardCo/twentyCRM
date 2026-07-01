@@ -20,18 +20,18 @@ const StyledTr = styled.div<{
         border-color: ${themeCssVariables.border.color.medium};
       }
       &:nth-of-type(2) {
-        border-left: 1px solid ${themeCssVariables.border.color.medium};
+        border-inline-start: 1px solid ${themeCssVariables.border.color.medium};
 
-        margin-left: -1px;
+        margin-inline-start: -1px;
 
         div {
-          margin-left: -1px;
+          margin-inline-start: -1px;
         }
       }
       &:last-of-type {
+        border-inline-end: 1px solid ${themeCssVariables.border.color.medium};
         border-radius: 0 ${themeCssVariables.border.radius.sm}
           ${themeCssVariables.border.radius.sm} 0;
-        border-right: 1px solid ${themeCssVariables.border.color.medium};
       }
     }
   }

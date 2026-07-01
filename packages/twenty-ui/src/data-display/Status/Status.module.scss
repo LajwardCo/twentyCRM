@@ -13,7 +13,7 @@
   padding: 0 var(--t-spacing-2) 0 var(--t-spacing-2);
 
   &[data-loader-visible] {
-    padding-right: var(--t-spacing-1);
+    padding-inline-end: var(--t-spacing-1);
   }
 
   &:before {

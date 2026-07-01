@@ -12,13 +12,13 @@ import { CurrencyPickerDropdownSelect } from './CurrencyPickerDropdownSelect';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 const StyledDropdownButtonContainer = styled.div`
   align-items: center;
-  border-right: 1px solid ${themeCssVariables.border.color.medium};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.medium};
   color: ${({ color }) => color ?? 'none'};
   cursor: pointer;
   display: flex;
   height: 32px;
-  padding-left: ${themeCssVariables.spacing[2]};
-  padding-right: ${themeCssVariables.spacing[2]};
+  padding-inline-end: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   user-select: none;
   &:hover {
     background-color: ${themeCssVariables.background.transparent.light};

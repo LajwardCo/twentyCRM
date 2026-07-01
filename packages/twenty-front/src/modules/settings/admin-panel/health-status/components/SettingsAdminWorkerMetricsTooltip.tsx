@@ -26,7 +26,7 @@ const StyledTooltipColorCircle = styled.div<{ color: string }>`
   background-color: ${({ color }) => color};
   border-radius: 50%;
   height: 8px;
-  margin-right: ${themeCssVariables.spacing[2]};
+  margin-inline-end: ${themeCssVariables.spacing[2]};
   width: 8px;
 `;
 

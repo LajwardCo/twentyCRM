@@ -41,7 +41,7 @@ const StyledDescription = styled.div`
 const StyledToggleContainer = styled.span`
   align-items: center;
   display: flex;
-  margin-left: auto;
+  margin-inline-start: auto;
 `;
 
 export const SettingsAccountsToggleSettingCard = ({

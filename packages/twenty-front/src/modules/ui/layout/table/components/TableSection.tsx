@@ -20,7 +20,7 @@ const StyledSectionHeader = styled.div<{ isExpanded: boolean }>`
   height: ${themeCssVariables.spacing[6]};
   justify-content: space-between;
   padding: 0 ${themeCssVariables.spacing[2]};
-  text-align: left;
+  text-align: start;
 `;
 
 const StyledSection = styled.div<{ isExpanded: boolean }>`

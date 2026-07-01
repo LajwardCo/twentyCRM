@@ -47,8 +47,8 @@ const StyledSectionHeader = styled.div`
   display: flex;
   height: ${themeCssVariables.spacing[6]};
   justify-content: space-between;
-  padding-left: ${themeCssVariables.spacing[1]};
-  text-align: left;
+  padding-inline-start: ${themeCssVariables.spacing[1]};
+  text-align: start;
 `;
 
 const StyledLabelContainer = styled.span`

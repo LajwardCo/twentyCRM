@@ -15,7 +15,7 @@ const StyledRowContainer = styled.div`
     gap: ${themeCssVariables.spacing[2]};
     min-height: ${themeCssVariables.spacing[6]};
     padding: ${themeCssVariables.spacing[2]};
-    padding-left: ${themeCssVariables.spacing[3]};
+    padding-inline-start: ${themeCssVariables.spacing[3]};
   }
 `;
 
@@ -43,7 +43,7 @@ const StyledDescription = styled.span`
   color: ${themeCssVariables.font.color.light};
   font-weight: ${themeCssVariables.font.weight.regular};
   line-height: ${themeCssVariables.text.lineHeight.lg};
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledLinkContainer = styled.div`

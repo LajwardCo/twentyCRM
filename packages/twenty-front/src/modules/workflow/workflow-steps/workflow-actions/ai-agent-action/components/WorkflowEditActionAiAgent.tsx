@@ -45,7 +45,7 @@ type WorkflowEditActionAiAgentProps = {
 
 const StyledTabListContainer = styled.div`
   background-color: ${themeCssVariables.background.secondary};
-  padding-left: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
 `;
 
 export const WorkflowEditActionAiAgent = ({

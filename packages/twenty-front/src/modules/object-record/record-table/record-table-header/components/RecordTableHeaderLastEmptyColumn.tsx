@@ -21,7 +21,7 @@ const StyledLastColumnHeader = styled.div<{
     shouldDisplayBorderBottom
       ? `1px solid ${themeCssVariables.border.color.light}`
       : 'none'};
-  border-left: none !important;
+  border-inline-start: none !important;
   color: ${themeCssVariables.font.color.tertiary};
 
   cursor: pointer;

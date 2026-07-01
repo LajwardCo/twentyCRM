@@ -77,11 +77,11 @@
 }
 
 .labelRight {
-  margin-left: var(--t-spacing-2);
+  margin-inline-start: var(--t-spacing-2);
 }
 
 .labelLeft {
-  margin-right: var(--t-spacing-2);
+  margin-inline-end: var(--t-spacing-2);
 }
 
 .label[data-disabled] {

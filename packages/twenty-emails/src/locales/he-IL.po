@@ -19,6 +19,11 @@ msgstr ""
 "X-Crowdin-File-ID: 27\n"
 
 #. js-lingui-explicit-id
+#: src/emails/test.email.tsx
+msgid "Test email"
+msgstr "הודעת דוא\"ל מבחן"
+
+#. js-lingui-explicit-id
 #: src/emails/warn-suspended-workspace.email.tsx
 msgid "Suspended Workspace"
 msgstr "מרחב עבודה מושעה"
@@ -58,9 +63,30 @@ msgid "Update your subscription"
 msgstr "עדכן את המנוי שלך"
 
 #. js-lingui-explicit-id
-#: src/emails/test.email.tsx
-msgid "Test email"
-msgstr "הודעת דוא\"ל מבחן"
+#: src/emails/validate-approved-access-domain.email.tsx
+#: src/emails/validate-approved-access-domain.email.tsx
+msgid "Validate domain"
+msgstr "אמת את הדומיין"
+
+#. js-lingui-explicit-id
+#: src/emails/validate-approved-access-domain.email.tsx
+msgid "{senderName} (<0>{senderEmail}</0>): Please validate this domain to allow users with <1>@{domain}</1> email addresses to join your workspace without requiring an invitation."
+msgstr "{senderName} (<0>{senderEmail}</0>): אנא אמת דומיין זה כדי לאפשר למשתמשים עם כתובות דוא\"ל <1>@{domain}</1> להצטרף למרחב שלך בלי צורך בהזמנה."
+
+#. js-lingui-explicit-id
+#: src/emails/send-invite-link.email.tsx
+msgid "Join your team on Twenty"
+msgstr "הצטרף לצוות שלך ב-Twenty"
+
+#. js-lingui-explicit-id
+#: src/emails/send-invite-link.email.tsx
+msgid "{senderName} (<0>{senderEmail}</0>) has invited you to join a workspace called <1>{workspaceName}</1>."
+msgstr "{senderName} (<0>{senderEmail}</0>) הזמין אותך להצטרף למרחב שנקרא <1>{workspaceName}</1>."
+
+#. js-lingui-explicit-id
+#: src/emails/send-invite-link.email.tsx
+msgid "Accept invite"
+msgstr "קבל הזמנה"
 
 #. js-lingui-explicit-id
 #: src/emails/server-admin-access-changed.email.tsx
@@ -118,30 +144,29 @@ msgid "Connect to Twenty"
 msgstr "התחבר ל-Twenty"
 
 #. js-lingui-explicit-id
-#: src/emails/send-invite-link.email.tsx
-msgid "Join your team on Twenty"
-msgstr "הצטרף לצוות שלך ב-Twenty"
+#: src/emails/password-reset-link.email.tsx
+msgid "Reset your password 🗝"
+msgstr "אפס את הסיסמה שלך 🗝"
 
 #. js-lingui-explicit-id
-#: src/emails/send-invite-link.email.tsx
-msgid "{senderName} (<0>{senderEmail}</0>) has invited you to join a workspace called <1>{workspaceName}</1>."
-msgstr "{senderName} (<0>{senderEmail}</0>) הזמין אותך להצטרף למרחב שנקרא <1>{workspaceName}</1>."
+#: src/emails/password-reset-link.email.tsx
+msgid "Set your password 🗝"
+msgstr "\"הגדר את הסיסמה שלך 🗝\""
 
 #. js-lingui-explicit-id
-#: src/emails/send-invite-link.email.tsx
-msgid "Accept invite"
-msgstr "קבל הזמנה"
+#: src/emails/password-reset-link.email.tsx
+msgid "Reset"
+msgstr "איפוס"
 
 #. js-lingui-explicit-id
-#: src/emails/validate-approved-access-domain.email.tsx
-#: src/emails/validate-approved-access-domain.email.tsx
-msgid "Validate domain"
-msgstr "אמת את הדומיין"
+#: src/emails/password-reset-link.email.tsx
+msgid "Set"
+msgstr "\"הגדר\""
 
 #. js-lingui-explicit-id
-#: src/emails/validate-approved-access-domain.email.tsx
-msgid "{senderName} (<0>{senderEmail}</0>): Please validate this domain to allow users with <1>@{domain}</1> email addresses to join your workspace without requiring an invitation."
-msgstr "{senderName} (<0>{senderEmail}</0>): אנא אמת דומיין זה כדי לאפשר למשתמשים עם כתובות דוא\"ל <1>@{domain}</1> להצטרף למרחב שלך בלי צורך בהזמנה."
+#: src/emails/password-reset-link.email.tsx
+msgid "This link is only valid for the next {duration}. If the link does not work, you can use the login verification link directly:"
+msgstr "הקישור הזה תקף רק ל-{duration} הבאים. אם הקישור לא עובד, תוכל להשתמש בקישור אימות ההתחברות ישירות:"
 
 #. js-lingui-explicit-id
 #: src/emails/clean-suspended-workspace.email.tsx
@@ -167,31 +192,6 @@ msgstr "אם תרצה להשתמש ב-Twenty שוב, תוכל ליצור מרח�
 #: src/emails/clean-suspended-workspace.email.tsx
 msgid "Create a new workspace"
 msgstr "צור מרחב עבודה חדש"
-
-#. js-lingui-explicit-id
-#: src/emails/password-reset-link.email.tsx
-msgid "Reset your password 🗝"
-msgstr "אפס את הסיסמה שלך 🗝"
-
-#. js-lingui-explicit-id
-#: src/emails/password-reset-link.email.tsx
-msgid "Set your password 🗝"
-msgstr "\"הגדר את הסיסמה שלך 🗝\""
-
-#. js-lingui-explicit-id
-#: src/emails/password-reset-link.email.tsx
-msgid "Reset"
-msgstr "איפוס"
-
-#. js-lingui-explicit-id
-#: src/emails/password-reset-link.email.tsx
-msgid "Set"
-msgstr "\"הגדר\""
-
-#. js-lingui-explicit-id
-#: src/emails/password-reset-link.email.tsx
-msgid "This link is only valid for the next {duration}. If the link does not work, you can use the login verification link directly:"
-msgstr "הקישור הזה תקף רק ל-{duration} הבאים. אם הקישור לא עובד, תוכל להשתמש בקישור אימות ההתחברות ישירות:"
 
 #. js-lingui-explicit-id
 #: src/components/WhatIsTwenty.tsx

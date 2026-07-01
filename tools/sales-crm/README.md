@@ -24,6 +24,26 @@ metadata GraphQL API. See the design in
   **Requires the twenty-server WORKER process running** (`npx nx run
   twenty-server:worker`) — the API server alone registers the trigger but never
   fires it; DATABASE_EVENT triggers are consumed off a BullMQ queue by the worker.
+- `provision-views.mjs` — creates 4 saved Views: **My Tasks — Today** (assignee =
+  Me via the `{"isCurrentWorkspaceMemberSelected":true}` convention, due = today),
+  **Pipeline by Owner** (Opportunities grouped by owner), **Quotations Nearing
+  Expiry** and **Subscriptions — Renewal Due Soon** (filtered + sorted by date).
+  Idempotent. Views are a metadata-layer object, a simpler API than Workflows —
+  used here instead of a CRON+iterator automation for the expiry/renewal
+  "alarms" (no bulk-update primitive exists for that; would need a nested loop
+  step, materially more complex than the round-robin workflow for uncertain payoff).
+
+## Not built (deferred)
+
+- **Dashboards / chart widgets** — Dashboard → PageLayout → Tab → Widget is a
+  3-level metadata hierarchy with its own widget-config JSON schema, not yet
+  reverse-engineered. The `isAnalyticsEnabled` workspace flag also defaults off,
+  which would need enabling first for charts to show real data. The **Pipeline
+  by Owner** view above covers the "seller activity" reporting need without it.
+- **Quotation-expiry / subscription-renewal CRON automation** — see above; the
+  saved Views cover the same need without the added complexity.
+- **Phase 3**: dynamic per-factor pricing engine, discount-floor enforcement,
+  external API sync, field-level permissions — not started.
 
 ## Prerequisites
 

@@ -50,7 +50,7 @@ const PASSWORD = process.env.TWENTY_PASSWORD ?? 'tim@apple.dev';
 const DASHBOARD_TITLE = 'Sales Overview';
 
 let TOKEN = null;
-async function gql(endpoint, query, variables) {
+async function gqlOnce(endpoint, query, variables) {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}) },
@@ -59,6 +59,17 @@ async function gql(endpoint, query, variables) {
   const json = await res.json();
   if (json.errors) throw new Error(JSON.stringify(json.errors.map((e) => e.message)));
   return json.data;
+}
+async function gql(endpoint, query, variables) {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      return await gqlOnce(endpoint, query, variables);
+    } catch (e) {
+      if (!(e instanceof TypeError) || attempt === 5) throw e;
+      console.error(`  (network hiccup, retry ${attempt}/5 in ${attempt * 2}s: ${e.message})`);
+      await new Promise((r) => setTimeout(r, attempt * 2000));
+    }
+  }
 }
 async function login() {
   const a = await gql(META, `mutation($e:String!,$p:String!,$o:String!){getLoginTokenFromCredentials(email:$e,password:$p,origin:$o){loginToken{token}}}`, { e: EMAIL, p: PASSWORD, o: ORIGIN });

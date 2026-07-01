@@ -31,7 +31,7 @@ const PASSWORD = process.env.TWENTY_PASSWORD ?? 'tim@apple.dev';
 const WORKFLOW_NAME = 'Lead Round-Robin Assignment';
 
 let TOKEN = null;
-async function gql(endpoint, query, variables) {
+async function gqlOnce(endpoint, query, variables) {
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}) },
@@ -41,6 +41,28 @@ async function gql(endpoint, query, variables) {
   if (json.errors) throw new Error(JSON.stringify(json.errors.map((e) => e.message)));
   return json.data;
 }
+// Retries only on network-level failures (fetch throws TypeError), never on
+// GraphQL application errors (thrown as plain Error above). Observed on this
+// production box: some fraction of localhost connections to the API
+// intermittently fail for bursty periods that can outlast a short retry
+// budget (confirmed NOT a rate limit -- 90s of full idle didn't help; NOT
+// resource exhaustion -- load/memory always normal; NOT an endpoint bug --
+// the exact same query succeeds when run in isolation moments later). High
+// attempt count with a capped, moderate backoff gives many more chances to
+// land in a working window rather than giving up after one bad patch.
+const MAX_ATTEMPTS = 20;
+async function gql(endpoint, query, variables) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await gqlOnce(endpoint, query, variables);
+    } catch (e) {
+      if (!(e instanceof TypeError) || attempt === MAX_ATTEMPTS) throw e;
+      const delayMs = Math.min(attempt * 1000, 5000);
+      console.error(`  (network hiccup, retry ${attempt}/${MAX_ATTEMPTS} in ${delayMs / 1000}s: ${e.message})`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
 async function login() {
   const a = await gql(META, `mutation($e:String!,$p:String!,$o:String!){getLoginTokenFromCredentials(email:$e,password:$p,origin:$o){loginToken{token}}}`, { e: EMAIL, p: PASSWORD, o: ORIGIN });
   const b = await gql(META, `mutation($t:String!,$o:String!){getAuthTokensFromLoginToken(loginToken:$t,origin:$o){tokens{accessOrWorkspaceAgnosticToken{token}}}}`, { t: a.getLoginTokenFromCredentials.loginToken.token, o: ORIGIN });
@@ -48,12 +70,14 @@ async function login() {
 }
 
 async function getSteps(workflowVersionId) {
+  console.log('  -> getSteps');
   const d = await gql(GRAPHQL, `query($id:UUID!){ workflowVersion(filter:{id:{eq:$id}}){ id steps } }`, { id: workflowVersionId });
   return d.workflowVersion.steps || [];
 }
 async function createStep(workflowVersionId, stepType, parentStepId) {
   const before = await getSteps(workflowVersionId);
   const beforeIds = new Set(before.map((s) => s.id));
+  console.log(`  -> createWorkflowVersionStep ${stepType}`);
   await gql(GRAPHQL, `mutation($input: CreateWorkflowVersionStepInput!) { createWorkflowVersionStep(input: $input) { triggerDiff stepsDiff } }`, { input: { workflowVersionId, stepType, parentStepId } });
   const after = await getSteps(workflowVersionId);
   const created = after.find((s) => !beforeIds.has(s.id));
@@ -61,23 +85,28 @@ async function createStep(workflowVersionId, stepType, parentStepId) {
   return created;
 }
 async function updateStep(workflowVersionId, step) {
+  console.log(`  -> updateWorkflowVersionStep ${step.type}`);
   const r = await gql(GRAPHQL, `mutation($input: UpdateWorkflowVersionStepInput!) { updateWorkflowVersionStep(input: $input) { id type settings } }`, { input: { workflowVersionId, step } });
   return r.updateWorkflowVersionStep;
 }
 
 async function main() {
+  console.log('-> login');
   await login();
 
+  console.log('-> check existing workflow');
   const existing = await gql(GRAPHQL, `query($n:String!) { workflows(filter:{name:{eq:$n}}) { edges { node { id } } } }`, { n: WORKFLOW_NAME });
   if (existing.workflows.edges.length) {
     console.log('EXISTS, skipping:', JSON.stringify(existing.workflows.edges[0].node));
     return;
   }
 
+  console.log('-> createWorkflow');
   const created = await gql(GRAPHQL, `mutation($data: WorkflowCreateInput!){ createWorkflow(data:$data){ id name } }`, { data: { name: WORKFLOW_NAME } });
   const workflowId = created.createWorkflow.id;
   console.log('workflow:', workflowId);
 
+  console.log('-> query workflowVersions');
   const versions = await gql(GRAPHQL, `query($id:UUID!){ workflowVersions(filter:{workflowId:{eq:$id}}) { edges { node { id status } } } }`, { id: workflowId });
   const workflowVersionId = versions.workflowVersions.edges[0].node.id;
 
@@ -87,10 +116,14 @@ async function main() {
     position: { x: 0, y: 0 },
     settings: { eventName: 'opportunity.created', outputSchema: {} },
   };
+  console.log('-> updateWorkflowVersion (set trigger)');
   await gql(GRAPHQL, `mutation($id:UUID!,$data:WorkflowVersionUpdateInput!){ updateWorkflowVersion(id:$id, data:$data){ id } }`, { id: workflowVersionId, data: { trigger } });
 
+  console.log('-> create FIND_RECORDS step');
   const find = await createStep(workflowVersionId, 'FIND_RECORDS', 'trigger');
+  console.log('-> create CODE step');
   const code = await createStep(workflowVersionId, 'CODE', find.id);
+  console.log('-> create UPDATE_RECORD step');
   const update = await createStep(workflowVersionId, 'UPDATE_RECORD', code.id);
   const logicFunctionId = code.settings.input.logicFunctionId;
 
@@ -109,6 +142,7 @@ async function main() {
   return { pickedOwnerId: picked.id };
 };
 `;
+  console.log('-> updateOneLogicFunction (set source)');
   await gql(META, `mutation($input: UpdateLogicFunctionFromSourceInput!){ updateOneLogicFunction(input:$input) }`, {
     input: { id: logicFunctionId, update: { name: 'Pick Seller For Lead Assignment', sourceHandlerCode } },
   });
@@ -134,6 +168,7 @@ async function main() {
   };
   await updateStep(workflowVersionId, updatePatched);
 
+  console.log('-> activateWorkflowVersion');
   await gql(GRAPHQL, `mutation($id:UUID!){ activateWorkflowVersion(workflowVersionId:$id) }`, { id: workflowVersionId });
   console.log('activated. workflowId=', workflowId, 'versionId=', workflowVersionId);
   console.log('\nReminder: requires the twenty-server WORKER process running to actually fire.');

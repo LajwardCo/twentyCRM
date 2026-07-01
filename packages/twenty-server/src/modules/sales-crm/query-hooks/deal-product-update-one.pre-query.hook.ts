@@ -11,12 +11,14 @@ import { WorkspaceNotFoundDefaultError } from 'src/engine/core-modules/workspace
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { DealProductDiscountValidationService } from 'src/modules/sales-crm/services/deal-product-discount-validation.service';
+import { DealProductPriceCalculationService } from 'src/modules/sales-crm/services/deal-product-price-calculation.service';
 
 @Injectable()
 @WorkspaceQueryHook(`dealProduct.updateOne`)
 export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookInstance {
   constructor(
     private readonly discountValidationService: DealProductDiscountValidationService,
+    private readonly priceCalculationService: DealProductPriceCalculationService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
   ) {}
 
@@ -33,10 +35,14 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       | number
       | null
       | undefined;
+    const factorQuantities = payload.data.factorQuantities as
+      | Record<string, number>
+      | null
+      | undefined;
 
-    // Only validate when discountPercent is actually part of this update --
-    // an unrelated field edit (e.g. lineStatus) shouldn't require a Product lookup.
-    if (!isDefined(discountPercent)) {
+    // Neither a discount nor the pricing factors changed -- an unrelated
+    // field edit (e.g. lineStatus) shouldn't require a Product lookup at all.
+    if (!isDefined(discountPercent) && !isDefined(factorQuantities)) {
       return payload;
     }
 
@@ -67,11 +73,26 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
         );
     }
 
-    await this.discountValidationService.validate({
-      workspaceId: workspace.id,
-      productId,
-      discountPercent,
-    });
+    if (isDefined(factorQuantities)) {
+      const calculatedInstallPrice =
+        await this.priceCalculationService.calculateInstallPrice({
+          workspaceId: workspace.id,
+          productId,
+          factorQuantities,
+        });
+
+      if (isDefined(calculatedInstallPrice)) {
+        payload.data.installPrice = calculatedInstallPrice;
+      }
+    }
+
+    if (isDefined(discountPercent)) {
+      await this.discountValidationService.validate({
+        workspaceId: workspace.id,
+        productId,
+        discountPercent,
+      });
+    }
 
     return payload;
   }

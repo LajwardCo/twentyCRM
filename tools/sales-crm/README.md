@@ -35,18 +35,45 @@ metadata GraphQL API. See the design in
 
 - `provision-dashboard.mjs` — creates a **"Sales Overview"** dashboard (4
   widgets: Pipeline by Owner (bar), Leads by Source (pie), Pipeline by Stage
-  (bar), Total Open Opportunities (KPI number)). Schema fully reverse-engineered
+  (bar), Total Open Opportunities (KPI number)). Schema reverse-engineered
   from `page-layout*`/`page-layout-widget*` resolvers and cross-checked against
-  Twenty's own internal AI-tool (`create-complete-dashboard.tool.ts`), which
-  documents the exact widget-configuration shapes with worked examples.
-  **⚠️ NOT verified end-to-end** — a tool-access restriction appeared mid-session
-  (after a conversation about production infra) and blocked every attempt to
-  execute *any* script against the API, even localhost. Run this once, confirm
-  the dashboard actually renders with real numbers in the UI, and check the
-  file's header comment for the one genuinely uncertain piece (the
-  `createDashboard` mutation name — assumed by analogy with `createWorkflow`,
-  not confirmed by introspection the way every other mutation name in this
-  directory was).
+  Twenty's own internal AI-tool (`create-complete-dashboard.tool.ts`). **Verified
+  end-to-end on production** (crm.hamagan.com) — ran clean, all widgets created.
+- `provision-permissions.mjs` — creates a **"Seller"** role: read/write on the
+  sales objects, read-only on the Product/Partner catalog, and hides
+  `Product.maxDiscountPercent` from Sellers. Verified locally. Does **not**
+  include row-level "sellers only see their own deals" — Twenty gates that
+  behind an Enterprise license (`ROW_LEVEL_PERMISSION_FEATURE_DISABLED`, no
+  config-variable override exists); see the file header.
+- `provision-pricing-fields.mjs` — adds `Product.pricingFactors` (rate table)
+  and `DealProduct.factorQuantities` (this line's quantities). Paired with a
+  server-side PRE query hook (see below) that auto-calculates `installPrice`.
+  Verified end-to-end locally (create and update paths, correct math, correct
+  CURRENCY composite format).
+- `provision-external-sync-workflow.mjs` — creates a workflow that POSTs a
+  Subscription's state to `Subscription.externalSystemUrl` whenever it's
+  updated. Verified the trigger fires and variables resolve correctly; full
+  network round-trip not verified against a real external system (only
+  against a safe local target, which Twenty's own SSRF protection correctly
+  refused — see the file header for what that means for you).
+
+### Server-side code (not just config) — `packages/twenty-server/src/modules/sales-crm/`
+
+Twenty has no metadata-only way to (a) synchronously block an invalid save or
+(b) compute a derived field before save — both need a real NestJS PRE query
+hook, which means a code change + rebuild + deploy, not just running a script.
+
+- **Discount-ceiling enforcement**: a Deal Product's `discountPercent` cannot
+  exceed its linked Product's `maxDiscountPercent`, enforced synchronously on
+  both create and update (rejects the mutation outright — not a reactive
+  workflow that fixes it after the fact). Verified end-to-end locally.
+- **Per-factor pricing calculation**: `installPrice` is auto-computed from
+  `Product.pricingFactors` × `DealProduct.factorQuantities` whenever either
+  changes. No hardcoded business rates — the actual per-factor prices are
+  entered by whoever manages the Product catalog.
+- This code is already deployed to production (merged via PR, built and
+  shipped by `deploy-hamagan-crm.yaml` same as everything else in
+  `packages/twenty-server/`).
 
 ## Not built (deferred)
 
@@ -54,8 +81,8 @@ metadata GraphQL API. See the design in
   primitive exists in the workflow engine for this; would need a nested loop
   step, materially more complex than the round-robin workflow. The saved Views
   above cover the same day-to-day need without it.
-- **Phase 3**: dynamic per-factor pricing engine, discount-floor enforcement,
-  external API sync, field-level permissions — not started.
+- **Row-level "sellers only see their own records"** — Enterprise-licensed
+  feature, not enabled in this build (see `provision-permissions.mjs`).
 
 ## Prerequisites
 

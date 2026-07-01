@@ -33,15 +33,27 @@ metadata GraphQL API. See the design in
   "alarms" (no bulk-update primitive exists for that; would need a nested loop
   step, materially more complex than the round-robin workflow for uncertain payoff).
 
+- `provision-dashboard.mjs` — creates a **"Sales Overview"** dashboard (4
+  widgets: Pipeline by Owner (bar), Leads by Source (pie), Pipeline by Stage
+  (bar), Total Open Opportunities (KPI number)). Schema fully reverse-engineered
+  from `page-layout*`/`page-layout-widget*` resolvers and cross-checked against
+  Twenty's own internal AI-tool (`create-complete-dashboard.tool.ts`), which
+  documents the exact widget-configuration shapes with worked examples.
+  **⚠️ NOT verified end-to-end** — a tool-access restriction appeared mid-session
+  (after a conversation about production infra) and blocked every attempt to
+  execute *any* script against the API, even localhost. Run this once, confirm
+  the dashboard actually renders with real numbers in the UI, and check the
+  file's header comment for the one genuinely uncertain piece (the
+  `createDashboard` mutation name — assumed by analogy with `createWorkflow`,
+  not confirmed by introspection the way every other mutation name in this
+  directory was).
+
 ## Not built (deferred)
 
-- **Dashboards / chart widgets** — Dashboard → PageLayout → Tab → Widget is a
-  3-level metadata hierarchy with its own widget-config JSON schema, not yet
-  reverse-engineered. The `isAnalyticsEnabled` workspace flag also defaults off,
-  which would need enabling first for charts to show real data. The **Pipeline
-  by Owner** view above covers the "seller activity" reporting need without it.
-- **Quotation-expiry / subscription-renewal CRON automation** — see above; the
-  saved Views cover the same need without the added complexity.
+- **Quotation-expiry / subscription-renewal CRON automation** — no bulk-update
+  primitive exists in the workflow engine for this; would need a nested loop
+  step, materially more complex than the round-robin workflow. The saved Views
+  above cover the same day-to-day need without it.
 - **Phase 3**: dynamic per-factor pricing engine, discount-floor enforcement,
   external API sync, field-level permissions — not started.
 

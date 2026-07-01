@@ -34,6 +34,11 @@ services:
       EMAIL_SMTP_PORT: "465"
       EMAIL_SMTP_USER: crm-auto@hamagan.com
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
+      # Enables workflow CODE steps (executes user-authored JS via a local
+      # child-process driver, not remote Lambda). Needed for the sales-crm
+      # round-robin lead-assignment workflow's CODE step. Twenty defaults this
+      # to LOCAL only when NODE_ENV=development; production needs it explicit.
+      LOGIC_FUNCTION_TYPE: ${LOGIC_FUNCTION_TYPE:-LOCAL}
 
   worker:
     environment:
@@ -47,3 +52,8 @@ services:
       EMAIL_SMTP_PORT: "465"
       EMAIL_SMTP_USER: crm-auto@hamagan.com
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
+      # Enables workflow CODE steps (executes user-authored JS via a local
+      # child-process driver, not remote Lambda). Needed for the sales-crm
+      # round-robin lead-assignment workflow's CODE step. Twenty defaults this
+      # to LOCAL only when NODE_ENV=development; production needs it explicit.
+      LOGIC_FUNCTION_TYPE: ${LOGIC_FUNCTION_TYPE:-LOCAL}

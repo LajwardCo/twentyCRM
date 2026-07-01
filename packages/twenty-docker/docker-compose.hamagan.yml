@@ -13,6 +13,13 @@ services:
   server:
     ports: !override
       - "127.0.0.1:3000:3000"
+    # This box's docker daemon DNS is misconfigured (daemon.json -> 192.168.203.2),
+    # so containers can't resolve external hosts (SMTP box.lajward.dev, AI
+    # api.anthropic.com). Point the embedded resolver at public DNS; internal
+    # service names (db/redis) still resolve via Docker's embedded server.
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     healthcheck:
       # first boot runs DB migrations; give it room before counting failures
       start_period: 240s
@@ -36,6 +43,9 @@ services:
       EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
 
   worker:
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       APP_VERSION: ${APP_VERSION:-0.2.1}
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}

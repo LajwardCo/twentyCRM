@@ -39,7 +39,7 @@ const StyledNoBodyMessage = styled.div`
   color: ${themeCssVariables.font.color.light};
   font-size: ${themeCssVariables.font.size.md};
   padding: ${themeCssVariables.spacing[2]};
-  text-align: left;
+  text-align: start;
 `;
 
 type BodyInputProps = {

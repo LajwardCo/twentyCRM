@@ -10,7 +10,7 @@ const StyledSkeletonContainer = styled.div`
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
   height: 71px;
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledSkeletonColumn = styled.div`

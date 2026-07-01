@@ -29,7 +29,7 @@ const StyledActionWrapper = styled.div`
   display: flex;
 
   & > button + button {
-    border-left: none;
+    border-inline-start: none;
   }
 `;
 

@@ -27,7 +27,7 @@ const StyledControlContainer = styled.div`
   height: ${themeCssVariables.spacing[8]};
   max-width: 100%;
   padding: 0 ${themeCssVariables.spacing[2]};
-  text-align: left;
+  text-align: start;
 `;
 
 type AdvancedFilterValueInputDropdownButtonClickableSelectProps = {

@@ -14,7 +14,7 @@ import { objectFilterDropdownSearchInputComponentState } from '@/object-record/o
 
 const StyledSearchText = styled.span`
   color: ${themeCssVariables.font.color.light};
-  margin-left: ${themeCssVariables.spacing[1]};
+  margin-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 type ViewBarFilterDropdownAnyFieldSearchButtonMenuItemProps = {

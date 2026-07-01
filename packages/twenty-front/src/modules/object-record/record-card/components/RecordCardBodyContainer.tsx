@@ -14,7 +14,7 @@ const StyledCardBodyContainer = styled.div<{ padding?: string }>`
     flex-direction: row;
     svg {
       color: ${themeCssVariables.font.color.tertiary};
-      margin-right: ${themeCssVariables.spacing[2]};
+      margin-inline-end: ${themeCssVariables.spacing[2]};
     }
   }
 `;

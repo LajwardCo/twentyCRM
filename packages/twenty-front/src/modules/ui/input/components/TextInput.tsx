@@ -133,16 +133,16 @@ const StyledInput = styled.input<
       : sizeVariant === 'xs'
         ? `${themeCssVariables.spacing[2]} 0`
         : themeCssVariables.spacing[2]};
-  padding-left: ${({ LeftIcon, autoGrow }) =>
-    autoGrow
-      ? themeCssVariables.spacing[1]
-      : LeftIcon
-        ? `calc(${themeCssVariables.spacing[3]} + 16px)`
-        : themeCssVariables.spacing[2]};
-  padding-right: ${({ RightIcon, autoGrow }) =>
+  padding-inline-end: ${({ RightIcon, autoGrow }) =>
     autoGrow
       ? themeCssVariables.spacing[1]
       : RightIcon
+        ? `calc(${themeCssVariables.spacing[3]} + 16px)`
+        : themeCssVariables.spacing[2]};
+  padding-inline-start: ${({ LeftIcon, autoGrow }) =>
+    autoGrow
+      ? themeCssVariables.spacing[1]
+      : LeftIcon
         ? `calc(${themeCssVariables.spacing[3]} + 16px)`
         : themeCssVariables.spacing[2]};
   text-overflow: ellipsis;
@@ -179,7 +179,7 @@ const StyledLeftIconContainer = styled.div<{ sizeVariant: TextInputSize }>`
   display: flex;
   justify-content: center;
   margin: auto 0;
-  padding-left: ${({ sizeVariant }) =>
+  padding-inline-start: ${({ sizeVariant }) =>
     sizeVariant === 'xs'
       ? themeCssVariables.spacing[0.5]
       : sizeVariant === 'md' || sizeVariant === 'sm'
@@ -197,9 +197,9 @@ const StyledTrailingIconContainer = styled.div<
   display: flex;
   justify-content: center;
   margin: auto 0;
-  padding-right: ${themeCssVariables.spacing[2]};
+  inset-inline-end: 0;
+  padding-inline-end: ${themeCssVariables.spacing[2]};
   position: absolute;
-  right: 0;
   top: 0;
 `;
 

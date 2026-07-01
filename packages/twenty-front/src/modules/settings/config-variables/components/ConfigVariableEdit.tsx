@@ -23,7 +23,7 @@ const StyledRow = styled.div`
 const StyledButtonContainer = styled.div`
   display: flex;
   & > :not(:first-of-type) > button {
-    border-left: none;
+    border-inline-start: none;
   }
 `;
 

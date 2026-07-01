@@ -10,7 +10,7 @@ const StyledColumnContainer = styled.div`
   flex: 1;
 
   & > *:not(:first-of-type) {
-    border-left: 1px solid ${themeCssVariables.border.color.light};
+    border-inline-start: 1px solid ${themeCssVariables.border.color.light};
   }
 `;
 

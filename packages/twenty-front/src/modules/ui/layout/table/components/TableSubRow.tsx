@@ -5,7 +5,7 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
 
 const StyledTableSubRowContainer = styled.div`
-  padding-left: ${themeCssVariables.spacing[4]};
+  padding-inline-start: ${themeCssVariables.spacing[4]};
 `;
 
 export const TableSubRow = ({

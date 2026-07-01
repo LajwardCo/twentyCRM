@@ -70,7 +70,7 @@ const StyledTitle = styled.span`
 
 const StyledCount = styled.span`
   color: ${themeCssVariables.font.color.light};
-  margin-left: ${themeCssVariables.spacing[2]};
+  margin-inline-start: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledDropZoneContainer = styled.div`

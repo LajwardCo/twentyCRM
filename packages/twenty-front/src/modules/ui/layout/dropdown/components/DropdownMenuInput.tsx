@@ -22,8 +22,8 @@ const StyledInput = styled.input<{
   color: ${themeCssVariables.font.color.primary};
   font-family: ${themeCssVariables.font.family};
   font-size: inherit;
-  font-weight: ${themeCssVariables.font.weight.medium};
   font-weight: inherit;
+  font-weight: ${themeCssVariables.font.weight.medium};
 
   &::placeholder,
   &::-webkit-input-placeholder {
@@ -35,9 +35,9 @@ const StyledInput = styled.input<{
   height: 32px;
   outline: none;
   padding: ${themeCssVariables.spacing[0]} ${themeCssVariables.spacing[2]};
-  padding-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${({ withRightComponent }) =>
+  padding-inline-end: ${({ withRightComponent }) =>
     withRightComponent ? '32px' : '0'};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
   position: relative;
 
   width: 100%;

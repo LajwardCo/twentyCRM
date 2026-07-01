@@ -50,7 +50,7 @@ const StyledTrContainer = styled.div`
 `;
 
 const StyledChevronContainer = styled.div`
-  border-right: none;
+  border-inline-end: none;
   color: ${themeCssVariables.font.color.secondary};
   display: flex;
   left: ${RECORD_TABLE_COLUMN_DRAG_AND_DROP_WIDTH}px;
@@ -73,7 +73,7 @@ const StyledAnimatedLightIconButtonContainer = styled.div`
 
 const StyledRecordGroupSection = styled.div<{ width: number }>`
   align-items: center;
-  border-right: none;
+  border-inline-end: none;
   display: flex;
   flex-direction: row;
   gap: ${themeCssVariables.spacing[1]};

@@ -23,7 +23,7 @@ const StyledDescription = styled.span`
   display: flex;
   font-size: ${themeCssVariables.font.size.md};
   overflow: hidden;
-  padding-left: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   text-overflow: ellipsis;
   white-space: nowrap;
 `;
@@ -32,12 +32,12 @@ const StyledToggleContainer = styled.div`
   background-color: ${themeCssVariables.background.transparent.lighter};
   border-bottom: 1px solid ${themeCssVariables.border.color.medium};
   border-bottom-right-radius: ${themeCssVariables.border.radius.sm};
-  border-right: 1px solid ${themeCssVariables.border.color.medium};
+  border-inline-end: 1px solid ${themeCssVariables.border.color.medium};
   border-top: 1px solid ${themeCssVariables.border.color.medium};
   border-top-right-radius: ${themeCssVariables.border.radius.sm};
   display: flex;
   padding-bottom: ${themeCssVariables.spacing[2]};
-  padding-right: ${themeCssVariables.spacing[2]};
+  padding-inline-end: ${themeCssVariables.spacing[2]};
   padding-top: ${themeCssVariables.spacing[2]};
 `;
 

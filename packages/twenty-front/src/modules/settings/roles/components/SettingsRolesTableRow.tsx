@@ -29,10 +29,10 @@ const StyledAvatarGroup = styled.div`
   justify-content: flex-end;
 
   > * {
-    margin-left: -5px;
+    margin-inline-start: -5px;
 
     &:first-of-type {
-      margin-left: 0;
+      margin-inline-start: 0;
     }
   }
 `;

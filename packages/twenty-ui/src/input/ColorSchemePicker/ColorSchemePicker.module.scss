@@ -3,7 +3,7 @@
   flex-direction: row;
 
   > * + * {
-    margin-left: var(--t-spacing-4);
+    margin-inline-start: var(--t-spacing-4);
   }
 
   @include respond-to(mobile) {

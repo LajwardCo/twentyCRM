@@ -16,7 +16,7 @@ const StyledSkeletonIconAndText = styled.div`
 `;
 
 const StyledSkeletonTitle = styled.div`
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledBodyContainer = styled.div`

@@ -32,7 +32,7 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 const StyledButtonGroupContainer = styled.div`
   > * > :not(:first-of-type) > button {
-    border-left: none;
+    border-inline-start: none;
   }
 `;
 

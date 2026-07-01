@@ -27,14 +27,14 @@ const StyledMainContainer = styled.div`
 
   justify-content: center;
   overflow: auto;
-  padding-left: ${themeCssVariables.spacing[6]};
-  padding-right: ${themeCssVariables.spacing[6]};
+  padding-inline-end: ${themeCssVariables.spacing[6]};
+  padding-inline-start: ${themeCssVariables.spacing[6]};
   padding-top: ${themeCssVariables.spacing[6]};
 
   @media (max-width: ${MOBILE_VIEWPORT}px) {
     border-top: 1px solid ${themeCssVariables.border.color.medium};
-    padding-right: ${themeCssVariables.spacing[1]};
-    padding-left: ${themeCssVariables.spacing[1]};
+    padding-inline-end: ${themeCssVariables.spacing[1]};
+    padding-inline-start: ${themeCssVariables.spacing[1]};
   }
 `;
 

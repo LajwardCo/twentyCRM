@@ -11,10 +11,10 @@ const StyledNodeViewWrapperContainer = styled.div<{
   align?: string;
 }>`
   height: 100%;
-  margin-left: ${({ align }) =>
-    align === 'left' ? '0' : align === 'center' ? 'auto' : 'unset'};
-  margin-right: ${({ align }) =>
+  margin-inline-end: ${({ align }) =>
     align === 'right' ? '0' : align === 'center' ? 'auto' : 'unset'};
+  margin-inline-start: ${({ align }) =>
+    align === 'left' ? '0' : align === 'center' ? 'auto' : 'unset'};
 `;
 
 const StyledImageWrapper = styled.div<{ width?: number }>`

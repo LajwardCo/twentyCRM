@@ -21,7 +21,7 @@ type CommandMenuItemTextInputProps = {
 
 const StyledRightAlignedTextInputContainer = styled.div`
   & input {
-    text-align: right;
+    text-align: end;
   }
 `;
 

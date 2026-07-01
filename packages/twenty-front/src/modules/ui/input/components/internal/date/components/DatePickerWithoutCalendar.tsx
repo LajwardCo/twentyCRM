@@ -83,18 +83,18 @@ const StyledContainer = styled.div<{
   & .react-datepicker__header__dropdown {
     display: flex;
     color: ${themeCssVariables.font.color.primary};
-    margin-left: ${themeCssVariables.spacing[1]};
+    margin-inline-start: ${themeCssVariables.spacing[1]};
     margin-bottom: ${themeCssVariables.spacing[10]};
   }
 
   & .react-datepicker__month-dropdown-container,
   & .react-datepicker__year-dropdown-container {
-    text-align: left;
+    text-align: start;
     border-radius: ${themeCssVariables.border.radius.sm};
-    margin-left: ${themeCssVariables.spacing[1]};
-    margin-right: 0;
+    margin-inline-start: ${themeCssVariables.spacing[1]};
+    margin-inline-end: 0;
     padding: ${themeCssVariables.spacing[2]};
-    padding-right: ${themeCssVariables.spacing[4]};
+    padding-inline-end: ${themeCssVariables.spacing[4]};
     background-color: ${themeCssVariables.background.tertiary};
   }
 
@@ -110,7 +110,7 @@ const StyledContainer = styled.div<{
 
   & .react-datepicker__year-read-view,
   & .react-datepicker__month-read-view {
-    padding-right: ${themeCssVariables.spacing[2]};
+    padding-inline-end: ${themeCssVariables.spacing[2]};
   }
 
   & .react-datepicker__month-dropdown-container {
@@ -148,7 +148,7 @@ const StyledContainer = styled.div<{
 
   & .react-datepicker__year-option,
   & .react-datepicker__month-option {
-    text-align: left;
+    text-align: start;
     padding: ${themeCssVariables.spacing[2]}
       calc(${themeCssVariables.spacing[2]} - 2px);
     width: calc(100% - ${themeCssVariables.spacing[4]});
@@ -223,7 +223,7 @@ const StyledContainer = styled.div<{
     left: auto;
 
     & > span {
-      margin-left: -6px;
+      margin-inline-start: -6px;
     }
   }
 
@@ -232,7 +232,7 @@ const StyledContainer = styled.div<{
     top: 6px;
 
     & > span {
-      margin-left: 6px;
+      margin-inline-start: 6px;
     }
   }
 

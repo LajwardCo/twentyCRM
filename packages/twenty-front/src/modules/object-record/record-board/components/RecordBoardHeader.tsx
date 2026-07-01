@@ -22,7 +22,7 @@ const StyledHeaderContainer = styled.div`
   }
 
   & > *:not(:first-of-type) {
-    border-left: 1px solid ${themeCssVariables.border.color.light};
+    border-inline-start: 1px solid ${themeCssVariables.border.color.light};
   }
 `;
 

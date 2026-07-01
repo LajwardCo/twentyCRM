@@ -49,7 +49,7 @@ const StyledDataGridContainer = styled.div<{ headerRowHeight?: number }>`
   .rdg-cell {
     border-bottom: 1px solid ${themeCssVariables.border.color.medium};
     border-inline-end: none;
-    border-right: none;
+    border-inline-end: none;
     box-shadow: none;
     overflow: hidden;
     text-overflow: ellipsis;

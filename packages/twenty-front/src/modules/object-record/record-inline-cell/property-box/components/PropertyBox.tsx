@@ -18,10 +18,10 @@ const StyledPropertyBoxContainer = styled.div<{
   flex-direction: column;
   gap: ${themeCssVariables.spacing[2]};
   padding-bottom: ${themeCssVariables.spacing[3]};
-  padding-left: ${({ noHorizontalPadding }) =>
-    noHorizontalPadding ? 0 : themeCssVariables.spacing[3]};
-  padding-right: ${({ noHorizontalPadding }) =>
+  padding-inline-end: ${({ noHorizontalPadding }) =>
     noHorizontalPadding ? 0 : themeCssVariables.spacing[2]};
+  padding-inline-start: ${({ noHorizontalPadding }) =>
+    noHorizontalPadding ? 0 : themeCssVariables.spacing[3]};
   padding-top: ${themeCssVariables.spacing[3]};
 `;
 

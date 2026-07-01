@@ -6,7 +6,7 @@ import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 const StyledSkeletonTitle = styled.div`
   margin-bottom: ${themeCssVariables.spacing[2]};
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 export const NavigationDrawerSectionTitleSkeletonLoader = () => {

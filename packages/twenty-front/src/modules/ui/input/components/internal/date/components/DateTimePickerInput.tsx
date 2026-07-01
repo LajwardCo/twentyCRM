@@ -37,7 +37,7 @@ const StyledInput = styled.input<{ hasError?: boolean }>`
   font-size: ${themeCssVariables.font.size.md};
   font-weight: 500;
   outline: none;
-  padding-left: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   width: 140px;
 `;
 

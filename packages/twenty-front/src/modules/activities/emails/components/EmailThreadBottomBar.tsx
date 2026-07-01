@@ -8,8 +8,8 @@ const StyledThreadBottomBar = styled.div`
   align-items: center;
   display: flex;
   gap: ${themeCssVariables.spacing[2]};
-  padding-left: ${themeCssVariables.spacing[6]};
-  padding-right: ${themeCssVariables.spacing[6]};
+  padding-inline-end: ${themeCssVariables.spacing[6]};
+  padding-inline-start: ${themeCssVariables.spacing[6]};
   padding-top: ${themeCssVariables.spacing[4]};
 `;
 

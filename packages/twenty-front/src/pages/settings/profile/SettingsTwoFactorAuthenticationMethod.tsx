@@ -61,7 +61,7 @@ const StyledCopySetupKeyText = styled.div`
   color: ${themeCssVariables.font.color.tertiary};
   font-size: ${themeCssVariables.font.size.sm};
   line-height: 1.5;
-  text-align: left;
+  text-align: start;
 `;
 
 const StyledCopySetupKeyLink = styled.button`
@@ -71,7 +71,7 @@ const StyledCopySetupKeyLink = styled.button`
   cursor: pointer;
   display: inline;
   font-size: ${themeCssVariables.font.size.sm};
-  margin-left: 0;
+  margin-inline-start: 0;
   padding: 0;
   text-decoration: underline;
 

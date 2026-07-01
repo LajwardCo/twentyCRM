@@ -81,7 +81,7 @@ const StyledOptionsLabel = styled.div<{
   font-size: ${themeCssVariables.font.size.xs};
   font-weight: ${themeCssVariables.font.weight.semiBold};
   margin-bottom: ${themeCssVariables.spacing['1.5']};
-  margin-left: ${({ isAdvancedModeEnabled, isBulkInputMode }) =>
+  margin-inline-start: ${({ isAdvancedModeEnabled, isBulkInputMode }) =>
     isAdvancedModeEnabled && !isBulkInputMode
       ? themeCssVariables.spacing[10]
       : themeCssVariables.spacing[0]};
@@ -114,7 +114,7 @@ const StyledLabelContainer = styled.div`
 
 const StyledIconContainer = styled.div`
   align-items: center;
-  border-right: 1px solid ${themeCssVariables.color.yellow};
+  border-inline-end: 1px solid ${themeCssVariables.color.yellow};
   display: flex;
 
   margin-bottom: ${themeCssVariables.spacing['1.5']};
@@ -124,7 +124,7 @@ const StyledIconContainer = styled.div`
 const StyledIconPointContainer = styled.span`
   align-items: center;
   display: flex;
-  margin-right: ${themeCssVariables.spacing['0.5']};
+  margin-inline-end: ${themeCssVariables.spacing['0.5']};
 `;
 
 const StyledFooterContainer = styled.div`

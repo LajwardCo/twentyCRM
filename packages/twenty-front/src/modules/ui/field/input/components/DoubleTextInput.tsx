@@ -24,8 +24,8 @@ const StyledContainer = styled.div`
   justify-content: space-between;
 
   & > input:last-child {
-    border-left: 1px solid ${themeCssVariables.border.color.strong};
-    padding-left: ${themeCssVariables.spacing[2]};
+    border-inline-start: 1px solid ${themeCssVariables.border.color.strong};
+    padding-inline-start: ${themeCssVariables.spacing[2]};
   }
 `;
 

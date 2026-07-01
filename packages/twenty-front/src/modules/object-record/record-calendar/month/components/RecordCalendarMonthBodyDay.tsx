@@ -37,7 +37,7 @@ const StyledContainer = styled.div<{
   width: calc(100% / 7);
 
   &:not(:last-child) {
-    border-right: 1px solid ${themeCssVariables.border.color.light};
+    border-inline-end: 1px solid ${themeCssVariables.border.color.light};
   }
 `;
 
@@ -47,13 +47,13 @@ const StyledDayHeader = styled.div`
   flex-direction: row;
   height: 24px;
   justify-content: space-between;
-  margin-left: none;
+  margin-inline-start: none;
   width: 100%;
 `;
 
 const StyledDayHeaderDayContainer = styled.div`
   display: flex;
-  margin-left: auto;
+  margin-inline-start: auto;
   padding: ${themeCssVariables.spacing['0.5']}
     ${themeCssVariables.spacing['0.5']};
 `;

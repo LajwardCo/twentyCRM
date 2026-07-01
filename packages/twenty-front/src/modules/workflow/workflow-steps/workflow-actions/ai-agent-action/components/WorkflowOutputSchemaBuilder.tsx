@@ -65,8 +65,8 @@ const StyledSettingsHeader = styled.div<{
       ? `1fr ${themeCssVariables.spacing[6]} ${themeCssVariables.spacing[6]}`
       : `1fr ${themeCssVariables.spacing[6]}`};
   height: ${themeCssVariables.spacing[8]};
-  padding-left: ${themeCssVariables.spacing[2]};
-  padding-right: ${themeCssVariables.spacing[1]};
+  padding-inline-end: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledTitleContainer = styled.div`

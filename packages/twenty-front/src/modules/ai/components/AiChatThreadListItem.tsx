@@ -17,7 +17,7 @@ import { type AgentChatThread } from '~/generated-metadata/graphql';
 
 const StyledThreadItem = styled.div`
   align-items: center;
-  border-left: 3px solid transparent;
+  border-inline-start: 3px solid transparent;
   border-radius: ${themeCssVariables.border.radius.sm};
   cursor: pointer;
   display: flex;

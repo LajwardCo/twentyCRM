@@ -52,7 +52,7 @@ const StyledVerticalLineTop = styled.div`
 const StyledRoundedCorner = styled.div`
   border-bottom: 1px solid ${themeCssVariables.border.color.strong};
   border-bottom-left-radius: 4px;
-  border-left: 1px solid ${themeCssVariables.border.color.strong};
+  border-inline-start: 1px solid ${themeCssVariables.border.color.strong};
   height: 8px;
   left: 0;
   position: absolute;

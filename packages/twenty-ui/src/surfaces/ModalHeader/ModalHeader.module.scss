@@ -21,8 +21,8 @@
   padding: 0 var(--modal-header-padding-horizontal);
 
   @include respond-to(mobile) {
-    padding-left: var(--t-spacing-4);
-    padding-right: var(--t-spacing-4);
+    padding-inline-start: var(--t-spacing-4);
+    padding-inline-end: var(--t-spacing-4);
   }
 }
 

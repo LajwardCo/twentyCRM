@@ -56,7 +56,7 @@ const StyledInfoContainer = styled.div<{ isMobile: boolean }>`
 const StyledDate = styled.div<{ isMobile: boolean }>`
   color: ${themeCssVariables.font.color.tertiary};
   cursor: pointer;
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledTitle = styled.div<{ isMobile: boolean }>`

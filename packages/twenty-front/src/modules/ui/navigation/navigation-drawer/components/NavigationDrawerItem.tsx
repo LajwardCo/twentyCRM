@@ -112,11 +112,11 @@ const StyledItem = styled.button<StyledItemProps>`
     indentationLevel === 2 ? '2px' : '0'};
   min-width: 0;
   padding-bottom: ${themeCssVariables.spacing[1]};
-  padding-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${({ hasRightOptions }) =>
+  padding-inline-end: ${({ hasRightOptions }) =>
     hasRightOptions
       ? themeCssVariables.spacing['0.5']
       : themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
   padding-top: ${themeCssVariables.spacing[1]};
   pointer-events: ${({ isSoon }) => (isSoon ? 'none' : 'auto')};
   text-decoration: none;
@@ -198,7 +198,7 @@ const StyledIcon = styled.div`
   flex-grow: 0;
   flex-shrink: 0;
   justify-content: center;
-  margin-right: ${themeCssVariables.spacing[2]};
+  margin-inline-end: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledIconBackgroundTile = styled.div`
@@ -228,7 +228,7 @@ const StyledRightOptionsVisbility = styled.div`
   height: 1px;
   opacity: 0;
   overflow: hidden;
-  padding-left: ${themeCssVariables.spacing[2]};
+  padding-inline-start: ${themeCssVariables.spacing[2]};
   position: absolute;
   transition: opacity 150ms;
   white-space: nowrap;

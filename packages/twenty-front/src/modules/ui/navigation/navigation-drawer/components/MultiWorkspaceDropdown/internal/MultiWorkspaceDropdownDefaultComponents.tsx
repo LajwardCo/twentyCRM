@@ -48,7 +48,7 @@ import { getWorkspaceUrl } from '~/utils/getWorkspaceUrl';
 
 const StyledDescription = styled.div`
   color: ${themeCssVariables.font.color.light};
-  padding-left: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
 `;
 
 export const MultiWorkspaceDropdownDefaultComponents = () => {

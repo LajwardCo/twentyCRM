@@ -9,8 +9,8 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 const StyledHeaderTitle = styled.div`
   border-radius: ${themeCssVariables.border.radius.sm};
   max-width: 420px;
-  padding-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${themeCssVariables.spacing[1]};
+  padding-inline-end: ${themeCssVariables.spacing[1]};
+  padding-inline-start: ${themeCssVariables.spacing[1]};
   width: fit-content;
 
   &:hover {

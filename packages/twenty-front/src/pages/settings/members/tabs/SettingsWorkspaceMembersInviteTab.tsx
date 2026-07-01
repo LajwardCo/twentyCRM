@@ -36,7 +36,7 @@ const StyledButtonContainer = styled.div`
   flex-direction: row;
   flex-shrink: 0;
   gap: ${themeCssVariables.spacing[1]};
-  margin-left: ${themeCssVariables.spacing[2]};
+  margin-inline-start: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledExpiresInHeader = styled.span`
@@ -52,7 +52,7 @@ const StyledTableContainer = styled.div`
 const StyledIconWrapper = styled.div`
   align-items: center;
   display: flex;
-  margin-right: ${themeCssVariables.spacing[2]};
+  margin-inline-end: ${themeCssVariables.spacing[2]};
 `;
 
 const StyledTextContainerWithEllipsis = styled.div`

@@ -41,7 +41,7 @@ const StyledIconContainer = styled.div`
   background-color: ${themeCssVariables.background.transparent.lighter};
   border: 1px solid ${themeCssVariables.border.color.medium};
   border-bottom-right-radius: ${themeCssVariables.border.radius.sm};
-  border-left: none;
+  border-inline-start: none;
   border-top-right-radius: ${themeCssVariables.border.radius.sm};
   color: ${themeCssVariables.font.color.tertiary};
   cursor: pointer;

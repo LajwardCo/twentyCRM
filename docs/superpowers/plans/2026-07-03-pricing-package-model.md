@@ -672,7 +672,7 @@ export class DealProductPricingVersionValidationService {
       (packageRecord.productId as string | undefined) !== productId
     ) {
       throw new CommonQueryRunnerException(
-        "The linked pricing version belongs to a package for a different Product.",
+        'The linked pricing version belongs to a package for a different Product.',
         CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
         {
           userFriendlyMessage: msg`This pricing version doesn't belong to this line's Product.`,

@@ -12,6 +12,7 @@ import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspac
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { DealProductDiscountValidationService } from 'src/modules/sales-crm/services/deal-product-discount-validation.service';
 import { DealProductPriceCalculationService } from 'src/modules/sales-crm/services/deal-product-price-calculation.service';
+import { DealProductPricingVersionValidationService } from 'src/modules/sales-crm/services/deal-product-pricing-version-validation.service';
 
 @Injectable()
 @WorkspaceQueryHook(`dealProduct.updateOne`)
@@ -19,6 +20,7 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
   constructor(
     private readonly discountValidationService: DealProductDiscountValidationService,
     private readonly priceCalculationService: DealProductPriceCalculationService,
+    private readonly pricingVersionValidationService: DealProductPricingVersionValidationService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
   ) {}
 
@@ -35,25 +37,35 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       | number
       | null
       | undefined;
-    const factorQuantities = payload.data.factorQuantities as
+    let factorQuantities = payload.data.factorQuantities as
       | Record<string, number>
       | null
       | undefined;
+    const pricingVersionId = payload.data.pricingVersionId as
+      | string
+      | null
+      | undefined;
 
-    // Neither a discount nor the pricing factors changed -- an unrelated
-    // field edit (e.g. lineStatus) shouldn't require a Product lookup at all.
-    if (!isDefined(discountPercent) && !isDefined(factorQuantities)) {
+    // Neither pricing-related field changed -- an unrelated field edit
+    // (e.g. lineStatus) shouldn't require any Product/Package lookup at all.
+    if (
+      !isDefined(discountPercent) &&
+      !isDefined(factorQuantities) &&
+      !isDefined(pricingVersionId)
+    ) {
       return payload;
     }
 
     let productId = payload.data.productId as string | null | undefined;
 
     // Partial update payloads often omit unchanged fields -- if productId
-    // isn't in THIS payload, it wasn't changed, so look up the existing record.
-    if (!isDefined(productId)) {
+    // (or factorQuantities, when switching pricingVersion without re-sending
+    // quantities) isn't in THIS payload, it wasn't changed, so look up the
+    // existing record.
+    if (!isDefined(productId) || (isDefined(pricingVersionId) && !isDefined(factorQuantities))) {
       const authContextForLookup = buildSystemAuthContext(workspace.id);
 
-      productId =
+      const existing =
         await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
           async () => {
             const dealProductRepository =
@@ -63,17 +75,45 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
                 { shouldBypassPermissionChecks: true },
               );
 
-            const existing = await dealProductRepository.findOne({
+            return dealProductRepository.findOne({
               where: { id: payload.id },
             });
-
-            return existing?.productId as string | null | undefined;
           },
           authContextForLookup,
         );
+
+      if (!isDefined(productId)) {
+        productId = existing?.productId as string | null | undefined;
+      }
+
+      if (isDefined(pricingVersionId) && !isDefined(factorQuantities)) {
+        factorQuantities = existing?.factorQuantities as
+          | Record<string, number>
+          | null
+          | undefined;
+      }
     }
 
-    if (isDefined(factorQuantities)) {
+    await this.pricingVersionValidationService.validate({
+      workspaceId: workspace.id,
+      productId,
+      pricingVersionId,
+    });
+
+    if (isDefined(pricingVersionId)) {
+      const calculated =
+        await this.priceCalculationService.calculateFromPricingVersion({
+          workspaceId: workspace.id,
+          pricingVersionId,
+          factorQuantities,
+        });
+
+      if (isDefined(calculated)) {
+        payload.data.installPrice = calculated.installPrice;
+        payload.data.annualPrice = calculated.annualPrice;
+        payload.data.priceSnapshot = calculated.priceSnapshot;
+      }
+    } else if (isDefined(factorQuantities)) {
       const calculatedInstallPrice =
         await this.priceCalculationService.calculateInstallPrice({
           workspaceId: workspace.id,

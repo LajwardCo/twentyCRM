@@ -43,10 +43,14 @@ async function login() {
   TOKEN = b.getAuthTokensFromLoginToken.tokens.accessOrWorkspaceAgnosticToken.token;
 }
 async function getConnectedAccountId() {
-  const d = await gql(GRAPHQL, `query { myConnectedAccounts { id handle accountName } }`, {});
+  // myConnectedAccounts lives on the metadata resolver (@MetadataResolver),
+  // served on /metadata, not the workspace /graphql endpoint -- verified
+  // against connected-account.resolver.ts and the frontend's own query
+  // (getMyConnectedAccounts.ts uses `name`, not `accountName`).
+  const d = await gql(META, `query { myConnectedAccounts { id handle name } }`, {});
   const account = d.myConnectedAccounts?.[0];
   if (!account) throw new Error('No connected email account found. Connect one via Settings > Accounts before running this script.');
-  console.log('using connected account:', account.handle);
+  console.log('using connected account:', account.handle, account.name ? `(${account.name})` : '');
   return account.id;
 }
 async function getSteps(workflowVersionId) {
@@ -114,10 +118,20 @@ async function main() {
   }];
   await updateStep(workflowVersionId, formPatched);
 
+  // NOTE: docs/tests elsewhere in this codebase reference `{{trigger.record.X}}`
+  // for a SINGLE_RECORD manual trigger, but that's stale -- verified live
+  // against a real run (see getWorkflowRunContext.ts: the trigger's context
+  // entry is `stepInfos.trigger.result`, which for this trigger type has no
+  // `record` key at all, only fields flattened directly on `trigger` plus a
+  // duplicate copy under `trigger.payload` per WORKFLOW_TRIGGER_PAYLOAD_KEY =
+  // 'payload'). `{{trigger.record.email}}` silently resolves to nothing
+  // (Handlebars + JSON.parse swallow the failure), so SEND_EMAIL sends with
+  // empty recipients. Using `{{trigger.payload.X}}` instead, confirmed
+  // against the actual runtime context of a live workflow run.
   const sendEmailPatched = structuredClone(freshById[sendEmail.id]);
   sendEmailPatched.settings.input = {
     connectedAccountId,
-    recipients: { to: '{{trigger.record.email}}' },
+    recipients: { to: '{{trigger.payload.email}}' },
     subject: 'Re: your request',
     body: `{{${form.id}.message}}`,
   };
@@ -126,7 +140,7 @@ async function main() {
   const markRepliedPatched = structuredClone(freshById[markReplied.id]);
   markRepliedPatched.settings.input = {
     objectName: 'contactRequest',
-    objectRecordId: '{{trigger.record.id}}',
+    objectRecordId: '{{trigger.payload.id}}',
     fieldsToUpdate: ['status'],
     objectRecord: { status: 'REPLIED' },
   };

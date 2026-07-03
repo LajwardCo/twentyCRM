@@ -59,7 +59,8 @@ export class PricingVersionCreateOnePreQueryHook implements WorkspacePreQueryHoo
           (max, version) =>
             Math.max(
               max,
-              typeof version.versionNumber === 'number'
+              typeof version.versionNumber === 'number' &&
+                !Number.isNaN(version.versionNumber)
                 ? version.versionNumber
                 : 0,
             ),

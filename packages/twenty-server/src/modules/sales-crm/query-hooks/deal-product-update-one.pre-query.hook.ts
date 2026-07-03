@@ -51,7 +51,8 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
     if (
       !isDefined(discountPercent) &&
       !isDefined(factorQuantities) &&
-      !isDefined(pricingVersionId)
+      !isDefined(pricingVersionId) &&
+      payload.data.pricingVersionId !== null
     ) {
       return payload;
     }

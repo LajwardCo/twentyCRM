@@ -129,6 +129,13 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       }
     }
 
+    // An explicit `pricingVersionId: null` detaches the line from its
+    // Pricing Version -- the old priceSnapshot no longer reflects reality
+    // and must be cleared, regardless of which branch above fired.
+    if (payload.data.pricingVersionId === null) {
+      payload.data.priceSnapshot = null;
+    }
+
     if (isDefined(discountPercent)) {
       await this.discountValidationService.validate({
         workspaceId: workspace.id,

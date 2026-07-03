@@ -175,6 +175,11 @@ prices off a `pricingVersion` (new path) or off `product.pricingFactors`
 matched and what they computed, so historical prices stay reconstructible
 even if the Package/Pricing Version is edited later).
 
+Note: `annualPrice` is only auto-computed on the Pricing Version path — the
+legacy `PER_FACTOR` path never populated it either (this is inherited Phase 3
+scope, not a Phase 4 regression), so a Deal Product on the old path still
+needs `annualPrice` set manually if it's used.
+
 **Real server code** (all in `packages/twenty-server/src/modules/sales-crm/`),
 same PRE-hook pattern as Phase 3's discount ceiling:
 - `utils/pricing-tier-schedule.util.ts` — pure band-matching/aggregation

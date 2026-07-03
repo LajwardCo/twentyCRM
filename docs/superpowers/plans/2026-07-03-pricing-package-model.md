@@ -981,7 +981,10 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
     // (or factorQuantities, when switching pricingVersion without re-sending
     // quantities) isn't in THIS payload, it wasn't changed, so look up the
     // existing record.
-    if (!isDefined(productId) || (isDefined(pricingVersionId) && !isDefined(factorQuantities))) {
+    if (
+      !isDefined(productId) ||
+      (isDefined(pricingVersionId) && !isDefined(factorQuantities))
+    ) {
       const authContextForLookup = buildSystemAuthContext(workspace.id);
 
       const existing =

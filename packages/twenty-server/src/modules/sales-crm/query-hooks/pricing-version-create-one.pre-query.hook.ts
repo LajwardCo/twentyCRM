@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
 
@@ -14,6 +14,10 @@ import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system
 @Injectable()
 @WorkspaceQueryHook(`pricingVersion.createOne`)
 export class PricingVersionCreateOnePreQueryHook implements WorkspacePreQueryHookInstance {
+  private readonly logger = new Logger(
+    PricingVersionCreateOnePreQueryHook.name,
+  );
+
   constructor(
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
   ) {}
@@ -47,10 +51,18 @@ export class PricingVersionCreateOnePreQueryHook implements WorkspacePreQueryHoo
         where: { packageId },
       });
 
+      // PricingVersion is a metadata-API-backed custom object, not a raw SQL
+      // table -- there's no DB-side MAX() available at this layer, so the
+      // next version number has to be computed in application code.
       const nextVersionNumber =
         existingVersions.reduce(
           (max, version) =>
-            Math.max(max, (version.versionNumber as number) ?? 0),
+            Math.max(
+              max,
+              typeof version.versionNumber === 'number'
+                ? version.versionNumber
+                : 0,
+            ),
           0,
         ) + 1;
 
@@ -72,6 +84,10 @@ export class PricingVersionCreateOnePreQueryHook implements WorkspacePreQueryHoo
           { isActive: false, deactivatedAt: new Date() },
         );
       }
+
+      this.logger.debug(
+        `Deactivated ${previouslyActiveVersions.length} previously active PricingVersion(s) for packageId=${packageId}`,
+      );
     }, systemAuthContext);
 
     return payload;

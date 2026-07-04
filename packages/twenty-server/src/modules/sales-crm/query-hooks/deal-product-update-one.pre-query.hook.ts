@@ -46,7 +46,7 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       | Record<string, number>
       | null
       | undefined;
-    const pricingVersionId = payload.data.pricingVersionId as
+    let pricingVersionId = payload.data.pricingVersionId as
       | string
       | null
       | undefined;
@@ -59,13 +59,16 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
 
     // Neither pricing- nor discount-related field changed -- an unrelated
     // field edit (e.g. lineStatus) shouldn't require any Product/Package/
-    // Discount Rule lookup at all.
+    // Discount Rule lookup at all. An explicit null on either pricingVersionId
+    // or discountRuleId is a real "detach" signal, not "unchanged", so it
+    // must NOT be treated as a reason to skip.
     if (
       !isDefined(discountPercent) &&
       !isDefined(factorQuantities) &&
       !isDefined(pricingVersionId) &&
       payload.data.pricingVersionId !== null &&
-      !isDefined(discountRuleId)
+      !isDefined(discountRuleId) &&
+      payload.data.discountRuleId !== null
     ) {
       return payload;
     }
@@ -81,7 +84,10 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       !isDefined(productId) ||
       (isDefined(pricingVersionId) && !isDefined(factorQuantities)) ||
       (isDefined(discountRuleId) &&
-        (!isDefined(quantity) || !isDefined(opportunityId)))
+        (!isDefined(quantity) || !isDefined(opportunityId))) ||
+      (payload.data.discountRuleId === null &&
+        !isDefined(pricingVersionId) &&
+        !isDefined(factorQuantities))
     ) {
       const authContextForLookup = buildSystemAuthContext(workspace.id);
 
@@ -119,6 +125,31 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
 
       if (isDefined(discountRuleId) && !isDefined(opportunityId)) {
         opportunityId = existing?.opportunityId as string | null | undefined;
+      }
+
+      // Detaching a Discount Rule (explicit null) without also resending
+      // pricing info must force a fresh recompute from the line's existing
+      // stored pricing inputs -- otherwise a FIXED_AMOUNT discount already
+      // baked into installPrice would silently survive forever, since
+      // neither the pricing-calculation branches nor the discount-rule
+      // application block below would otherwise touch installPrice at all
+      // this update.
+      if (
+        payload.data.discountRuleId === null &&
+        !isDefined(pricingVersionId) &&
+        !isDefined(factorQuantities)
+      ) {
+        pricingVersionId = existing?.pricingVersionId as
+          | string
+          | null
+          | undefined;
+
+        if (!isDefined(pricingVersionId)) {
+          factorQuantities = existing?.factorQuantities as
+            | Record<string, number>
+            | null
+            | undefined;
+        }
       }
     }
 

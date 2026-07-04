@@ -46,6 +46,10 @@ services:
       # round-robin lead-assignment workflow's CODE step. Twenty defaults this
       # to LOCAL only when NODE_ENV=development; production needs it explicit.
       LOGIC_FUNCTION_TYPE: ${LOGIC_FUNCTION_TYPE:-LOCAL}
+      # Lets a workspace member connect a generic IMAP/SMTP/CalDAV mailbox
+      # (not just Google/Microsoft OAuth) -- needed for the Contact Request
+      # reply workflow's SEND_EMAIL step to have a connected account to send from.
+      IS_IMAP_SMTP_CALDAV_ENABLED: ${IS_IMAP_SMTP_CALDAV_ENABLED:-false}
 
   worker:
     dns:
@@ -67,3 +71,4 @@ services:
       # round-robin lead-assignment workflow's CODE step. Twenty defaults this
       # to LOCAL only when NODE_ENV=development; production needs it explicit.
       LOGIC_FUNCTION_TYPE: ${LOGIC_FUNCTION_TYPE:-LOCAL}
+      IS_IMAP_SMTP_CALDAV_ENABLED: ${IS_IMAP_SMTP_CALDAV_ENABLED:-false}

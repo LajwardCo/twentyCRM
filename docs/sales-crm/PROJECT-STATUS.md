@@ -505,6 +505,25 @@ directly. `tools/sales-crm/DEPLOY-TO-PRODUCTION.md` has the exact runbook.
   Prescription) — a seller still adds it manually, then selects the rule.
   Both deliberately deferred per the Phase 5 design spec's "Open assumptions"
   section, not bugs.
+- **`annualPrice` doesn't get discounted when both a Pricing Version and a
+  Discount Rule apply to the same line** — the Discount Rule application
+  step only ever adjusts `installPrice` (`FIXED_AMOUNT`) or `discountPercent`
+  (`PERCENTAGE`); if the line is also priced via a Pricing Version (which
+  populates a real `annualPrice`), that field keeps its pre-discount value.
+  Found in the Phase 5 final integration review, not by any earlier task
+  review. Not currently visible anywhere (no view/report surfaces
+  `annualPrice` yet), so latent rather than active — but real, and would
+  need fixing before `annualPrice` is ever displayed.
+- **A bundle (`SIBLING_PRODUCT_PURCHASED`) rule isn't re-validated if its
+  sibling line is later deleted** — there's no `dealProduct.deleteOne`
+  pre-query hook, so a Deal Product with a bundle discount keeps that
+  discount even after the sibling Deal Product it depended on is removed
+  from the Lead. Also found in the final integration review; not covered by
+  the design spec's "Open assumptions" section (which only discusses
+  existence-vs-status leniency at evaluation time, not staleness after a
+  later deletion elsewhere). Accepted as v1 scope, matching this project's
+  "seller manually adds/removes lines" model — revisit if bundle discounts
+  surviving a removed sibling turns out to matter in practice.
 - Nothing else from the original request is outstanding. If new work comes
   up, it's new scope, not a continuation of something half-finished.
 

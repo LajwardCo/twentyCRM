@@ -98,16 +98,14 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
       discountRuleId,
     });
 
-    const discountRuleEffect = await this.discountRuleApplicationService.apply(
-      {
-        workspaceId: workspace.id,
-        discountRuleId,
-        installPrice: payload.data.installPrice as
-          | CurrencyValue
-          | null
-          | undefined,
-      },
-    );
+    const discountRuleEffect = await this.discountRuleApplicationService.apply({
+      workspaceId: workspace.id,
+      discountRuleId,
+      installPrice: payload.data.installPrice as
+        | CurrencyValue
+        | null
+        | undefined,
+    });
 
     if (isDefined(discountRuleEffect)) {
       if (isDefined(discountRuleEffect.discountPercent)) {

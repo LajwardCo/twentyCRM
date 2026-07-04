@@ -59,10 +59,7 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       | null
       | undefined;
     let quantity = payload.data.quantity as number | null | undefined;
-    let opportunityId = payload.data.opportunityId as
-      | string
-      | null
-      | undefined;
+    let opportunityId = payload.data.opportunityId as string | null | undefined;
 
     // Neither pricing- nor discount-related field changed -- an unrelated
     // field edit (e.g. lineStatus) shouldn't require any Product/Package/
@@ -176,16 +173,14 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       discountRuleId,
     });
 
-    const discountRuleEffect = await this.discountRuleApplicationService.apply(
-      {
-        workspaceId: workspace.id,
-        discountRuleId,
-        installPrice: payload.data.installPrice as
-          | CurrencyValue
-          | null
-          | undefined,
-      },
-    );
+    const discountRuleEffect = await this.discountRuleApplicationService.apply({
+      workspaceId: workspace.id,
+      discountRuleId,
+      installPrice: payload.data.installPrice as
+        | CurrencyValue
+        | null
+        | undefined,
+    });
 
     if (isDefined(discountRuleEffect)) {
       if (isDefined(discountRuleEffect.discountPercent)) {

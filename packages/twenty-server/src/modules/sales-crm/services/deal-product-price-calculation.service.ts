@@ -4,6 +4,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 import {
   computePriceFromTierSchedule,
   type FactorTierSchedule,
@@ -11,10 +12,6 @@ import {
 
 type PricingFactor = { name: string; unitPrice: number };
 type FactorQuantities = Record<string, number>;
-type CurrencyValue = {
-  amountMicros: number | null;
-  currencyCode: string | null;
-};
 
 export type PriceSnapshot = {
   packageId: string | null;

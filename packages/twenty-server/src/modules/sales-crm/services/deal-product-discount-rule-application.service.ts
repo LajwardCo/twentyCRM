@@ -4,11 +4,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
-
-type CurrencyValue = {
-  amountMicros: number | null;
-  currencyCode: string | null;
-};
+import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 
 // Computes the discount effect of an already-validated Discount Rule --
 // PERCENTAGE rules set discountPercent (still subject to the existing

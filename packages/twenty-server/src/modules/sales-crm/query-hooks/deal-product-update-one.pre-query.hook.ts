@@ -15,11 +15,7 @@ import { DealProductDiscountRuleValidationService } from 'src/modules/sales-crm/
 import { DealProductDiscountValidationService } from 'src/modules/sales-crm/services/deal-product-discount-validation.service';
 import { DealProductPriceCalculationService } from 'src/modules/sales-crm/services/deal-product-price-calculation.service';
 import { DealProductPricingVersionValidationService } from 'src/modules/sales-crm/services/deal-product-pricing-version-validation.service';
-
-type CurrencyValue = {
-  amountMicros: number | null;
-  currencyCode: string | null;
-};
+import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 
 @Injectable()
 @WorkspaceQueryHook(`dealProduct.updateOne`)

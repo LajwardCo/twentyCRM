@@ -10,9 +10,16 @@ import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/wo
 import { WorkspaceNotFoundDefaultError } from 'src/engine/core-modules/workspace/workspace.exception';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { DealProductDiscountRuleApplicationService } from 'src/modules/sales-crm/services/deal-product-discount-rule-application.service';
+import { DealProductDiscountRuleValidationService } from 'src/modules/sales-crm/services/deal-product-discount-rule-validation.service';
 import { DealProductDiscountValidationService } from 'src/modules/sales-crm/services/deal-product-discount-validation.service';
 import { DealProductPriceCalculationService } from 'src/modules/sales-crm/services/deal-product-price-calculation.service';
 import { DealProductPricingVersionValidationService } from 'src/modules/sales-crm/services/deal-product-pricing-version-validation.service';
+
+type CurrencyValue = {
+  amountMicros: number | null;
+  currencyCode: string | null;
+};
 
 @Injectable()
 @WorkspaceQueryHook(`dealProduct.updateOne`)
@@ -21,6 +28,8 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
     private readonly discountValidationService: DealProductDiscountValidationService,
     private readonly priceCalculationService: DealProductPriceCalculationService,
     private readonly pricingVersionValidationService: DealProductPricingVersionValidationService,
+    private readonly discountRuleValidationService: DealProductDiscountRuleValidationService,
+    private readonly discountRuleApplicationService: DealProductDiscountRuleApplicationService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
   ) {}
 
@@ -45,14 +54,25 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       | string
       | null
       | undefined;
+    const discountRuleId = payload.data.discountRuleId as
+      | string
+      | null
+      | undefined;
+    let quantity = payload.data.quantity as number | null | undefined;
+    let opportunityId = payload.data.opportunityId as
+      | string
+      | null
+      | undefined;
 
-    // Neither pricing-related field changed -- an unrelated field edit
-    // (e.g. lineStatus) shouldn't require any Product/Package lookup at all.
+    // Neither pricing- nor discount-related field changed -- an unrelated
+    // field edit (e.g. lineStatus) shouldn't require any Product/Package/
+    // Discount Rule lookup at all.
     if (
       !isDefined(discountPercent) &&
       !isDefined(factorQuantities) &&
       !isDefined(pricingVersionId) &&
-      payload.data.pricingVersionId !== null
+      payload.data.pricingVersionId !== null &&
+      !isDefined(discountRuleId)
     ) {
       return payload;
     }
@@ -61,11 +81,14 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
 
     // Partial update payloads often omit unchanged fields -- if productId
     // (or factorQuantities, when switching pricingVersion without re-sending
-    // quantities) isn't in THIS payload, it wasn't changed, so look up the
-    // existing record.
+    // quantities, or quantity/opportunityId, when setting a discountRule
+    // without re-sending them) isn't in THIS payload, it wasn't changed, so
+    // look up the existing record.
     if (
       !isDefined(productId) ||
-      (isDefined(pricingVersionId) && !isDefined(factorQuantities))
+      (isDefined(pricingVersionId) && !isDefined(factorQuantities)) ||
+      (isDefined(discountRuleId) &&
+        (!isDefined(quantity) || !isDefined(opportunityId)))
     ) {
       const authContextForLookup = buildSystemAuthContext(workspace.id);
 
@@ -95,6 +118,14 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
           | Record<string, number>
           | null
           | undefined;
+      }
+
+      if (isDefined(discountRuleId) && !isDefined(quantity)) {
+        quantity = existing?.quantity as number | null | undefined;
+      }
+
+      if (isDefined(discountRuleId) && !isDefined(opportunityId)) {
+        opportunityId = existing?.opportunityId as string | null | undefined;
       }
     }
 
@@ -137,13 +168,43 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       payload.data.priceSnapshot = null;
     }
 
-    if (isDefined(discountPercent)) {
-      await this.discountValidationService.validate({
+    await this.discountRuleValidationService.validate({
+      workspaceId: workspace.id,
+      productId,
+      opportunityId,
+      quantity,
+      discountRuleId,
+    });
+
+    const discountRuleEffect = await this.discountRuleApplicationService.apply(
+      {
         workspaceId: workspace.id,
-        productId,
-        discountPercent,
-      });
+        discountRuleId,
+        installPrice: payload.data.installPrice as
+          | CurrencyValue
+          | null
+          | undefined,
+      },
+    );
+
+    if (isDefined(discountRuleEffect)) {
+      if (isDefined(discountRuleEffect.discountPercent)) {
+        payload.data.discountPercent = discountRuleEffect.discountPercent;
+      }
+
+      if (isDefined(discountRuleEffect.installPrice)) {
+        payload.data.installPrice = discountRuleEffect.installPrice;
+      }
     }
+
+    await this.discountValidationService.validate({
+      workspaceId: workspace.id,
+      productId,
+      discountPercent: payload.data.discountPercent as
+        | number
+        | null
+        | undefined,
+    });
 
     return payload;
   }

@@ -84,10 +84,12 @@ of:
 2. The rule's `appliesToProduct` matches the Deal Product's own `product`.
 3. The condition holds:
    - `ALWAYS` — always passes.
-   - `MIN_QUANTITY` — this line's effective quantity (sum of
-     `factorQuantities` values if priced via a Pricing Version or legacy
-     `PER_FACTOR`, else the plain `quantity` field for `FLAT`-priced lines)
-     is `>= conditionMinQuantity`.
+   - `MIN_QUANTITY` — the Deal Product's plain `quantity` field (the same
+     field that's existed since Phase 1, independent of which pricing path —
+     Pricing Version, legacy `PER_FACTOR`, or `FLAT` — is used) is
+     `>= conditionMinQuantity`. Deliberately not `factorQuantities` (e.g.
+     doctor/employee counts) — "buy 10 units" is about how many of this
+     Product line, not any one pricing factor within it.
    - `SIBLING_PRODUCT_PURCHASED` — at least one other (non-deleted) Deal
      Product exists on the SAME Lead (Opportunity) whose `product` is
      `conditionSiblingProduct`.
@@ -129,7 +131,7 @@ following the exact pattern of `provision-pricing-package-model.mjs`.
 - Unit tests for the condition-evaluation logic (mirrors
   `pricing-tier-schedule.util.ts`'s pure-function pattern): a pure function
   taking `{conditionType, conditionMinQuantity, conditionSiblingProduct}` +
-  the relevant facts (effective quantity, sibling product IDs) and returning
+  the relevant facts (this line's `quantity`, sibling product IDs) and returning
   pass/fail, unit tested exhaustively (no DB, no NestJS DI).
 - Live functional verification (once deployed): create an `ALWAYS` rule, a
   `MIN_QUANTITY` rule (verify both a passing and a failing quantity), and a

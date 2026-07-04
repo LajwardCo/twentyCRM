@@ -120,9 +120,7 @@ export class DealProductDiscountRuleValidationService {
       );
     }
 
-    if (
-      (discountRule.appliesToProductId as string | undefined) !== productId
-    ) {
+    if ((discountRule.appliesToProductId as string | undefined) !== productId) {
       throw new CommonQueryRunnerException(
         'The linked discount rule applies to a different Product.',
         CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
@@ -153,7 +151,9 @@ export class DealProductDiscountRuleValidationService {
           ? msg`This discount rule requires a higher quantity on this line.`
           : evaluation.failureReason === 'SIBLING_PRODUCT_MISSING'
             ? msg`This discount rule requires another line for its linked product on the same Lead.`
-            : msg`This discount rule is not configured correctly.`;
+            : evaluation.failureReason === 'MISSING_MIN_QUANTITY_CONFIG'
+              ? msg`This discount rule is missing its minimum quantity setting. Ask an admin to fix it.`
+              : msg`This discount rule is missing its linked product setting. Ask an admin to fix it.`;
 
       throw new CommonQueryRunnerException(
         `Discount rule condition not met (${evaluation.failureReason}).`,

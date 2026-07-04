@@ -91,7 +91,7 @@ describe('evaluateDiscountRuleCondition', () => {
         quantity: 100,
         siblingProductIds: [],
       }),
-    ).toEqual({ passed: false, failureReason: 'MISCONFIGURED' });
+    ).toEqual({ passed: false, failureReason: 'MISSING_MIN_QUANTITY_CONFIG' });
   });
 
   it('SIBLING_PRODUCT_PURCHASED passes when the sibling product is present', () => {
@@ -151,6 +151,6 @@ describe('evaluateDiscountRuleCondition', () => {
         quantity: null,
         siblingProductIds: ['opd-product-id'],
       }),
-    ).toEqual({ passed: false, failureReason: 'MISCONFIGURED' });
+    ).toEqual({ passed: false, failureReason: 'MISSING_SIBLING_CONFIG' });
   });
 });

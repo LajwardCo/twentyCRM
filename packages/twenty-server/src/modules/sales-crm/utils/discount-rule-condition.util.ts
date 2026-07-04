@@ -15,7 +15,8 @@ export type DiscountRuleConditionFacts = {
 };
 
 export type DiscountRuleConditionFailureReason =
-  | 'MISCONFIGURED'
+  | 'MISSING_MIN_QUANTITY_CONFIG'
+  | 'MISSING_SIBLING_CONFIG'
   | 'BELOW_MIN_QUANTITY'
   | 'SIBLING_PRODUCT_MISSING';
 
@@ -37,7 +38,7 @@ export function evaluateDiscountRuleCondition(
 
   if (condition.conditionType === 'MIN_QUANTITY') {
     if (typeof condition.conditionMinQuantity !== 'number') {
-      return { passed: false, failureReason: 'MISCONFIGURED' };
+      return { passed: false, failureReason: 'MISSING_MIN_QUANTITY_CONFIG' };
     }
 
     if (
@@ -52,7 +53,7 @@ export function evaluateDiscountRuleCondition(
 
   // SIBLING_PRODUCT_PURCHASED
   if (!condition.conditionSiblingProduct) {
-    return { passed: false, failureReason: 'MISCONFIGURED' };
+    return { passed: false, failureReason: 'MISSING_SIBLING_CONFIG' };
   }
 
   if (!facts.siblingProductIds.includes(condition.conditionSiblingProduct)) {

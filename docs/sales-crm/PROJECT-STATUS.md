@@ -1,9 +1,9 @@
 # Sales CRM Project — Status
 
-**Last updated:** 2026-07-03
+**Last updated:** 2026-07-04
 **Status: Phases 1-3 complete, verified end-to-end, live on production. Phase 4
-(Package/Pricing Version model) complete and verified locally, not yet
-deployed to production.**
+(Package/Pricing Version model) and Phase 5 (Discount & Bundle Rules) complete
+and verified locally, not yet deployed to production.**
 
 This document is a handoff/reference for continuing this work in a new
 session — what exists, where it lives, how to verify it, and what's
@@ -286,6 +286,148 @@ dev DB only). Also found and killed roughly 15 stale/orphaned
 previous, days-old sessions that were holding ports and confusing which
 server was actually serving requests.
 
+## Phase 5 — Discount & Bundle Rules
+
+Full design: [`docs/superpowers/specs/2026-07-04-discount-bundle-rules-design.md`](../superpowers/specs/2026-07-04-discount-bundle-rules-design.md)
+Full plan: [`docs/superpowers/plans/2026-07-04-discount-bundle-rules.md`](../superpowers/plans/2026-07-04-discount-bundle-rules.md)
+
+Replaces the free-typed `DealProduct.discountPercent` (only checked against a
+ceiling after the fact, Phase 3) with a curated **Discount Rule** a seller
+selects, never types — the system rejects the selection outright if its
+condition isn't met. Bundles ("buy Product A, get Product B discounted") are
+modeled as the *same* object as volume discounts, just with a condition type
+that checks a sibling Deal Product's Product instead of this line's own
+quantity — no separate "Bundle" object was introduced.
+
+**One new custom object** (via `tools/sales-crm/provision-discount-bundle-rules.mjs`):
+- `Discount Rule` — `name` (auto), `status` (`ACTIVE`/`ARCHIVED`, same
+  deactivate-not-delete convention as Package/Pricing Version),
+  `conditionType` (`ALWAYS`/`MIN_QUANTITY`/`SIBLING_PRODUCT_PURCHASED`),
+  `conditionMinQuantity`, `discountType` (`PERCENTAGE`/`FIXED_AMOUNT`),
+  `discountPercentValue`, `discountFixedAmount` (CURRENCY), `notes`, relations
+  `appliesToProduct` (which Product this rule can be selected on) and
+  `conditionSiblingProduct` (the other Product a `SIBLING_PRODUCT_PURCHASED`
+  rule checks for).
+
+**One new field on the existing Deal Product object**: `discountRule`
+(relation, nullable — null means the existing free-typed `discountPercent`
+path, unchanged, fully backward compatible).
+
+**Real server code** (all in `packages/twenty-server/src/modules/sales-crm/`),
+same PRE-hook pattern as Phase 3's discount ceiling and Phase 4's Pricing
+Version validation:
+- `utils/discount-rule-condition.util.ts` — pure condition-evaluator
+  (`evaluateDiscountRuleCondition`), the single place both volume discounts
+  and bundles get evaluated. Unit tested (10 tests covering all three
+  condition types, both pass and fail paths, and misconfigured-rule cases).
+- `services/deal-product-discount-rule-validation.service.ts` — enforces the
+  "seller can't invent a discount" guarantee: a Deal Product's `discountRule`,
+  if set, must be `ACTIVE`, must have `appliesToProduct` matching the line's
+  own Product, and its condition must actually hold (own `quantity` for
+  `MIN_QUANTITY`; an existing sibling Deal Product on the same Opportunity for
+  `SIBLING_PRODUCT_PURCHASED`). Rejects with a distinct, clear GraphQL error
+  per failure reason otherwise.
+- `services/deal-product-discount-rule-application.service.ts` — computes the
+  effect of an already-validated rule: `PERCENTAGE` sets `discountPercent`
+  (still run through the existing `maxDiscountPercent` ceiling check
+  afterward as defense-in-depth); `FIXED_AMOUNT` subtracts from the
+  already-computed `installPrice`, floored at 0.
+- `query-hooks/deal-product-create-one.pre-query.hook.ts` and
+  `deal-product-update-one.pre-query.hook.ts` — extended, additively, to
+  validate + apply the Discount Rule after whichever price-calculation path
+  (Pricing Version or legacy `PER_FACTOR`/`FLAT`) already ran. The update hook
+  needed two follow-up bug fixes (found by hand-tracing in code review, not
+  live testing, before this verification pass): backfilling `quantity` /
+  `opportunityId` from the existing record when a partial update payload sets
+  `discountRuleId` without resending them, and recomputing `installPrice`
+  from scratch when a Discount Rule is explicitly detached
+  (`discountRuleId: null`) so a previously-baked-in `FIXED_AMOUNT` reduction
+  doesn't silently survive forever.
+- `query-hooks/sales-crm-query-hook.module.ts` — registers the two new
+  services alongside the existing Phase 3/4 providers.
+
+**Verified live in local dev** (`/Users/rashid/Development/twentyCRM`, server
+`:3010`, front-end `:3011`, worker running, `tim@apple.dev` / `tim@apple.dev`).
+Local dev was already up from prior session work — confirmed via
+`curl -sf http://localhost:3010/healthz` before starting, no restart needed.
+
+`node tools/sales-crm/provision-discount-bundle-rules.mjs` — first run:
+`==== SUMMARY: 11 created, 0 skipped, 0 failed ====` (1 object, 7 fields, 3
+relations). Re-run immediately after to confirm idempotency: `==== SUMMARY: 0
+created, 11 skipped, 0 failed ====`.
+
+Functional verification via a throwaway Node script driving
+`getLoginTokenFromCredentials` → `getAuthTokensFromLoginToken` (against
+`/metadata`, per this codebase's convention) → `createProduct`/
+`createDiscountRule`/`createDealProduct`/`createOpportunity`/
+`updateDealProduct` mutations against `/graphql`:
+
+1. Created two test Products, both with `maxDiscountPercent: 50` (generous,
+   to avoid the pre-existing Phase 3 discount-ceiling check confounding these
+   results), and an Opportunity to act as the Lead.
+2. Created an `ALWAYS` rule, `discountType: PERCENTAGE`,
+   `discountPercentValue: 5`, on Product A. Created a Deal Product
+   referencing Product A + this rule: **accepted**, `discountPercent: 5` — as
+   expected.
+3. Created a `MIN_QUANTITY` rule (`conditionMinQuantity: 10`,
+   `discountType: PERCENTAGE`, `discountPercentValue: 15`) on Product A.
+   Attempted a Deal Product with `quantity: 5` + this rule: **rejected**,
+   `"Discount rule condition not met (BELOW_MIN_QUANTITY)."` — as expected.
+   Retried with `quantity: 10`: **accepted**, `discountPercent: 15` — as
+   expected.
+4. Created a second Product ("Prescription") and a
+   `SIBLING_PRODUCT_PURCHASED` rule on it (`conditionSiblingProduct` =
+   Product A, `discountType: FIXED_AMOUNT`, `discountFixedAmount: $20`).
+   Attempted a Deal Product for Prescription + this rule on a fresh
+   Opportunity with NO sibling Deal Product for Product A yet: **rejected**,
+   `"Discount rule condition not met (SIBLING_PRODUCT_MISSING)."` — as
+   expected. Added a Deal Product for Product A to the same Opportunity, then
+   retried the Prescription line: **accepted**. In a follow-up run using a
+   Product with `pricingModel: PER_FACTOR` and an explicit `installPrice: $30`
+   on the line, the `$20` FIXED_AMOUNT rule correctly reduced
+   `installPrice` to exactly **$10** (`amountMicros: 10000000`). A second
+   check with `installPrice: $15` and the same `$20` rule correctly floored
+   to **$0** (`amountMicros: 0`), never negative — both exactly as designed.
+5. Created a rule with `status: ARCHIVED` and attempted to select it on a
+   Deal Product for its matching Product: **rejected**, `"The linked
+   discount rule is not active."` — as expected.
+6. Attempted to select the Product-A-only `ALWAYS` rule from step 2 on a Deal
+   Product for Product B (Prescription): **rejected**, `"The linked discount
+   rule applies to a different Product."` — as expected.
+7. Cleaned up all test records (`delete*` then `destroy*` for every Deal
+   Product, Discount Rule, Opportunity, and Product created across all test
+   runs) — confirmed via a follow-up query for any leftover records matching
+   the test naming convention: **zero** orphaned records left in any of
+   `discountRules`, `dealProducts`, `products`, or `opportunities`.
+
+**Bonus check beyond the plan's minimum** (attach → confirm discount →
+detach → confirm recompute, targeting the exact scenario that needed two
+rounds of bug fixes during code review): created a Product with
+`pricingModel: PER_FACTOR` (`unit` factor at `$100`/unit), an `ALWAYS` +
+`FIXED_AMOUNT` ($15 off) rule, and a Deal Product with `factorQuantities:
+{"unit": 1}` + this rule. Computed `installPrice` came back as **$85**
+(`100 - 15`, i.e. the legacy `PER_FACTOR` calculation ran first, then the
+Discount Rule application subtracted from it — both price-calculation paths
+and the discount-rule path composing correctly). Updated the same Deal
+Product with `discountRuleId: null` (detaching the rule, no other fields
+resent): `installPrice` correctly **recomputed to $100** — the undiscounted,
+freshly-recalculated `PER_FACTOR` price, not a stale cached value. Confirms
+both prior bug-fix commits (`47e0637c`, `c9fb9bfb`) hold up under live
+testing, not just unit-level hand-tracing.
+
+**No bugs found in this pass.** All 6 verification sub-steps (plus the bonus
+check) behaved exactly as designed. One thing worth noting for future
+verification work, not a feature bug: `installPrice` stays `null` on a Deal
+Product unless it's either set explicitly or computed via a real pricing
+path (`PER_FACTOR` factorQuantities+pricingModel, or a Pricing Version) — a
+`FIXED_AMOUNT` Discount Rule correctly declines to act when there's no
+`installPrice` to subtract from (per
+`DealProductDiscountRuleApplicationService`'s own `isDefined` guard), so an
+early pass of this verification that skipped setting up real pricing showed
+`installPrice: null` throughout and had to be redone with a proper
+`PER_FACTOR` setup to actually observe the FIXED_AMOUNT math — a test-setup
+gap on the verifier's part, not a defect in the feature.
+
 ---
 
 ## How to re-verify any of this
@@ -323,7 +465,18 @@ directly. `tools/sales-crm/DEPLOY-TO-PRODUCTION.md` has the exact runbook.
    first flips to `isActive: false` with `deactivatedAt` set. Try a Deal
    Product against a deactivated version, and against a version belonging to
    a different Product's Package → expect both rejected.
-5. Always clean up test records afterward (`delete*` then `destroy*`
+5. Create a Discount Rule (`status: ACTIVE`, `conditionType: ALWAYS`,
+   `discountType: PERCENTAGE`) on a Product, select it on a matching Deal
+   Product → confirm `discountPercent` is set. Create a `MIN_QUANTITY` rule
+   → confirm a below-threshold `quantity` is rejected and an at-or-above one
+   is accepted. Create a `SIBLING_PRODUCT_PURCHASED` rule → confirm it's
+   rejected with no sibling Deal Product on the same Opportunity, and
+   accepted once one exists. Try an `ARCHIVED` rule and a rule whose
+   `appliesToProduct` doesn't match the line's Product → expect both
+   rejected. For a `FIXED_AMOUNT` rule, confirm `installPrice` drops by the
+   fixed amount (floored at 0), and that detaching the rule
+   (`discountRuleId: null`) recomputes `installPrice` back to undiscounted.
+6. Always clean up test records afterward (`delete*` then `destroy*`
    mutations — Twenty soft-deletes by default).
 
 ---
@@ -341,6 +494,17 @@ directly. `tools/sales-crm/DEPLOY-TO-PRODUCTION.md` has the exact runbook.
   `main` triggers `.github/workflows/deploy-hamagan-crm.yaml`, then run
   `tools/sales-crm/provision-pricing-package-model.mjs` against production
   per the `DEPLOY-TO-PRODUCTION.md` runbook.
+- **Phase 5 (Discount & Bundle Rules) has not been deployed to production** —
+  built and verified end-to-end on local dev only (see Phase 5 section
+  above). Same deploy path: push to `main`, then run
+  `tools/sales-crm/provision-discount-bundle-rules.mjs` against production
+  per the `DEPLOY-TO-PRODUCTION.md` runbook.
+- **Stacking / auto-creating companion lines** — a Deal Product can only
+  reference one `discountRule` (no combining "10+ units AND bundle"), and
+  selecting a bundle rule doesn't auto-create the companion line (e.g.
+  Prescription) — a seller still adds it manually, then selects the rule.
+  Both deliberately deferred per the Phase 5 design spec's "Open assumptions"
+  section, not bugs.
 - Nothing else from the original request is outstanding. If new work comes
   up, it's new scope, not a continuation of something half-finished.
 
@@ -388,9 +552,11 @@ docs/sales-crm/
 docs/superpowers/specs/
   2026-07-01-twenty-sales-crm-design.md         <- original design spec
   2026-07-03-pricing-package-model-design.md    <- Phase 4 design spec
+  2026-07-04-discount-bundle-rules-design.md    <- Phase 5 design spec
 
 docs/superpowers/plans/
   2026-07-03-pricing-package-model.md    <- Phase 4 implementation plan
+  2026-07-04-discount-bundle-rules.md    <- Phase 5 implementation plan
 
 tools/sales-crm/
   README.md                              <- technical script reference
@@ -405,19 +571,24 @@ tools/sales-crm/
   provision-pricing-fields.mjs           <- Phase 3: pricing factor fields
   provision-external-sync-workflow.mjs   <- Phase 3: external sync workflow
   provision-pricing-package-model.mjs    <- Phase 4: Package/Pricing Version objects
+  provision-discount-bundle-rules.mjs    <- Phase 5: Discount Rule object
   diag2.mjs                              <- diagnostic script (debugging aid)
 
 packages/twenty-server/src/modules/sales-crm/
   utils/
     pricing-tier-schedule.util.ts              <- Phase 4: tier-band calculation (unit tested)
     pricing-tier-schedule.util.spec.ts
+    discount-rule-condition.util.ts             <- Phase 5: condition evaluator (unit tested)
+    discount-rule-condition.util.spec.ts
   services/
     deal-product-discount-validation.service.ts
     deal-product-price-calculation.service.ts  <- extended in Phase 4 (calculateFromPricingVersion)
     deal-product-pricing-version-validation.service.ts  <- Phase 4
+    deal-product-discount-rule-validation.service.ts    <- Phase 5
+    deal-product-discount-rule-application.service.ts   <- Phase 5
   query-hooks/
-    deal-product-create-one.pre-query.hook.ts  <- extended in Phase 4
-    deal-product-update-one.pre-query.hook.ts  <- extended in Phase 4
+    deal-product-create-one.pre-query.hook.ts  <- extended in Phase 4 and Phase 5
+    deal-product-update-one.pre-query.hook.ts  <- extended in Phase 4 and Phase 5
     pricing-version-create-one.pre-query.hook.ts  <- Phase 4: auto-version + deactivate-not-delete
     sales-crm-query-hook.module.ts
 

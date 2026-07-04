@@ -139,17 +139,25 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
         !isDefined(pricingVersionId) &&
         !isDefined(factorQuantities)
       ) {
-        pricingVersionId = existing?.pricingVersionId as
-          | string
-          | null
-          | undefined;
-
-        if (!isDefined(pricingVersionId)) {
-          factorQuantities = existing?.factorQuantities as
-            | Record<string, number>
+        // Don't resurrect pricingVersionId if THIS SAME payload explicitly
+        // detached it too (pricingVersionId: null) -- that's a deliberate
+        // "also detach the pricing version" request, not an omission.
+        if (payload.data.pricingVersionId !== null) {
+          pricingVersionId = existing?.pricingVersionId as
+            | string
             | null
             | undefined;
         }
+
+        // Always backfill factorQuantities regardless of which branch above
+        // fired: calculateFromPricingVersion requires BOTH pricingVersionId
+        // AND factorQuantities to be defined, and the legacy
+        // calculateInstallPrice path only needs factorQuantities -- so this
+        // is the one value every recompute path needs.
+        factorQuantities = existing?.factorQuantities as
+          | Record<string, number>
+          | null
+          | undefined;
       }
     }
 

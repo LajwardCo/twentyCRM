@@ -8,9 +8,16 @@ import { type CreateOneResolverArgs } from 'src/engine/api/graphql/workspace-res
 import { WorkspaceQueryHook } from 'src/engine/api/graphql/workspace-query-runner/workspace-query-hook/decorators/workspace-query-hook.decorator';
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { WorkspaceNotFoundDefaultError } from 'src/engine/core-modules/workspace/workspace.exception';
+import { DealProductDiscountRuleApplicationService } from 'src/modules/sales-crm/services/deal-product-discount-rule-application.service';
+import { DealProductDiscountRuleValidationService } from 'src/modules/sales-crm/services/deal-product-discount-rule-validation.service';
 import { DealProductDiscountValidationService } from 'src/modules/sales-crm/services/deal-product-discount-validation.service';
 import { DealProductPriceCalculationService } from 'src/modules/sales-crm/services/deal-product-price-calculation.service';
 import { DealProductPricingVersionValidationService } from 'src/modules/sales-crm/services/deal-product-pricing-version-validation.service';
+
+type CurrencyValue = {
+  amountMicros: number | null;
+  currencyCode: string | null;
+};
 
 @Injectable()
 @WorkspaceQueryHook(`dealProduct.createOne`)
@@ -19,6 +26,8 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
     private readonly discountValidationService: DealProductDiscountValidationService,
     private readonly priceCalculationService: DealProductPriceCalculationService,
     private readonly pricingVersionValidationService: DealProductPricingVersionValidationService,
+    private readonly discountRuleValidationService: DealProductDiscountRuleValidationService,
+    private readonly discountRuleApplicationService: DealProductDiscountRuleApplicationService,
   ) {}
 
   async execute(
@@ -37,6 +46,15 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
       | undefined;
     const factorQuantities = payload.data.factorQuantities as
       | Record<string, number>
+      | null
+      | undefined;
+    const opportunityId = payload.data.opportunityId as
+      | string
+      | null
+      | undefined;
+    const quantity = payload.data.quantity as number | null | undefined;
+    const discountRuleId = payload.data.discountRuleId as
+      | string
       | null
       | undefined;
 
@@ -69,6 +87,35 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
 
       if (isDefined(calculatedInstallPrice)) {
         payload.data.installPrice = calculatedInstallPrice;
+      }
+    }
+
+    await this.discountRuleValidationService.validate({
+      workspaceId: workspace.id,
+      productId,
+      opportunityId,
+      quantity,
+      discountRuleId,
+    });
+
+    const discountRuleEffect = await this.discountRuleApplicationService.apply(
+      {
+        workspaceId: workspace.id,
+        discountRuleId,
+        installPrice: payload.data.installPrice as
+          | CurrencyValue
+          | null
+          | undefined,
+      },
+    );
+
+    if (isDefined(discountRuleEffect)) {
+      if (isDefined(discountRuleEffect.discountPercent)) {
+        payload.data.discountPercent = discountRuleEffect.discountPercent;
+      }
+
+      if (isDefined(discountRuleEffect.installPrice)) {
+        payload.data.installPrice = discountRuleEffect.installPrice;
       }
     }
 

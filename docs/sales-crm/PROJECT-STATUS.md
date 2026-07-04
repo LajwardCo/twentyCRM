@@ -1,7 +1,9 @@
 # Sales CRM Project — Status
 
-**Last updated:** 2026-07-02
-**Status: all three phases complete, verified end-to-end, live on production.**
+**Last updated:** 2026-07-03
+**Status: Phases 1-3 complete, verified end-to-end, live on production. Phase 4
+(Package/Pricing Version model) complete and verified locally, not yet
+deployed to production.**
 
 This document is a handoff/reference for continuing this work in a new
 session — what exists, where it lives, how to verify it, and what's
@@ -144,6 +146,146 @@ CODE-step execution on a box triggers a one-time dependency install for the
 local execution sandbox (a `yarn workspaces focus` child process) — expect a
 short delay the very first time, not a bug.
 
+## Phase 4 — Package & Pricing Version model
+
+Full design: [`docs/superpowers/specs/2026-07-03-pricing-package-model-design.md`](../superpowers/specs/2026-07-03-pricing-package-model-design.md)
+Full plan: [`docs/superpowers/plans/2026-07-03-pricing-package-model.md`](../superpowers/plans/2026-07-03-pricing-package-model.md)
+
+Replaces the flat, non-versioned `Product.pricingFactors` rate table (Phase 3)
+with a proper **Package** (a named, sellable pricing plan scoped to one
+Product) and **Pricing Version** (a versioned, volume-banded rate table under
+that Package) model, for cases needing tiered/volume pricing instead of one
+flat unit rate per factor. The legacy `pricingFactors`/`PER_FACTOR` path from
+Phase 3 is completely unchanged and still works — a Deal Product either
+prices off a `pricingVersion` (new path) or off `product.pricingFactors`
+(old path), never both.
+
+**Two new custom objects** (via `tools/sales-crm/provision-pricing-package-model.mjs`):
+- `Package` — `name`, `status` (`ACTIVE`/`ARCHIVED`), `allowsCustomPricing`,
+  `notes`, relation `product` (many Packages per Product).
+- `Pricing Version` — `versionNumber` (auto-incrementing per package, set by
+  a create hook), `isActive`, `effectiveFrom`, `deactivatedAt`,
+  `currencyCode`, `tierSchedule` (RAW_JSON — array of
+  `{factor, billingFrequency, bands: [{minQty, maxQty, mode, amount}]}`),
+  relation `package`.
+
+**Two new fields on the existing Deal Product object**: `pricingVersion`
+(relation, nullable — null means the legacy `pricingFactors` path) and
+`priceSnapshot` (RAW_JSON — a frozen breakdown of exactly which bands were
+matched and what they computed, so historical prices stay reconstructible
+even if the Package/Pricing Version is edited later).
+
+Note: `annualPrice` is only auto-computed on the Pricing Version path — the
+legacy `PER_FACTOR` path never populated it either (this is inherited Phase 3
+scope, not a Phase 4 regression), so a Deal Product on the old path still
+needs `annualPrice` set manually if it's used.
+
+**Real server code** (all in `packages/twenty-server/src/modules/sales-crm/`),
+same PRE-hook pattern as Phase 3's discount ceiling:
+- `utils/pricing-tier-schedule.util.ts` — pure band-matching/aggregation
+  logic (`matchTierBand`, `computePriceFromTierSchedule`). Volume/threshold
+  tiering, not graduated: the matched band's rate applies to the entire
+  quantity. `FLAT` bands charge a fixed amount regardless of quantity within
+  the band; `PER_UNIT` bands charge `amount × quantity`. Multi-factor results
+  are grouped into `totalMonthly`/`totalAnnual` by each factor's
+  `billingFrequency`. Unit tested (8 tests covering band boundaries, both
+  modes, mixed frequencies, missing/unmatched factor quantities).
+- `services/deal-product-price-calculation.service.ts` — extended with
+  `calculateFromPricingVersion`, which loads the Pricing Version → Package →
+  Product chain, delegates band-matching to the utility above, and writes
+  `installPrice`/`annualPrice` (as `{amountMicros, currencyCode}` composites)
+  plus `priceSnapshot`. The pre-existing `calculateInstallPrice`
+  (`PER_FACTOR` path) is untouched.
+- `services/deal-product-pricing-version-validation.service.ts` — enforces
+  that a Deal Product's `pricingVersion`, if set, is `isActive` at write time
+  and belongs to a Package on the *same* Product as the Deal Product line.
+  Rejects with a clear GraphQL error otherwise.
+- `query-hooks/pricing-version-create-one.pre-query.hook.ts` — the entire
+  "deactivate, never delete" mechanism: auto-assigns `versionNumber` (max
+  existing + 1 per package), and when a new version is created
+  `isActive: true`, flips any other active version under the same package to
+  `isActive: false` + stamps `deactivatedAt`.
+- `query-hooks/deal-product-create-one.pre-query.hook.ts` and
+  `deal-product-update-one.pre-query.hook.ts` — extended to branch on
+  whether `pricingVersionId` is set: if so, validate + calculate via the
+  Pricing Version path; if not, fall through to the unchanged legacy
+  `PER_FACTOR` path. The existing discount-ceiling check still applies
+  regardless of which pricing path is used.
+- `query-hooks/sales-crm-query-hook.module.ts` — registers the two new
+  services and the new hook alongside the existing Phase 3 providers.
+  **Confirmed booting cleanly in local dev**: `SalesCrmQueryHookModule
+  dependencies initialized`, zero DI errors.
+
+**Verified live in local dev** (`/Users/rashid/Development/twentyCRM`, server
+`:3010`, front-end `:3011`, `tim@apple.dev` / `tim@apple.dev`) via a
+throwaway Node script driving `getLoginTokenFromCredentials` →
+`getAuthTokensFromLoginToken` → `createProduct`/`createPackage`/
+`createPricingVersion`/`createDealProduct` mutations against `/graphql`
+(the same pattern as the provisioning scripts, but hitting the regular
+GraphQL API instead of `/metadata`):
+
+1. Created a Product (`OPD Verification Product`, `isSellable: true`).
+2. Created a Package on that Product, `status: ACTIVE`.
+3. Created a Pricing Version on that Package, `isActive: true`,
+   `effectiveFrom: now`, `tierSchedule` set to the OPD example from the spec
+   (doctor MONTHLY bands + employee ANNUAL bands). Got back
+   `versionNumber: 1`, `isActive: true`, and the full `tierSchedule` echoed
+   back byte-for-byte.
+4. Created a second Pricing Version on the same Package, also
+   `isActive: true`. Got back `versionNumber: 2`, `isActive: true`.
+   Re-fetching the first version confirmed the deactivate-not-delete hook
+   fired correctly: `isActive: false`, `deactivatedAt:
+   "2026-07-03T05:40:24.777Z"` — stamped automatically, no manual
+   bookkeeping.
+5. Created a Deal Product on that Product, referencing the Package's
+   now-active second Pricing Version, `factorQuantities: {"doctor": 5}`.
+   Result: `installPrice.amountMicros: 2000000000` (**$2000.00 USD** — 5
+   doctors lands in the 5-9 `PER_UNIT` band at 400/doctor, 400 × 5 = 2000,
+   exactly as expected), `annualPrice.amountMicros: 0` (no `employee`
+   quantity supplied, so that factor is correctly skipped, not charged),
+   and `priceSnapshot.breakdown` contained exactly one entry — `factor:
+   "doctor"`, `quantity: 5`, `matchedBand: {minQty:5,maxQty:9,mode:
+   PER_UNIT,amount:400}`, `subtotal: 2000` — a byte-for-byte match to the
+   spec's worked example.
+6. Attempted a Deal Product on the same Product but referencing the *other*
+   test Product's Package's Pricing Version. **Correctly rejected**:
+   `"The linked pricing version belongs to a package for a different
+   Product."` (GraphQL error, `BAD_USER_INPUT` / `INVALID_ARGS_DATA`, no
+   record created).
+7. Attempted a Deal Product referencing the now-deactivated first Pricing
+   Version from step 3. **Correctly rejected**: `"The linked pricing
+   version is not active. Select the current active version for this
+   package."` (same error shape as above, no record created).
+8. Cleaned up every test record (`delete*` then `destroy*` for the Deal
+   Product, both Pricing Versions, both Packages, both Products) — all
+   succeeded, no orphaned data left in the workspace.
+
+All 8 sub-steps behaved exactly as designed; no bugs found in this pass.
+
+**Environment issue hit and fixed along the way (documented for next time,
+not a feature bug)**: `bash packages/twenty-utils/setup-dev-env.sh`'s
+auto-detection picked up an unrelated local (non-Docker) Postgres on port
+5432 that happened to be running on this machine for other projects,
+instead of this project's `twenty_db` Docker container on port 5436 — and
+its `npx nx reset:env` step overwrote the already-working, gitignored
+`packages/twenty-server/.env` / `packages/twenty-front/.env` back to
+`.env.example` placeholder defaults (wrong DB port, wrong Redis port, wrong
+`APP_SECRET`). The placeholder `APP_SECRET` no longer matched the secret
+that had originally encrypted `core."signingKey"`'s private key, so the
+server logged `Failed to load or create current signing key ... No
+encryption key matches keyId '...'` and every login attempt failed with `No
+active signing key available to sign asymmetric token`. Fixed by pointing
+`.env` back at the Docker containers (`localhost:5436` / `localhost:6380`)
+and the documented ports (`NODE_PORT=3010` for the server — note: **not**
+`PORT`, front-end `REACT_APP_PORT=3011`), then deleting the stale,
+now-undecryptable `signingKey` row so `JwtKeyManagerService` regenerated a
+fresh one under the current `APP_SECRET` on the next login (this specific
+deletion was done with explicit operator authorization, against the local
+dev DB only). Also found and killed roughly 15 stale/orphaned
+`twenty-server`/`twenty-front`/`worker` processes left running from
+previous, days-old sessions that were holding ports and confusing which
+server was actually serving requests.
+
 ---
 
 ## How to re-verify any of this
@@ -173,7 +315,15 @@ directly. `tools/sales-crm/DEPLOY-TO-PRODUCTION.md` has the exact runbook.
 3. Create a Product with `pricingModel: PER_FACTOR` and `pricingFactors`, a
    Deal Product with matching `factorQuantities` → confirm `installPrice`
    calculates correctly.
-4. Always clean up test records afterward (`delete*` then `destroy*`
+4. Create a Package (`status: ACTIVE`) on a Product, a Pricing Version on it
+   with a `tierSchedule`, and a Deal Product referencing that Pricing
+   Version with matching `factorQuantities` → confirm `installPrice`/
+   `annualPrice`/`priceSnapshot` match the tier schedule's bands. Create a
+   second `isActive: true` Pricing Version on the same Package → confirm the
+   first flips to `isActive: false` with `deactivatedAt` set. Try a Deal
+   Product against a deactivated version, and against a version belonging to
+   a different Product's Package → expect both rejected.
+5. Always clean up test records afterward (`delete*` then `destroy*`
    mutations — Twenty soft-deletes by default).
 
 ---
@@ -185,6 +335,12 @@ directly. `tools/sales-crm/DEPLOY-TO-PRODUCTION.md` has the exact runbook.
 - **External sync's full network round-trip** — infrastructure is built and
   the trigger/payload path is verified; only the actual outbound POST to a
   real external system hasn't been exercised (nothing to point it at yet).
+- **Phase 4 (Package/Pricing Version model) has not been deployed to
+  production** — built and verified end-to-end on local dev only (see Phase
+  4 section above). Deploying follows the same path as Phases 1-3: push to
+  `main` triggers `.github/workflows/deploy-hamagan-crm.yaml`, then run
+  `tools/sales-crm/provision-pricing-package-model.mjs` against production
+  per the `DEPLOY-TO-PRODUCTION.md` runbook.
 - Nothing else from the original request is outstanding. If new work comes
   up, it's new scope, not a continuation of something half-finished.
 
@@ -230,7 +386,11 @@ docs/sales-crm/
   Sales-Team-Handbook.docx       <- printable handbook for sellers
 
 docs/superpowers/specs/
-  2026-07-01-twenty-sales-crm-design.md   <- original design spec
+  2026-07-01-twenty-sales-crm-design.md         <- original design spec
+  2026-07-03-pricing-package-model-design.md    <- Phase 4 design spec
+
+docs/superpowers/plans/
+  2026-07-03-pricing-package-model.md    <- Phase 4 implementation plan
 
 tools/sales-crm/
   README.md                              <- technical script reference
@@ -244,15 +404,21 @@ tools/sales-crm/
   provision-permissions.mjs              <- Phase 3: Seller role
   provision-pricing-fields.mjs           <- Phase 3: pricing factor fields
   provision-external-sync-workflow.mjs   <- Phase 3: external sync workflow
+  provision-pricing-package-model.mjs    <- Phase 4: Package/Pricing Version objects
   diag2.mjs                              <- diagnostic script (debugging aid)
 
 packages/twenty-server/src/modules/sales-crm/
+  utils/
+    pricing-tier-schedule.util.ts              <- Phase 4: tier-band calculation (unit tested)
+    pricing-tier-schedule.util.spec.ts
   services/
     deal-product-discount-validation.service.ts
-    deal-product-price-calculation.service.ts
+    deal-product-price-calculation.service.ts  <- extended in Phase 4 (calculateFromPricingVersion)
+    deal-product-pricing-version-validation.service.ts  <- Phase 4
   query-hooks/
-    deal-product-create-one.pre-query.hook.ts
-    deal-product-update-one.pre-query.hook.ts
+    deal-product-create-one.pre-query.hook.ts  <- extended in Phase 4
+    deal-product-update-one.pre-query.hook.ts  <- extended in Phase 4
+    pricing-version-create-one.pre-query.hook.ts  <- Phase 4: auto-version + deactivate-not-delete
     sales-crm-query-hook.module.ts
 
 packages/twenty-docker/

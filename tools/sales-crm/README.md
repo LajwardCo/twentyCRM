@@ -56,6 +56,22 @@ metadata GraphQL API. See the design in
   network round-trip not verified against a real external system (only
   against a safe local target, which Twenty's own SSRF protection correctly
   refused — see the file header for what that means for you).
+- `provision-contact-request-object.mjs` — creates the **Contact Request**
+  custom object (inbound website questions/demo requests: fullName, email,
+  phone, category, message, preferredContactMethod, status, sourceUrl) with
+  relations to Person and Opportunity. Idempotent.
+- `provision-contact-request-autolink-workflow.mjs` — creates the **"Contact
+  Request Auto-Link Person"** workflow (trigger: Contact Request created ->
+  find Person by email (substring match on `emails.primaryEmail` — the only
+  operand Twenty exposes for that subfield) -> link if found, else create a
+  new Person and link it). Idempotent. Requires the twenty-server WORKER
+  process running (same DATABASE_EVENT requirement as round-robin).
+- `provision-contact-request-reply-workflow.mjs` — creates the **"Send
+  Contact Request Reply"** workflow: a manual "Send Message" action on a
+  Contact Request record that pops a one-field form, emails the typed message
+  to the requester via Twenty's native SEND_EMAIL action, and sets status to
+  Replied. Idempotent. **Requires a connected email account** in the
+  workspace (Settings > Accounts) — the script fails loudly if none exists.
 
 ### Server-side code (not just config) — `packages/twenty-server/src/modules/sales-crm/`
 
@@ -88,6 +104,8 @@ hook, which means a code change + rebuild + deploy, not just running a script.
 
 - The `twenty-server` API reachable (default `http://localhost:3010`).
 - A login for the target workspace.
+- A connected email account in the workspace (Settings > Accounts), for the
+  Contact Request reply workflow only.
 
 ## Run
 
@@ -107,3 +125,13 @@ node tools/sales-crm/update-stages.mjs
 | `TWENTY_PASSWORD` | `tim@apple.dev` | seeded dev password = the email |
 
 When deploying to a real server later, override these env vars for that workspace.
+
+## Website integration (Contact Request intake)
+
+Once `provision-contact-request-object.mjs` has run, the standard
+`createOneContactRequest` mutation is available on `/graphql` like any other
+object — no extra provisioning needed for intake itself. Generate a scoped
+API key for the workspace via Settings > APIs (Twenty's own UI, not a
+script) and have the website POST to `/graphql` with it as a Bearer token.
+Filtering by `category`/`status` works through Twenty's standard view
+filters once Contact Requests exist.

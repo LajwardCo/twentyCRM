@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
+import { FieldActorSource } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
@@ -12,6 +13,13 @@ import { resolveWhatsappRecipientPhone } from 'src/modules/sales-crm/whatsapp/ut
 
 // Meta error 131047: free-form message outside the 24h customer service window
 const RE_ENGAGEMENT_ERROR_CODE = 131047;
+
+const SYSTEM_ACTOR = {
+  source: FieldActorSource.SYSTEM,
+  workspaceMemberId: null,
+  name: 'WhatsApp',
+  context: {},
+};
 
 export type SendWhatsappMessageParams = {
   workspaceId: string;
@@ -144,12 +152,24 @@ export class WhatsappSendMessageService {
         { shouldBypassPermissionChecks: true },
       );
 
+    // TEXT fields on provisioned objects are non-null (default ''), a null
+    // FK is rejected, and the createdBy ACTOR composite must be supplied
+    // explicitly on server-side inserts (the GraphQL create path fills it
+    // from the request auth context)
     await whatsappMessageRepository.save({
+      createdBy: SYSTEM_ACTOR,
+      updatedBy: SYSTEM_ACTOR,
       direction: 'OUTBOUND',
       templateName: params.templateName ?? '',
       personId: params.personId,
-      opportunityId: params.opportunityId ?? null,
-      ...fields,
+      ...(isDefined(params.opportunityId)
+        ? { opportunityId: params.opportunityId }
+        : {}),
+      status: fields.status,
+      toPhone: fields.toPhone,
+      body: fields.body,
+      waMessageId: fields.waMessageId ?? '',
+      errorMessage: fields.errorMessage ?? '',
     });
   }
 }

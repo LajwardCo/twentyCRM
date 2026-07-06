@@ -19,6 +19,11 @@ msgstr ""
 "X-Crowdin-File-ID: 27\n"
 
 #. js-lingui-explicit-id
+#: src/emails/test.email.tsx
+msgid "Test email"
+msgstr "הודעת דוא\"ל מבחן"
+
+#. js-lingui-explicit-id
 #: src/emails/warn-suspended-workspace.email.tsx
 msgid "Suspended Workspace"
 msgstr "מרחב עבודה מושעה"
@@ -84,31 +89,6 @@ msgid "Server administrator access changed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/emails/test.email.tsx
-msgid "Test email"
-msgstr "הודעת דוא\"ל מבחן"
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Confirm your new email address"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Confirm your email address"
-msgstr "אמת את כתובת האימייל שלך"
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Confirm new email"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Verify Email"
-msgstr "אמת דוא\"ל"
-
-#. js-lingui-explicit-id
 #: src/emails/send-invite-link.email.tsx
 msgid "Join your team on Twenty"
 msgstr "הצטרף לצוות שלך ב-Twenty"
@@ -169,16 +149,6 @@ msgid "This link is only valid for the next {duration}. If the link does not wor
 msgstr "הקישור הזה תקף רק ל-{duration} הבאים. אם הקישור לא עובד, תוכל להשתמש בקישור אימות ההתחברות ישירות:"
 
 #. js-lingui-explicit-id
-#: src/components/WhatIsTwenty.tsx
-msgid "What is Twenty?"
-msgstr "מה זה Twenty?"
-
-#. js-lingui-explicit-id
-#: src/components/WhatIsTwenty.tsx
-msgid "It's a CRM, a software to help businesses manage their customer data and relationships efficiently."
-msgstr "זהו CRM, תוכנה שעוזרת לעסקים לנהל את הנתונים והיחסים עם הלקוחות שלהם בצורה יעילה."
-
-#. js-lingui-explicit-id
 #: src/emails/clean-suspended-workspace.email.tsx
 msgid "Deleted Workspace"
 msgstr "מרחב עבודה שנמחק"
@@ -202,6 +172,36 @@ msgstr "אם תרצה להשתמש ב-Twenty שוב, תוכל ליצור מרח�
 #: src/emails/clean-suspended-workspace.email.tsx
 msgid "Create a new workspace"
 msgstr "צור מרחב עבודה חדש"
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Confirm your new email address"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Confirm your email address"
+msgstr "אמת את כתובת האימייל שלך"
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Confirm new email"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Verify Email"
+msgstr "אמת דוא\"ל"
+
+#. js-lingui-explicit-id
+#: src/components/WhatIsTwenty.tsx
+msgid "What is Twenty?"
+msgstr "מה זה Twenty?"
+
+#. js-lingui-explicit-id
+#: src/components/WhatIsTwenty.tsx
+msgid "It's a CRM, a software to help businesses manage their customer data and relationships efficiently."
+msgstr "זהו CRM, תוכנה שעוזרת לעסקים לנהל את הנתונים והיחסים עם הלקוחות שלהם בצורה יעילה."
 
 #. js-lingui-explicit-id
 #: src/components/Footer.tsx

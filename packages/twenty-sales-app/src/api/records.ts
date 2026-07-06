@@ -2,10 +2,13 @@ import { coreQuery } from './client';
 
 // ---------- shared types ----------
 
+export type TaskType = 'CALL' | 'MEETING' | 'DEMO' | 'VISIT' | 'OTHER';
+
 export type Task = {
   id: string;
   title: string;
   status: 'TODO' | 'IN_PROGRESS' | 'DONE' | null;
+  taskType: TaskType | null;
   dueAt: string | null;
   createdAt: string;
   bodyV2: { markdown: string | null } | null;
@@ -42,6 +45,13 @@ export type LeadSummary = {
   } | null;
   owner: { id: string; name: { firstName: string; lastName: string } } | null;
   amount: { amountMicros: number | null; currencyCode: string | null } | null;
+  createdBy: { name: string | null; source: string | null } | null;
+  referrer: {
+    id: string;
+    name: string;
+    partnerType: string | null;
+    commissionPercent: number | null;
+  } | null;
 };
 
 // Stages considered "open pipeline" (not yet won or lost).
@@ -97,6 +107,8 @@ const LEAD_FIELDS = `
   }
   owner { id name { firstName lastName } }
   amount { amountMicros currencyCode }
+  createdBy { name source }
+  referrer { id name partnerType commissionPercent }
 `;
 
 // ---------- leads ----------
@@ -184,6 +196,7 @@ export const fetchLeadTasks = async (opportunityId: string): Promise<Task[]> => 
               id
               title
               status
+              taskType
               dueAt
               createdAt
               bodyV2 { markdown }
@@ -262,6 +275,7 @@ export const fetchMyOpenTasks = async (
             id
             title
             status
+            taskType
             dueAt
             createdAt
             bodyV2 { markdown }
@@ -298,6 +312,45 @@ export const setTaskStatus = async (
   );
 };
 
+// Single task with its lead/company targets — for the task execution view.
+export const fetchTask = async (taskId: string): Promise<Task> => {
+  const data = await coreQuery<{ task: Task }>(
+    `query TaskById($id: UUID) {
+      task(filter: { id: { eq: $id } }) {
+        id
+        title
+        status
+        taskType
+        dueAt
+        createdAt
+        bodyV2 { markdown }
+        taskTargets {
+          edges {
+            node {
+              opportunity { id name }
+              company { id name }
+            }
+          }
+        }
+      }
+    }`,
+    { id: taskId },
+  );
+  return data.task;
+};
+
+export const updateTask = async (
+  taskId: string,
+  update: Record<string, unknown>,
+): Promise<void> => {
+  await coreQuery(
+    `mutation UpdateTaskFields($id: UUID!, $data: TaskUpdateInput!) {
+      updateTask(id: $id, data: $data) { id }
+    }`,
+    { id: taskId, data: update },
+  );
+};
+
 // ---------- create: task / note attached to a lead ----------
 
 type LeadTargetIds = {
@@ -309,6 +362,7 @@ export const createTaskForLead = async (input: {
   title: string;
   bodyMarkdown?: string;
   status: 'TODO' | 'DONE';
+  taskType?: TaskType;
   dueAt: string | null;
   assigneeId: string;
   target: LeadTargetIds;
@@ -323,6 +377,7 @@ export const createTaskForLead = async (input: {
         status: input.status,
         dueAt: input.dueAt,
         assigneeId: input.assigneeId,
+        ...(input.taskType ? { taskType: input.taskType } : {}),
         ...(input.bodyMarkdown
           ? { bodyV2: { markdown: input.bodyMarkdown } }
           : {}),
@@ -537,4 +592,264 @@ export const registerLead = async (
   }
 
   return { opportunityId, companyId, personId: personId ?? '' };
+};
+
+// ---------- company panel (info + other contacts) ----------
+
+export type CompanyInfo = {
+  id: string;
+  name: string;
+  employees: number | null;
+  domainName: { primaryLinkUrl: string | null } | null;
+  address: {
+    addressCity: string | null;
+    addressStreet1: string | null;
+  } | null;
+  createdAt: string;
+};
+
+export type CompanyContact = {
+  id: string;
+  name: { firstName: string; lastName: string };
+  jobTitle: string | null;
+  phones: {
+    primaryPhoneCallingCode: string | null;
+    primaryPhoneNumber: string | null;
+  } | null;
+  emails: { primaryEmail: string | null } | null;
+};
+
+export const fetchCompanyInfo = async (
+  companyId: string,
+): Promise<CompanyInfo> => {
+  const data = await coreQuery<{ company: CompanyInfo }>(
+    `query CompanyInfo($id: UUID!) {
+      company(filter: { id: { eq: $id } }) {
+        id
+        name
+        employees
+        domainName { primaryLinkUrl }
+        address { addressCity addressStreet1 }
+        createdAt
+      }
+    }`,
+    { id: companyId },
+  );
+  return data.company;
+};
+
+// Fields that only exist on some instances (added ad hoc in production);
+// fetched separately so the main query never breaks.
+export const fetchCompanyExtras = async (
+  companyId: string,
+): Promise<{ businessType: string | null; productsServices: string | null }> => {
+  try {
+    const data = await coreQuery<{
+      company: { businessType: string | null; productsServices: string | null };
+    }>(
+      `query CompanyExtras($id: UUID!) {
+        company(filter: { id: { eq: $id } }) { businessType productsServices }
+      }`,
+      { id: companyId },
+    );
+    return data.company;
+  } catch {
+    return { businessType: null, productsServices: null };
+  }
+};
+
+export const fetchCompanyContacts = async (
+  companyId: string,
+): Promise<CompanyContact[]> => {
+  const data = await coreQuery<{
+    people: { edges: { node: CompanyContact }[] };
+  }>(
+    `query CompanyContacts($companyId: UUID!) {
+      people(filter: { companyId: { eq: $companyId } }, first: 50) {
+        edges {
+          node {
+            id
+            name { firstName lastName }
+            jobTitle
+            phones { primaryPhoneCallingCode primaryPhoneNumber }
+            emails { primaryEmail }
+          }
+        }
+      }
+    }`,
+    { companyId },
+  );
+  return data.people.edges.map((e) => e.node);
+};
+
+// Marketer is a production-only SELECT field on Opportunity.
+export const fetchLeadMarketer = async (
+  opportunityId: string,
+): Promise<string | null> => {
+  try {
+    const data = await coreQuery<{ opportunity: { marketer: string | null } }>(
+      `query LeadMarketer($id: UUID!) {
+        opportunity(filter: { id: { eq: $id } }) { marketer }
+      }`,
+      { id: opportunityId },
+    );
+    return data.opportunity.marketer;
+  } catch {
+    return null;
+  }
+};
+
+// ---------- pricing: deal products + quotations ----------
+
+export type DealProductLine = {
+  id: string;
+  name: string;
+  quantity: number | null;
+  discountPercent: number | null;
+  lineStatus: string | null;
+  installPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+  annualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+  product: { id: string; name: string } | null;
+};
+
+export type QuotationRow = {
+  id: string;
+  name: string;
+  quoteNumber: string | null;
+  status: string | null;
+  issuedAt: string | null;
+  validUntil: string | null;
+  agreedPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+};
+
+export const fetchLeadPricing = async (
+  opportunityId: string,
+): Promise<{ dealProducts: DealProductLine[]; quotations: QuotationRow[] }> => {
+  const [dealProducts, quotations] = await Promise.all([
+    coreQuery<{ dealProducts: { edges: { node: DealProductLine }[] } }>(
+      `query LeadDealProducts($oppId: UUID!) {
+        dealProducts(filter: { opportunityId: { eq: $oppId } }, first: 50) {
+          edges {
+            node {
+              id
+              name
+              quantity
+              discountPercent
+              lineStatus
+              installPrice { amountMicros currencyCode }
+              annualPrice { amountMicros currencyCode }
+              product { id name }
+            }
+          }
+        }
+      }`,
+      { oppId: opportunityId },
+    )
+      .then((d) => d.dealProducts.edges.map((e) => e.node))
+      .catch(() => [] as DealProductLine[]),
+    coreQuery<{ quotations: { edges: { node: QuotationRow }[] } }>(
+      `query LeadQuotations($oppId: UUID!) {
+        quotations(filter: { opportunityId: { eq: $oppId } }, first: 50) {
+          edges {
+            node {
+              id
+              name
+              quoteNumber
+              status
+              issuedAt
+              validUntil
+              agreedPrice { amountMicros currencyCode }
+            }
+          }
+        }
+      }`,
+      { oppId: opportunityId },
+    )
+      .then((d) => d.quotations.edges.map((e) => e.node))
+      .catch(() => [] as QuotationRow[]),
+  ]);
+  return { dealProducts, quotations };
+};
+
+export type ProductOption = {
+  id: string;
+  name: string;
+  baseInstallPrice: { amountMicros: number | null } | null;
+  baseAnnualPrice: { amountMicros: number | null } | null;
+};
+
+export const fetchProducts = async (): Promise<ProductOption[]> => {
+  const data = await coreQuery<{
+    products: { edges: { node: ProductOption }[] };
+  }>(
+    `query Products {
+      products(first: 100, orderBy: [{ name: AscNullsLast }]) {
+        edges {
+          node {
+            id
+            name
+            baseInstallPrice { amountMicros }
+            baseAnnualPrice { amountMicros }
+          }
+        }
+      }
+    }`,
+  );
+  return data.products.edges.map((e) => e.node);
+};
+
+// The server-side PRE hook computes installPrice from the product's pricing
+// model, so we only send the linkage + quantity.
+export const addProductToLead = async (input: {
+  opportunityId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+}): Promise<void> => {
+  await coreQuery(
+    `mutation AddDealProduct($data: DealProductCreateInput!) {
+      createDealProduct(data: $data) { id }
+    }`,
+    {
+      data: {
+        name: input.productName,
+        opportunityId: input.opportunityId,
+        productId: input.productId,
+        quantity: input.quantity,
+      },
+    },
+  );
+};
+
+// ---------- reports ----------
+
+export type DoneTask = {
+  id: string;
+  title: string;
+  updatedAt: string;
+};
+
+export const fetchMyDoneTasksSince = async (
+  assigneeId: string,
+  sinceIso: string,
+): Promise<DoneTask[]> => {
+  const data = await coreQuery<{
+    tasks: { edges: { node: DoneTask }[] };
+  }>(
+    `query MyDoneTasks($filter: TaskFilterInput) {
+      tasks(filter: $filter, first: 200, orderBy: [{ updatedAt: DescNullsLast }]) {
+        edges { node { id title updatedAt } }
+      }
+    }`,
+    {
+      filter: {
+        and: [
+          { assigneeId: { eq: assigneeId } },
+          { status: { eq: 'DONE' } },
+          { updatedAt: { gte: sinceIso } },
+        ],
+      },
+    },
+  );
+  return data.tasks.edges.map((e) => e.node);
 };

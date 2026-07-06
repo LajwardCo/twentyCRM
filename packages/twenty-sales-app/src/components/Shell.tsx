@@ -4,8 +4,9 @@ import { type CurrentUser } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
 import { jalaliToday } from '../lib/jalali';
 import { navigate, useRoute } from '../lib/router';
-import { T } from '../lib/strings';
+import { T, T2 } from '../lib/strings';
 import {
+  IconChart,
   IconDashboard,
   IconLeads,
   IconLogout,
@@ -29,6 +30,7 @@ type AppShellProps = {
 const NAV = [
   { key: 'today', label: T.tabToday, icon: IconDashboard },
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
+  { key: 'reports', label: T2.reports, icon: IconChart },
 ] as const;
 
 export const AppShell = ({

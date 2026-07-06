@@ -193,6 +193,29 @@ export const IconMoney = ({ size }: IconProps) => (
   </svg>
 );
 
+export const IconPresentation = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M2 3h20" />
+    <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+    <path d="m7 21 5-5 5 5" />
+  </svg>
+);
+
+export const IconMapPin = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+export const IconMic = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="9" y="2" width="6" height="12" rx="3" />
+    <path d="M5 10a7 7 0 0 0 14 0" />
+    <line x1="12" y1="19" x2="12" y2="22" />
+  </svg>
+);
+
 export const IconMoon = ({ size }: IconProps) => (
   <svg {...base(size)}>
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
@@ -209,5 +232,39 @@ export const IconSun = ({ size }: IconProps) => (
 export const IconEdit = ({ size }: IconProps) => (
   <svg {...base(size)}>
     <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
+  </svg>
+);
+
+export const IconChart = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+    <line x1="3" y1="20" x2="21" y2="20" />
+  </svg>
+);
+
+export const IconBuilding = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="4" y="2" width="16" height="20" rx="2" />
+    <line x1="9" y1="7" x2="10" y2="7" />
+    <line x1="14" y1="7" x2="15" y2="7" />
+    <line x1="9" y1="11" x2="10" y2="11" />
+    <line x1="14" y1="11" x2="15" y2="11" />
+    <path d="M9 22v-4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4" />
+  </svg>
+);
+
+export const IconPackage = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <path d="M3.3 7 12 12l8.7-5" />
+    <line x1="12" y1="22" x2="12" y2="12" />
+  </svg>
+);
+
+export const IconChevronDown = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="m6 9 6 6 6-6" />
   </svg>
 );

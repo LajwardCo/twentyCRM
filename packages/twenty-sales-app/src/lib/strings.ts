@@ -157,6 +157,14 @@ export const SOURCE_LABELS: Record<string, string> = {
   OTHER: 'سایر',
 };
 
+export const TASK_TYPE_LABELS: Record<string, string> = {
+  CALL: 'تماس',
+  MEETING: 'جلسه',
+  DEMO: 'دمو',
+  VISIT: 'بازدید',
+  OTHER: 'دیگر',
+};
+
 export const TEMP_LABELS: Record<string, string> = {
   HOT: '🔥 داغ',
   WARM: '🌤 گرم',
@@ -165,3 +173,82 @@ export const TEMP_LABELS: Record<string, string> = {
 
 export const stageLabelFa = (value: string | null): string =>
   value ? (STAGE_LABELS[value] ?? value) : '—';
+
+// reports + lead enrichment (added with the reports/pricing build)
+export const T2 = {
+  reports: 'گزارش‌ها',
+  thisWeek: 'این هفته',
+  thisMonth: 'این ماه',
+  threeMonths: '۳ ماه',
+  me: 'من',
+  team: 'تیم',
+  leadsRegistered: 'لید ثبت‌شده',
+  tasksDone: 'وظیفه انجام‌شده',
+  activeCustomers: 'مشتری فعال',
+  openPipelineValue: 'ارزش قیف باز',
+  registrationsTrend: 'روند ثبت لید',
+  byStage: 'به تفکیک مرحله',
+  bySource: 'به تفکیک منبع',
+  byOwner: 'به تفکیک فروشنده',
+  byTemperature: 'به تفکیک علاقمندی',
+  count: 'تعداد',
+  value: 'ارزش',
+  seller: 'فروشنده',
+  noData: 'داده‌ای در این دوره نیست',
+
+  openTasks: 'وظایف باز',
+  companySection: 'شرکت',
+  showContacts: 'مخاطبین شرکت',
+  hideContacts: 'بستن مخاطبین',
+  employees: 'تعداد کارمندان',
+  website: 'ویب‌سایت',
+  addressLbl: 'آدرس',
+  businessType: 'نوع فعالیت',
+  productsServices: 'محصولات/خدمات',
+  metaSection: 'متادیتا',
+  referrerLbl: 'معرف',
+  commission: 'کمیسیون',
+  marketerLbl: 'بازاریاب',
+  registeredBy: 'ثبت‌کننده',
+  pricingSection: 'قیمت‌گذاری',
+  dealProducts: 'محصولات معامله',
+  addProduct: 'افزودن محصول',
+  productLbl: 'محصول',
+  quantityLbl: 'تعداد',
+  installPrice: 'قیمت نصب',
+  annualPrice: 'قیمت سالانه',
+  discount: 'تخفیف',
+  quotations: 'پیشنهادهای قیمت',
+  quoteNumber: 'شماره',
+  validUntil: 'اعتبار تا',
+  agreedPrice: 'قیمت توافقی',
+  noPricing: 'هنوز محصول یا پیشنهاد قیمتی ثبت نشده',
+  total: 'مجموع',
+};
+
+export const MARKETER_LABELS: Record<string, string> = {
+  ALAVI: 'مصطفی علوی',
+  SHABAB: 'نذیراحمد شباب',
+  NOORZAI: 'سهراب نورزایی',
+};
+
+export const PARTNER_TYPE_LABELS: Record<string, string> = {
+  MARKETER: 'بازاریاب',
+  SELLER: 'فروشنده',
+  PARTNER: 'شریک',
+};
+
+export const LINE_STATUS_LABELS: Record<string, string> = {
+  QUOTED: 'پیشنهاد شده',
+  CONTRACTED: 'قرارداد شده',
+  PAID: 'پرداخت شده',
+  DELIVERED: 'تحویل شده',
+};
+
+export const QUOTE_STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'پیش‌نویس',
+  SENT: 'ارسال شده',
+  ACCEPTED: 'پذیرفته شده',
+  EXPIRED: 'منقضی',
+  CONVERTED: 'قرارداد شده',
+};

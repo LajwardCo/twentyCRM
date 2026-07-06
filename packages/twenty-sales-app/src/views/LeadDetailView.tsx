@@ -17,6 +17,7 @@ import {
 } from '../api/records';
 import {
   IconAI,
+  IconCheck,
   IconMail,
   IconNote,
   IconPhone,
@@ -25,17 +26,23 @@ import {
   IconSummary,
   IconWhatsApp,
 } from '../components/icons';
+import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { useCached } from '../lib/cache';
 import { formatAfn, fullPhone, personName, toLocalInputValue } from '../lib/format';
-import { formatJalaliDate, formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
+import {
+  formatJalaliDate,
+  formatJalaliDateTime,
+  relativeDueLabel,
+  toPersianDigits,
+} from '../lib/jalali';
 import {
   CALL_SCRIPT_SYSTEM_PROMPT,
   leadContextText,
   SUMMARIZE_SYSTEM_PROMPT,
 } from '../lib/leadContext';
 import { navigate } from '../lib/router';
-import { SOURCE_LABELS, STAGE_LABELS, T, TEMP_LABELS } from '../lib/strings';
+import { SOURCE_LABELS, STAGE_LABELS, T, T2, TEMP_LABELS } from '../lib/strings';
 
 type LeadDetailViewProps = {
   leadId: string;
@@ -193,6 +200,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     )
     .sort((a, b) => b.at.localeCompare(a.at));
 
+  const openTasks = tasks.filter((t) => t.status !== 'DONE');
+
   const stageIndex = STAGES.findIndex((s) => s.value === lead?.stage);
 
   if (lead === null) {
@@ -294,6 +303,48 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
       <div className="detail-grid">
         <div className="stack">
+          {/* open tasks under this lead */}
+          {openTasks.length > 0 && (
+            <div className="card anim d1">
+              <div className="card-pad" style={{ paddingBottom: 6 }}>
+                <h3>
+                  {T2.openTasks}{' '}
+                  <span className="num" style={{ color: 'var(--ink-3)', fontWeight: 600 }}>
+                    ({toPersianDigits(openTasks.length)})
+                  </span>
+                </h3>
+              </div>
+              {openTasks.map((task) => (
+                <div className="task" key={task.id}>
+                  <button
+                    className="chk"
+                    aria-label={T.markDone}
+                    onClick={async () => {
+                      await setTaskStatus(task.id, 'DONE');
+                      showToast('انجام شد ✓');
+                      await reload();
+                    }}
+                  >
+                    <IconCheck size={13} />
+                  </button>
+                  <div className="t-main" style={{ cursor: 'default' }}>
+                    <div className="t-title">{task.title}</div>
+                    {task.bodyV2?.markdown && (
+                      <div className="t-sub">{task.bodyV2.markdown}</div>
+                    )}
+                  </div>
+                  <span
+                    className={`due ${
+                      task.dueAt && new Date(task.dueAt) < new Date() ? 'over' : 'later'
+                    }`}
+                  >
+                    {relativeDueLabel(task.dueAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* timeline */}
           <div className="card anim d2">
             <div
@@ -575,6 +626,15 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               </div>
             </div>
           </div>
+
+          {/* pricing: deal products + quotations */}
+          <PricingCard lead={lead} />
+
+          {/* company info + other contacts */}
+          {lead.company && <CompanyCard companyId={lead.company.id} />}
+
+          {/* metadata: source, referrer, marketer, created-by */}
+          <MetaCard lead={lead} />
         </div>
       </div>
 

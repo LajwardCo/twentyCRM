@@ -14,6 +14,8 @@ import { LeadDetailView } from './views/LeadDetailView';
 import { LeadsView } from './views/LeadsView';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
+import { ReportsView } from './views/ReportsView';
+import { TaskView } from './views/TaskView';
 import { TodayView } from './views/TodayView';
 
 type Session =
@@ -125,7 +127,15 @@ export const App = () => {
   let view: React.ReactNode;
   let bar: React.ReactNode = null;
 
-  if (section === 'lead' && param && sub === 'chat') {
+  if (section === 'task' && param) {
+    view = <TaskView taskId={param} user={user} />;
+    bar = (
+      <button className="btn line sm" onClick={() => window.history.back()}>
+        <IconBack size={15} />
+        {T.tabToday}
+      </button>
+    );
+  } else if (section === 'lead' && param && sub === 'chat') {
     view = <LeadChatView leadId={param} />;
     bar = backButton;
   } else if (section === 'lead' && param) {
@@ -136,6 +146,8 @@ export const App = () => {
     bar = <CmdSearch value={search} onChange={setSearch} />;
   } else if (section === 'new') {
     view = <NewLeadView user={user} />;
+  } else if (section === 'reports') {
+    view = <ReportsView user={user} />;
   } else {
     view = <TodayView user={user} />;
   }

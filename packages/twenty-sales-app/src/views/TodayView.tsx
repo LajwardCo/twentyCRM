@@ -20,7 +20,8 @@ import {
 import { endOfToday, formatAfn, startOfToday, sumAmountMicros } from '../lib/format';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { STAGE_LABELS, T } from '../lib/strings';
+import { STAGE_LABELS, T, TASK_TYPE_LABELS } from '../lib/strings';
+import { TASK_TYPE_ICONS } from './TaskView';
 
 type TodayViewProps = {
   user: CurrentUser;
@@ -55,17 +56,25 @@ const TaskRow = ({
   onDone: (task: Task) => void;
 }) => {
   const lead = taskLead(task);
+  const TypeIcon = TASK_TYPE_ICONS[task.taskType ?? 'OTHER'] ?? IconCheck;
   return (
     <div className={`task ${leaving ? 'leaving' : ''}`}>
       <button className="chk" aria-label={T.markDone} onClick={() => onDone(task)}>
         <IconCheck size={13} />
       </button>
-      <div
-        className="t-main"
-        onClick={() => lead?.id && navigate(`/lead/${lead.id}`)}
-      >
-        <div className="t-title">{task.title}</div>
+      <div className="t-main" onClick={() => navigate(`/task/${task.id}`)}>
+        <div className="t-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ color: 'var(--lapis-600)', display: 'inline-flex', flexShrink: 0 }}>
+            <TypeIcon size={14} />
+          </span>
+          {task.title}
+        </div>
         <div className="t-sub">
+          {task.taskType && (
+            <span className="pill stage" style={{ fontSize: 10.5, padding: '1px 8px' }}>
+              {TASK_TYPE_LABELS[task.taskType]}
+            </span>
+          )}
           {lead ? (
             <span className="lead-chip">{lead.name}</span>
           ) : (

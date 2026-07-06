@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+
+import { useCached } from '../lib/cache';
 
 import { type CurrentUser } from '../api/auth';
 import {
@@ -6,7 +8,6 @@ import {
   fetchMyOpenTasks,
   OPEN_STAGES,
   setTaskStatus,
-  type LeadSummary,
   type Task,
 } from '../api/records';
 import {
@@ -97,39 +98,35 @@ const SkeletonRows = () => (
 type TaskFilter = 'all' | 'overdue' | 'today';
 
 export const TodayView = ({ user }: TodayViewProps) => {
-  const [tasks, setTasks] = useState<Task[] | null>(null);
-  const [leads, setLeads] = useState<LeadSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [doneCount, setDoneCount] = useState(0);
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<TaskFilter>('all');
 
-  const reload = useCallback(async () => {
-    try {
-      const eod = endOfToday().toISOString();
-      const [dueNow, upcoming, myLeads] = await Promise.all([
-        fetchMyOpenTasks(user.workspaceMemberId, { dueBefore: eod }),
-        fetchMyOpenTasks(user.workspaceMemberId, { dueAfter: eod, limit: 8 }),
-        fetchLeads({ ownerId: user.workspaceMemberId, limit: 200 }),
-      ]);
-      setTasks([...dueNow, ...upcoming]);
-      setLeads(myLeads);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : T.loadFailed);
-    }
+  const fetchAll = useCallback(async () => {
+    const eod = endOfToday().toISOString();
+    const [dueNow, upcoming, myLeads] = await Promise.all([
+      fetchMyOpenTasks(user.workspaceMemberId, { dueBefore: eod }),
+      fetchMyOpenTasks(user.workspaceMemberId, { dueAfter: eod, limit: 8 }),
+      fetchLeads({ ownerId: user.workspaceMemberId, limit: 200 }),
+    ]);
+    return { tasks: [...dueNow, ...upcoming], leads: myLeads };
   }, [user.workspaceMemberId]);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const { data, error, refresh } = useCached(
+    `today:${user.workspaceMemberId}`,
+    fetchAll,
+  );
+
+  const tasks = data ? data.tasks.filter((t) => !removed.has(t.id)) : null;
+  const leads = data?.leads ?? null;
 
   const markDone = async (task: Task) => {
     setLeaving((prev) => new Set(prev).add(task.id));
     setDoneCount((c) => c + 1);
     // let the leave animation play before removing from the list
     setTimeout(() => {
-      setTasks((prev) => prev?.filter((t) => t.id !== task.id) ?? prev);
+      setRemoved((prev) => new Set(prev).add(task.id));
       setLeaving((prev) => {
         const next = new Set(prev);
         next.delete(task.id);
@@ -138,9 +135,15 @@ export const TodayView = ({ user }: TodayViewProps) => {
     }, 330);
     try {
       await setTaskStatus(task.id, 'DONE');
+      await refresh();
     } catch {
       setDoneCount((c) => c - 1);
-      void reload();
+      setRemoved((prev) => {
+        const next = new Set(prev);
+        next.delete(task.id);
+        return next;
+      });
+      void refresh();
     }
   };
 

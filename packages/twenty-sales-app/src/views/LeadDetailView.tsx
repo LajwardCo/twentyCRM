@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { generateText } from '../api/ai';
 import { type CurrentUser } from '../api/auth';
@@ -26,6 +26,7 @@ import {
   IconWhatsApp,
 } from '../components/icons';
 import { WhatsAppModal } from '../components/WhatsAppModal';
+import { useCached } from '../lib/cache';
 import { formatAfn, fullPhone, personName, toLocalInputValue } from '../lib/format';
 import { formatJalaliDate, formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
 import {
@@ -50,10 +51,8 @@ type TimelineFilter = 'all' | 'tasks' | 'notes';
 const CallIcon = () => <IconPhone size={16} />;
 
 export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
-  const [lead, setLead] = useState<LeadSummary | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [override, setOverride] = useState<Partial<LeadSummary>>({});
+  const [actionError, setActionError] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const [tlFilter, setTlFilter] = useState<TimelineFilter>('all');
   const [toast, setToast] = useState<string | null>(null);
@@ -78,25 +77,26 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     window.setTimeout(() => setToast(null), 2200);
   };
 
-  const reload = useCallback(async () => {
-    try {
-      const [leadData, taskData, noteData] = await Promise.all([
-        fetchLead(leadId),
-        fetchLeadTasks(leadId),
-        fetchLeadNotes(leadId),
-      ]);
-      setLead(leadData);
-      setTasks(taskData);
-      setNotes(noteData);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : T.loadFailed);
-    }
+  const fetchAll = useCallback(async () => {
+    const [lead, tasks, notes] = await Promise.all([
+      fetchLead(leadId),
+      fetchLeadTasks(leadId),
+      fetchLeadNotes(leadId),
+    ]);
+    return { lead, tasks, notes };
   }, [leadId]);
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const { data, error: loadError, refresh } = useCached(`lead:${leadId}`, fetchAll);
+
+  const lead: LeadSummary | null = data ? { ...data.lead, ...override } : null;
+  const tasks = data?.tasks ?? [];
+  const notes = data?.notes ?? [];
+  const error = actionError ?? loadError;
+
+  const reload = useCallback(async () => {
+    await refresh();
+    setOverride({});
+  }, [refresh]);
 
   const phone = fullPhone(lead?.pointOfContact?.phones ?? null);
   const email = lead?.pointOfContact?.emails?.primaryEmail ?? null;
@@ -119,7 +119,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
   const changeStage = async (stage: string) => {
     if (!lead) return;
-    setLead({ ...lead, stage });
+    setOverride((prev) => ({ ...prev, stage }));
     try {
       await updateLead(lead.id, { stage });
       showToast(`${T.stage}: ${STAGE_LABELS[stage] ?? stage} ✓`);
@@ -130,7 +130,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
   const changeTemperature = async (temperature: string | null) => {
     if (!lead) return;
-    setLead({ ...lead, temperature });
+    setOverride((prev) => ({ ...prev, temperature }));
     try {
       await updateLead(lead.id, { temperature });
     } catch {
@@ -151,7 +151,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       showToast('یادداشت ذخیره شد ✓');
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : T.loadFailed);
+      setActionError(err instanceof Error ? err.message : T.loadFailed);
     } finally {
       setNoteBusy(false);
     }
@@ -172,7 +172,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       showToast('پیگیری ثبت شد ✓');
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : T.loadFailed);
+      setActionError(err instanceof Error ? err.message : T.loadFailed);
     } finally {
       setFollowUpBusy(false);
     }

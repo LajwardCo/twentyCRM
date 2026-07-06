@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import { LEAD_SOURCES, registerLead, type NewLeadInput } from '../api/records';
+import { invalidateCache } from '../lib/cache';
 import { toLocalInputValue } from '../lib/format';
+import { clearDraft, loadDraft, saveDraft } from '../lib/prefs';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { SOURCE_LABELS, T, TEMP_LABELS } from '../lib/strings';
@@ -22,25 +24,79 @@ const presetDate = (preset: FollowUpPreset): Date => {
   return d;
 };
 
+type Draft = {
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  temperature: 'HOT' | 'WARM' | 'COLD' | null;
+  leadSource: string;
+  estimatedValue: string;
+  firstContactNote: string;
+  followUpNote: string;
+};
+
 export const NewLeadView = ({ user }: NewLeadViewProps) => {
-  const [companyName, setCompanyName] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [temperature, setTemperature] = useState<'HOT' | 'WARM' | 'COLD' | null>('WARM');
-  const [leadSource, setLeadSource] = useState('FIELD');
-  const [estimatedValue, setEstimatedValue] = useState('');
-  const [firstContactNote, setFirstContactNote] = useState('');
+  // Field sellers lose connections and close tabs — never lose a half-typed lead.
+  const draft = useRef(loadDraft<Draft>()).current;
+  const [draftRestored, setDraftRestored] = useState(
+    draft !== null && draft.companyName.trim() !== '',
+  );
+
+  const [companyName, setCompanyName] = useState(draft?.companyName ?? '');
+  const [firstName, setFirstName] = useState(draft?.firstName ?? '');
+  const [lastName, setLastName] = useState(draft?.lastName ?? '');
+  const [phone, setPhone] = useState(draft?.phone ?? '');
+  const [email, setEmail] = useState(draft?.email ?? '');
+  const [temperature, setTemperature] = useState<'HOT' | 'WARM' | 'COLD' | null>(
+    draft?.temperature ?? 'WARM',
+  );
+  const [leadSource, setLeadSource] = useState(draft?.leadSource ?? 'FIELD');
+  const [estimatedValue, setEstimatedValue] = useState(draft?.estimatedValue ?? '');
+  const [firstContactNote, setFirstContactNote] = useState(
+    draft?.firstContactNote ?? '',
+  );
   const [firstContactDate, setFirstContactDate] = useState(toLocalInputValue(new Date()));
   const [scheduleFollowUp, setScheduleFollowUp] = useState(true);
-  const [followUpNote, setFollowUpNote] = useState('');
+  const [followUpNote, setFollowUpNote] = useState(draft?.followUpNote ?? '');
   const [followUpPreset, setFollowUpPreset] = useState<FollowUpPreset>('tomorrow');
   const [followUpDate, setFollowUpDate] = useState(
     toLocalInputValue(presetDate('tomorrow')),
   );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const saveTimer = useRef<number>(0);
+  useEffect(() => {
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      saveDraft({
+        companyName,
+        firstName,
+        lastName,
+        phone,
+        email,
+        temperature,
+        leadSource,
+        estimatedValue,
+        firstContactNote,
+        followUpNote,
+      } satisfies Draft);
+    }, 400);
+    return () => window.clearTimeout(saveTimer.current);
+  }, [
+    companyName,
+    firstName,
+    lastName,
+    phone,
+    email,
+    temperature,
+    leadSource,
+    estimatedValue,
+    firstContactNote,
+    followUpNote,
+  ]);
 
   const pickPreset = (preset: FollowUpPreset) => {
     setFollowUpPreset(preset);
@@ -77,6 +133,9 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
 
     try {
       const result = await registerLead(input, setBusy);
+      clearDraft();
+      invalidateCache('leads:');
+      invalidateCache('today:');
       navigate(`/lead/${result.opportunityId}`);
     } catch (err) {
       setError(
@@ -97,6 +156,41 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
           <div className="sub">همه چیز در یک صفحه — شرکت، شخص تماس، تماس اول و پیگیری</div>
         </div>
       </div>
+
+      {draftRestored && (
+        <div
+          className="card card-pad anim"
+          style={{
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            borderColor: 'var(--gold-500)',
+          }}
+        >
+          <span style={{ flex: 1, fontSize: 13 }}>
+            📝 پیش‌نویس قبلی بازیابی شد — می‌توانید ادامه بدهید.
+          </span>
+          <button
+            type="button"
+            className="btn line sm"
+            onClick={() => {
+              clearDraft();
+              setCompanyName('');
+              setFirstName('');
+              setLastName('');
+              setPhone('');
+              setEmail('');
+              setEstimatedValue('');
+              setFirstContactNote('');
+              setFollowUpNote('');
+              setDraftRestored(false);
+            }}
+          >
+            شروع از نو
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="form-grid">

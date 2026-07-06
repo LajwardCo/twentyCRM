@@ -4,10 +4,11 @@ import { type CurrentUser } from '../api/auth';
 import {
   fetchLeads,
   OPEN_STAGES,
-  type LeadSummary,
 } from '../api/records';
 import { IconKanban, IconPlus, IconTable } from '../components/icons';
+import { useCached } from '../lib/cache';
 import { formatAfn, fullPhone, personName, sumAmountMicros } from '../lib/format';
+import { loadPrefs, savePref } from '../lib/prefs';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { SOURCE_LABELS, STAGE_LABELS, T, TEMP_LABELS } from '../lib/strings';
@@ -27,33 +28,67 @@ const TempDot = ({ temperature }: { temperature: string | null }) =>
     <span style={{ color: 'var(--ink-3)' }}>—</span>
   );
 
+type SortKey = 'created' | 'value' | 'name';
+
 export const LeadsView = ({ user, search }: LeadsViewProps) => {
-  const [leads, setLeads] = useState<LeadSummary[] | null>(null);
-  const [mineOnly, setMineOnly] = useState(true);
-  const [openOnly, setOpenOnly] = useState(true);
-  const [view, setView] = useState<'table' | 'kanban'>('table');
-  const [error, setError] = useState<string | null>(null);
+  const prefs = useMemo(loadPrefs, []);
+  const [mineOnly, setMineOnlyState] = useState(prefs.mineOnly);
+  const [openOnly, setOpenOnlyState] = useState(prefs.openOnly);
+  const [view, setViewState] = useState<'table' | 'kanban'>(prefs.leadsView);
+  const [sortBy, setSortByState] = useState<SortKey>(prefs.leadsSort);
+  const [debouncedSearch, setDebouncedSearch] = useState(search.trim());
   const debounceRef = useRef<number>(0);
 
   useEffect(() => {
     window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(async () => {
-      try {
-        setLeads(
-          await fetchLeads({
-            search: search.trim() || undefined,
-            ownerId: mineOnly ? user.workspaceMemberId : undefined,
-            openOnly,
-            limit: 100,
-          }),
-        );
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : T.loadFailed);
-      }
-    }, 250);
+    debounceRef.current = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      250,
+    );
     return () => window.clearTimeout(debounceRef.current);
-  }, [search, mineOnly, openOnly, user.workspaceMemberId]);
+  }, [search]);
+
+  const setMineOnly = (v: boolean) => {
+    setMineOnlyState(v);
+    savePref('mineOnly', v);
+  };
+  const setOpenOnly = (v: boolean) => {
+    setOpenOnlyState(v);
+    savePref('openOnly', v);
+  };
+  const setView = (v: 'table' | 'kanban') => {
+    setViewState(v);
+    savePref('leadsView', v);
+  };
+  const setSortBy = (v: SortKey) => {
+    setSortByState(v);
+    savePref('leadsSort', v);
+  };
+
+  const { data, error } = useCached(
+    `leads:${user.workspaceMemberId}:${mineOnly}:${openOnly}:${debouncedSearch}`,
+    () =>
+      fetchLeads({
+        search: debouncedSearch || undefined,
+        ownerId: mineOnly ? user.workspaceMemberId : undefined,
+        openOnly,
+        limit: 200,
+      }),
+  );
+
+  const leads = useMemo(() => {
+    if (!data) return null;
+    const sorted = [...data];
+    if (sortBy === 'value') {
+      sorted.sort(
+        (a, b) => (b.amount?.amountMicros ?? 0) - (a.amount?.amountMicros ?? 0),
+      );
+    } else if (sortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name, 'fa'));
+    }
+    // 'created' keeps the server order (newest first)
+    return sorted;
+  }, [data, sortBy]);
 
   const openValue = useMemo(
     () =>
@@ -144,13 +179,19 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
             <table className="leads">
               <thead>
                 <tr>
-                  <th>شرکت</th>
+                  <th onClick={() => setSortBy('name')}>
+                    شرکت{sortBy === 'name' ? ' ▾' : ''}
+                  </th>
                   <th>{T.stage}</th>
                   <th>{T.temperature}</th>
-                  <th>ارزش</th>
+                  <th onClick={() => setSortBy('value')}>
+                    ارزش{sortBy === 'value' ? ' ▾' : ''}
+                  </th>
                   <th>{T.leadSource}</th>
                   <th>{T.owner}</th>
-                  <th>ثبت</th>
+                  <th onClick={() => setSortBy('created')}>
+                    ثبت{sortBy === 'created' ? ' ▾' : ''}
+                  </th>
                 </tr>
               </thead>
               <tbody>

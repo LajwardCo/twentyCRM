@@ -8,8 +8,10 @@ import {
   IconDashboard,
   IconLeads,
   IconLogout,
+  IconMoon,
   IconPlus,
   IconSearch,
+  IconSun,
 } from './icons';
 
 type AppShellProps = {
@@ -18,6 +20,9 @@ type AppShellProps = {
   children: ReactNode;
   // rendered inside the sticky command bar (e.g. search box or back button)
   bar?: ReactNode;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
+  onOpenPalette: () => void;
 };
 
 const NAV = [
@@ -25,7 +30,15 @@ const NAV = [
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
 ] as const;
 
-export const AppShell = ({ user, onLogout, children, bar }: AppShellProps) => {
+export const AppShell = ({
+  user,
+  onLogout,
+  children,
+  bar,
+  theme,
+  onToggleTheme,
+  onOpenPalette,
+}: AppShellProps) => {
   const route = useRoute();
   const active =
     route.parts[0] === 'lead' ? 'leads' : (route.parts[0] ?? 'today');
@@ -83,6 +96,22 @@ export const AppShell = ({ user, onLogout, children, bar }: AppShellProps) => {
           {bar}
           <div className="cmd-right">
             <span className="cmd-date">{jalaliToday()}</span>
+            <button
+              className="icon-btn"
+              onClick={onOpenPalette}
+              title="جستجو و فرمان‌ها (Ctrl+K)"
+              aria-label="جستجو"
+            >
+              <IconSearch size={16} />
+            </button>
+            <button
+              className="icon-btn"
+              onClick={onToggleTheme}
+              title={theme === 'dark' ? 'حالت روشن' : 'حالت تاریک'}
+              aria-label="تغییر حالت نمایش"
+            >
+              {theme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </button>
           </div>
         </div>
         {children}

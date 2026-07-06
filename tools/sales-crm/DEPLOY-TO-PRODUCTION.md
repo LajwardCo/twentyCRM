@@ -35,6 +35,22 @@ node tools/sales-crm/provision-round-robin-workflow.mjs
 node tools/sales-crm/provision-views.mjs
 ```
 
+### Competitor Intelligence objects (added 2026-07-06)
+
+Two more idempotent scripts, run in this order (views depend on the objects):
+
+```bash
+node tools/sales-crm/provision-competitor-intel.mjs    # Competitor, Competitor Product, Competitor Update, Competitor Usage
+node tools/sales-crm/provision-competitor-views.mjs    # 5 saved views for those objects
+```
+
+`provision-competitor-intel.mjs` creates the four objects, their fields, and
+relations (Competitor Product/Update/Usage → Competitor; Competitor Usage →
+Person/Opportunity). `provision-competitor-views.mjs` adds "Competitors by
+Threat", "Competitors by Status" (Kanban), "Competitor Products", "Competitor
+Updates — Recent", and "Switching Signals". Both are the same env-var shape as
+the scripts above.
+
 Any modern Node (18+) works for these — they're plain `fetch`-based scripts,
 no build step, no dependency on the twenty-server dev toolchain.
 

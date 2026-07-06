@@ -1,4 +1,4 @@
-/* ============ Lajward design system — lapis + gold, Dari RTL ============ */
+/* ============ Lajward design system — lapis blue, Dari RTL ============ */
 
 :root {
   --lapis-950: #081737;
@@ -8,9 +8,6 @@
   --lapis-500: #3b6ae8;
   --lapis-100: #e9eefc;
   --lapis-50: #f3f6fe;
-  --gold-500: #c9a227;
-  --gold-400: #d9b64a;
-  --gold-300: #e6cf7d;
   --paper: #f4f5f7;
   --card: #ffffff;
   --ink: #14192b;
@@ -35,7 +32,7 @@
   --font: 'Vazirmatn', 'SF Arabic', 'Segoe UI', Tahoma, sans-serif;
 }
 
-/* Dark theme — long sessions are easier on the eyes; identity stays lapis+gold. */
+/* Dark theme — long sessions are easier on the eyes. */
 [data-theme='dark'] {
   --lapis-100: #1d2c55;
   --lapis-50: #182240;
@@ -167,10 +164,10 @@ textarea {
 @keyframes pulse-gold {
   0%,
   100% {
-    box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.22);
+    box-shadow: 0 0 0 4px rgba(59, 106, 232, 0.25);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(201, 162, 39, 0.08);
+    box-shadow: 0 0 0 8px rgba(59, 106, 232, 0.1);
   }
 }
 
@@ -260,31 +257,6 @@ textarea {
 
 .sidebar {
   background:
-    radial-gradient(
-      1.5px 1.5px at 18% 22%,
-      rgba(230, 207, 125, 0.45) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      1px 1px at 72% 9%,
-      rgba(230, 207, 125, 0.35) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 84% 41%,
-      rgba(230, 207, 125, 0.3) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      1px 1px at 33% 58%,
-      rgba(230, 207, 125, 0.35) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 61% 76%,
-      rgba(230, 207, 125, 0.25) 50%,
-      transparent 51%
-    ),
     linear-gradient(172deg, var(--lapis-900), var(--lapis-950) 58%);
   color: #dfe6f7;
   display: flex;
@@ -307,16 +279,14 @@ textarea {
   height: 40px;
   border-radius: 12px;
   flex-shrink: 0;
-  background: linear-gradient(140deg, var(--gold-300), var(--gold-500));
-  color: var(--lapis-950);
+  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-800));
+  color: #fff;
   font-weight: 800;
   font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    inset 0 -2px 4px rgba(0, 0, 0, 0.15),
-    0 4px 14px -4px rgba(201, 162, 39, 0.5);
+  box-shadow: 0 4px 14px -4px rgba(36, 83, 214, 0.5);
 }
 
 .brand b {
@@ -340,12 +310,12 @@ textarea {
   border: 0;
   border-radius: 12px;
   padding: 11.5px;
-  background: linear-gradient(140deg, var(--gold-400), var(--gold-500));
-  color: #221b04;
+  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-600));
+  color: #fff;
   font-weight: 800;
   font-size: 13.5px;
   cursor: pointer;
-  box-shadow: 0 6px 20px -6px rgba(201, 162, 39, 0.55);
+  box-shadow: 0 6px 20px -6px rgba(36, 83, 214, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,7 +327,7 @@ textarea {
 
 .side-cta button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 26px -6px rgba(201, 162, 39, 0.65);
+  box-shadow: 0 10px 26px -6px rgba(36, 83, 214, 0.7);
 }
 
 .side-cta button:active {
@@ -429,7 +399,7 @@ textarea {
   bottom: 9px;
   width: 3.5px;
   border-radius: 4px 0 0 4px;
-  background: var(--gold-500);
+  background: var(--lapis-500);
 }
 
 .nav-item .count {
@@ -720,13 +690,14 @@ textarea {
 }
 
 .btn.gold {
-  background: linear-gradient(140deg, var(--gold-400), var(--gold-500));
-  color: #221b04;
-  box-shadow: 0 4px 14px -4px rgba(201, 162, 39, 0.5);
+  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-600));
+  color: #fff;
+  box-shadow: 0 4px 14px -4px rgba(36, 83, 214, 0.5);
 }
 
 .btn.gold:hover {
-  box-shadow: 0 8px 20px -4px rgba(201, 162, 39, 0.6);
+  background: linear-gradient(140deg, var(--lapis-600), var(--lapis-800));
+  box-shadow: 0 8px 20px -4px rgba(36, 83, 214, 0.6);
 }
 
 .btn.line {
@@ -1149,7 +1120,7 @@ textarea {
 }
 
 .f-row.won i {
-  background: linear-gradient(90deg, var(--gold-400), var(--gold-500));
+  background: linear-gradient(90deg, #2fa768, var(--ok));
 }
 
 .f-meta {
@@ -1498,8 +1469,8 @@ table.leads tbody tr:hover {
 }
 
 .j-step.now .j-dot {
-  background: var(--gold-500);
-  border-color: var(--gold-500);
+  background: var(--lapis-500);
+  border-color: var(--lapis-500);
   animation: pulse-gold 2.4s infinite;
 }
 
@@ -1695,7 +1666,7 @@ table.leads tbody tr:hover {
   width: 150px;
   height: 150px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201, 162, 39, 0.28), transparent 65%);
+  background: radial-gradient(circle, rgba(59, 106, 232, 0.35), transparent 65%);
   pointer-events: none;
 }
 
@@ -1707,7 +1678,7 @@ table.leads tbody tr:hover {
 }
 
 .ai-card h3 svg {
-  color: var(--gold-300);
+  color: #8fadf5;
   width: 18px;
   height: 18px;
 }
@@ -1739,8 +1710,8 @@ table.leads tbody tr:hover {
 }
 
 .ai-actions .btn.gold {
-  background: linear-gradient(140deg, var(--gold-400), var(--gold-500));
-  color: #221b04;
+  background: var(--lapis-500);
+  color: #fff;
   border: 0;
   justify-content: center;
 }
@@ -1966,26 +1937,6 @@ table.leads tbody tr:hover {
 
 .login-side {
   background:
-    radial-gradient(
-      2px 2px at 20% 30%,
-      rgba(230, 207, 125, 0.5) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 70% 15%,
-      rgba(230, 207, 125, 0.4) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      2px 2px at 80% 60%,
-      rgba(230, 207, 125, 0.35) 50%,
-      transparent 51%
-    ),
-    radial-gradient(
-      1.5px 1.5px at 35% 75%,
-      rgba(230, 207, 125, 0.4) 50%,
-      transparent 51%
-    ),
     linear-gradient(160deg, var(--lapis-800), var(--lapis-950) 70%);
   color: #fff;
   display: flex;
@@ -1998,8 +1949,8 @@ table.leads tbody tr:hover {
   width: 58px;
   height: 58px;
   border-radius: 16px;
-  background: linear-gradient(140deg, var(--gold-300), var(--gold-500));
-  color: var(--lapis-950);
+  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-800));
+  color: #fff;
   font-size: 28px;
   font-weight: 800;
   display: flex;
@@ -2313,8 +2264,8 @@ table.leads tbody tr:hover {
   }
 
   .nav-item.m-cta {
-    background: linear-gradient(140deg, var(--gold-400), var(--gold-500));
-    color: #221b04;
+    background: linear-gradient(140deg, var(--lapis-500), var(--lapis-600));
+    color: #fff;
     font-weight: 800;
     border-radius: 12px;
   }

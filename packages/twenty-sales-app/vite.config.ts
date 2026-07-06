@@ -1,21 +1,32 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
 // The app is served under /sales/ on the same domain as the Twenty server in
-// production (avoids CORS entirely); in dev it proxies API calls to the local
-// twenty-server on :3010.
-export default defineConfig({
-  base: '/sales/',
-  plugins: [react()],
-  server: {
-    port: 3012,
-    proxy: {
-      '/graphql': 'http://localhost:3010',
-      '/metadata': 'http://localhost:3010',
-      '/rest': 'http://localhost:3010',
+// production (avoids CORS entirely); in dev it proxies API calls to the
+// target in SALES_API_TARGET (.env.local) — the local twenty-server by
+// default, or the live CRM for testing against real data.
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const apiTarget = env.SALES_API_TARGET ?? 'http://localhost:3010';
+  const proxyEntry = {
+    target: apiTarget,
+    changeOrigin: true,
+    secure: true,
+  };
+
+  return {
+    base: '/sales/',
+    plugins: [react()],
+    server: {
+      port: 3012,
+      proxy: {
+        '/graphql': proxyEntry,
+        '/metadata': proxyEntry,
+        '/rest': proxyEntry,
+      },
     },
-  },
-  build: {
-    outDir: 'dist',
-  },
+    build: {
+      outDir: 'dist',
+    },
+  };
 });

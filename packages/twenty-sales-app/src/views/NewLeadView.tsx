@@ -165,7 +165,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            borderColor: 'var(--gold-500)',
+            borderColor: 'var(--lapis-500)',
           }}
         >
           <span style={{ flex: 1, fontSize: 13 }}>

@@ -64,6 +64,12 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
       run: () => go('/today'),
     },
     {
+      key: 'tasks',
+      label: 'کارها',
+      icon: <IconLeads size={16} />,
+      run: () => go('/tasks'),
+    },
+    {
       key: 'leads',
       label: T.tabLeads,
       icon: <IconLeads size={16} />,

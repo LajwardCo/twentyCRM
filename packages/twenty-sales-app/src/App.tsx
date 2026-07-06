@@ -15,6 +15,7 @@ import { LeadsView } from './views/LeadsView';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
 import { ReportsView } from './views/ReportsView';
+import { TasksView } from './views/TasksView';
 import { TaskView } from './views/TaskView';
 import { TodayView } from './views/TodayView';
 
@@ -146,6 +147,8 @@ export const App = () => {
     bar = <CmdSearch value={search} onChange={setSearch} />;
   } else if (section === 'new') {
     view = <NewLeadView user={user} />;
+  } else if (section === 'tasks') {
+    view = <TasksView user={user} />;
   } else if (section === 'reports') {
     view = <ReportsView user={user} />;
   } else {

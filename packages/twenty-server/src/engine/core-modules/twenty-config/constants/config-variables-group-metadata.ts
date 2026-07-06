@@ -144,7 +144,7 @@ export const CONFIG_VARIABLES_GROUP_METADATA: Record<
     position: 2200,
     description:
       'Meta WhatsApp Cloud API credentials used by the sales-crm Send WhatsApp action',
-    isHiddenOnLoad: true,
+    isHiddenOnLoad: false,
     isHiddenInAdminPanel: false,
   },
 };

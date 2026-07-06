@@ -47,7 +47,7 @@ export class WhatsappCloudApiClientService {
 
     if (!accessToken || !phoneNumberId) {
       throw new WhatsappApiError(
-        'WhatsApp is not configured: set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID',
+        'WhatsApp is not configured: set the access token and phone number id under Settings → Admin Panel → Config Variables (WhatsApp settings)',
       );
     }
 
@@ -103,7 +103,7 @@ export class WhatsappCloudApiClientService {
 
     if (!businessAccountId) {
       throw new WhatsappApiError(
-        'WhatsApp is not configured: set WHATSAPP_BUSINESS_ACCOUNT_ID to list templates',
+        'WhatsApp is not configured: set the business account id under Settings → Admin Panel → Config Variables (WhatsApp settings)',
       );
     }
 

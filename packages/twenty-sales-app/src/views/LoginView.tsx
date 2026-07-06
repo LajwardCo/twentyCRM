@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { login } from '../api/auth';
+import logoSquare from '../assets/usystems-square.png';
 import { T } from '../lib/strings';
 
 type LoginViewProps = {
@@ -30,7 +31,7 @@ export const LoginView = ({ onLoggedIn }: LoginViewProps) => {
   return (
     <div className="login-page">
       <div className="login-side">
-        <div className="mark">هـ</div>
+        <img className="mark" src={logoSquare} alt="Usystems" />
         <h1>{T.appName}</h1>
         <p>
           ثبت لید در چند ثانیه، کارهای امروز در یک نگاه، و دستیار هوشمند برای

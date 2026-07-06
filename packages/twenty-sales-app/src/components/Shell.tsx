@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 
 import { type CurrentUser } from '../api/auth';
+import logoSquare from '../assets/usystems-square.png';
 import { jalaliToday } from '../lib/jalali';
 import { navigate, useRoute } from '../lib/router';
 import { T } from '../lib/strings';
@@ -47,7 +48,7 @@ export const AppShell = ({
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="mark">هـ</div>
+          <img className="mark" src={logoSquare} alt="Usystems" />
           <div>
             <b>{T.appName}</b>
             <small>{T.brandSub}</small>

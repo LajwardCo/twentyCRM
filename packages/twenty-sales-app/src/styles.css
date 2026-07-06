@@ -279,14 +279,10 @@ textarea {
   height: 40px;
   border-radius: 12px;
   flex-shrink: 0;
-  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-800));
-  color: #fff;
-  font-weight: 800;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 14px -4px rgba(36, 83, 214, 0.5);
+  background: #fff;
+  padding: 4px;
+  object-fit: contain;
+  box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.4);
 }
 
 .brand b {
@@ -1949,13 +1945,9 @@ table.leads tbody tr:hover {
   width: 58px;
   height: 58px;
   border-radius: 16px;
-  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-800));
-  color: #fff;
-  font-size: 28px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #fff;
+  padding: 6px;
+  object-fit: contain;
   margin-bottom: 24px;
 }
 

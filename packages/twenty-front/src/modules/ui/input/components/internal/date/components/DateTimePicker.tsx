@@ -11,7 +11,7 @@ import {
   DATE_TIME_PICKER_MONTH_YEAR_PANEL_DROPDOWN_ID,
   DateTimePickerHeader,
 } from '@/ui/input/components/internal/date/components/DateTimePickerHeader';
-import { JalaliCalendar } from '@/ui/input/components/internal/date/components/JalaliCalendar';
+import { JalaliDateTimePicker } from '@/ui/input/components/internal/date/components/JalaliDateTimePicker';
 import { RelativeDatePickerHeader } from '@/ui/input/components/internal/date/components/RelativeDatePickerHeader';
 import { getHighlightedDates } from '@/ui/input/components/internal/date/utils/getHighlightedDates';
 import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
@@ -503,42 +503,22 @@ export const DateTimePicker = ({
 
   const { calendarSystem } = useDateTimeFormat();
 
-  // Relative dates keep the Gregorian range picker; the Jalali grid only handles
-  // single-date selection. Time-of-day stays in the parent input, so we only
-  // swap the calendar grid and preserve the current hour/minute on selection.
+  // Relative dates keep the Gregorian range picker; the Jalali picker handles
+  // single date+time selection (its own RTL grid + a calendar-independent time
+  // input).
   if (calendarSystem === CalendarSystem.JALALI && !isRelative) {
-    const handleJalaliSelect = (pickedPlainDate: Temporal.PlainDate) => {
-      const zonedDateTime = pickedPlainDate
-        .toZonedDateTime(timeZone ?? userTimezone)
-        .with({
-          hour: dateToUse?.hour ?? 0,
-          minute: dateToUse?.minute ?? 0,
-        });
-      onChange?.(zonedDateTime);
-      handleClose(zonedDateTime);
-    };
-
     return (
       <StyledOuterWrapper>
         <StyledContainer calendarDisabled={false}>
-          <JalaliCalendar
-            selectedPlainDate={dateToUse.toPlainDate()}
-            onSelect={handleJalaliSelect}
+          <JalaliDateTimePicker
+            date={dateToUse}
+            timeZone={timeZone ?? userTimezone}
             calendarStartDay={calendarStartDayNumber}
+            clearable={clearable}
+            onChange={(zonedDateTime) => onChange?.(zonedDateTime)}
+            onClose={handleClose}
+            onClear={handleClear}
           />
-          {clearable && (
-            <>
-              <StyledSeparator />
-              <StyledButtonContainer onClick={handleClear}>
-                <StyledButtonContent>
-                  <MenuItemLeftContent
-                    LeftIcon={IconCalendarX}
-                    text={t`Clear`}
-                  />
-                </StyledButtonContent>
-              </StyledButtonContainer>
-            </>
-          )}
         </StyledContainer>
       </StyledOuterWrapper>
     );

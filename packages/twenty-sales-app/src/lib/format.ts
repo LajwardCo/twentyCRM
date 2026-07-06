@@ -52,3 +52,25 @@ export const personName = (
   person
     ? `${person.name.firstName} ${person.name.lastName}`.trim()
     : '—';
+
+// AFN money display with Persian digits: ۴۲۰ هزار ؋ / ۱٫۲م ؋
+import { toPersianDigits } from './jalali';
+
+export const formatAfn = (amountMicros: number | null | undefined): string => {
+  if (!amountMicros) return '—';
+  const afn = amountMicros / 1_000_000;
+  if (afn >= 1_000_000) {
+    const m = afn / 1_000_000;
+    return `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م ؋`;
+  }
+  if (afn >= 1_000) {
+    const k = Math.round(afn / 1_000);
+    return `${toPersianDigits(k)}هزار ؋`;
+  }
+  return `${toPersianDigits(Math.round(afn))} ؋`;
+};
+
+export const sumAmountMicros = (
+  leads: { amount: { amountMicros: number | null } | null }[],
+): number =>
+  leads.reduce((total, lead) => total + (lead.amount?.amountMicros ?? 0), 0);

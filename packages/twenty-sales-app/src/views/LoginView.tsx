@@ -1,6 +1,8 @@
 import { useState } from 'react';
 
 import { login } from '../api/auth';
+import logoSquare from '../assets/usystems-square.png';
+import { T } from '../lib/strings';
 
 type LoginViewProps = {
   onLoggedIn: () => void;
@@ -20,50 +22,61 @@ export const LoginView = ({ onLoggedIn }: LoginViewProps) => {
       await login(email.trim(), password);
       onLoggedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : T.loginFailed);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="login-wrap">
-      <div className="login-logo">
-        <div className="mark">H</div>
-        <h1>Hamagan Sales</h1>
-        <div className="muted">Sign in with your CRM account</div>
+    <div className="login-page">
+      <div className="login-side">
+        <img className="mark" src={logoSquare} alt="Usystems" />
+        <h1>{T.appName}</h1>
+        <p>
+          ثبت لید در چند ثانیه، کارهای امروز در یک نگاه، و دستیار هوشمند برای
+          هر لید — همه در یک جا.
+        </p>
       </div>
+      <div className="login-form-side">
+        <div className="login-box">
+          <h2>{T.signInTitle}</h2>
+          <div className="sub">{T.signInSub}</div>
 
-      {error !== null && <div className="error-banner">{error}</div>}
+          {error !== null && <div className="error-banner">{error}</div>}
 
-      <form onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="login-email">Email</label>
-          <input
-            id="login-email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <form onSubmit={handleSubmit}>
+            <div className="fld">
+              <label htmlFor="login-email">{T.email}</label>
+              <input
+                id="login-email"
+                type="email"
+                dir="ltr"
+                autoComplete="email"
+                inputMode="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="fld" style={{ marginBottom: 18 }}>
+              <label htmlFor="login-password">{T.password}</label>
+              <input
+                id="login-password"
+                type="password"
+                dir="ltr"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <button className="btn gold block" type="submit" disabled={busy} style={{ padding: 12 }}>
+              {busy ? T.signingIn : T.signIn}
+            </button>
+          </form>
         </div>
-        <div className="field">
-          <label htmlFor="login-password">Password</label>
-          <input
-            id="login-password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <button className="btn block" type="submit" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign In'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 };

@@ -1,51 +1,127 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
-import {
-  LEAD_SOURCES,
-  registerLead,
-  type NewLeadInput,
-} from '../api/records';
-import { TopBar } from '../components/Shell';
+import { LEAD_SOURCES, registerLead, type NewLeadInput } from '../api/records';
+import { invalidateCache } from '../lib/cache';
 import { toLocalInputValue } from '../lib/format';
+import { clearDraft, loadDraft, saveDraft } from '../lib/prefs';
+import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
+import { announceDockablePage, clearDockablePage } from '../lib/workbench';
+import { SOURCE_LABELS, T, TEMP_LABELS } from '../lib/strings';
 
 type NewLeadViewProps = {
   user: CurrentUser;
 };
 
-const tomorrowMorning = (): Date => {
+type FollowUpPreset = 'tomorrow' | 'threeDays' | 'nextWeek' | 'custom';
+
+const presetDate = (preset: FollowUpPreset): Date => {
   const d = new Date();
-  d.setDate(d.getDate() + 1);
+  if (preset === 'tomorrow') d.setDate(d.getDate() + 1);
+  if (preset === 'threeDays') d.setDate(d.getDate() + 3);
+  if (preset === 'nextWeek') d.setDate(d.getDate() + 7);
   d.setHours(9, 0, 0, 0);
   return d;
 };
 
+type Draft = {
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  temperature: 'HOT' | 'WARM' | 'COLD' | null;
+  leadSource: string;
+  estimatedValue: string;
+  firstContactNote: string;
+  followUpNote: string;
+};
+
 export const NewLeadView = ({ user }: NewLeadViewProps) => {
-  const [companyName, setCompanyName] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [temperature, setTemperature] = useState<'HOT' | 'WARM' | 'COLD' | null>('WARM');
-  const [leadSource, setLeadSource] = useState('FIELD');
-  const [firstContactNote, setFirstContactNote] = useState('');
-  const [firstContactDate, setFirstContactDate] = useState(
-    toLocalInputValue(new Date()),
-  );
-  const [scheduleFollowUp, setScheduleFollowUp] = useState(true);
-  const [followUpNote, setFollowUpNote] = useState('');
-  const [followUpDate, setFollowUpDate] = useState(
-    toLocalInputValue(tomorrowMorning()),
+  // Field sellers lose connections and close tabs — never lose a half-typed lead.
+  const draft = useRef(loadDraft<Draft>()).current;
+  const [draftRestored, setDraftRestored] = useState(
+    draft !== null && draft.companyName.trim() !== '',
   );
 
+  const [companyName, setCompanyName] = useState(draft?.companyName ?? '');
+  const [firstName, setFirstName] = useState(draft?.firstName ?? '');
+  const [lastName, setLastName] = useState(draft?.lastName ?? '');
+  const [phone, setPhone] = useState(draft?.phone ?? '');
+  const [email, setEmail] = useState(draft?.email ?? '');
+  const [temperature, setTemperature] = useState<'HOT' | 'WARM' | 'COLD' | null>(
+    draft?.temperature ?? 'WARM',
+  );
+  const [leadSource, setLeadSource] = useState(draft?.leadSource ?? 'FIELD');
+  const [estimatedValue, setEstimatedValue] = useState(draft?.estimatedValue ?? '');
+  const [firstContactNote, setFirstContactNote] = useState(
+    draft?.firstContactNote ?? '',
+  );
+  const [firstContactDate, setFirstContactDate] = useState(toLocalInputValue(new Date()));
+  const [scheduleFollowUp, setScheduleFollowUp] = useState(true);
+  const [followUpNote, setFollowUpNote] = useState(draft?.followUpNote ?? '');
+  const [followUpPreset, setFollowUpPreset] = useState<FollowUpPreset>('tomorrow');
+  const [followUpDate, setFollowUpDate] = useState(
+    toLocalInputValue(presetDate('tomorrow')),
+  );
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const saveTimer = useRef<number>(0);
+  useEffect(() => {
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      saveDraft({
+        companyName,
+        firstName,
+        lastName,
+        phone,
+        email,
+        temperature,
+        leadSource,
+        estimatedValue,
+        firstContactNote,
+        followUpNote,
+      } satisfies Draft);
+    }, 400);
+    return () => window.clearTimeout(saveTimer.current);
+  }, [
+    companyName,
+    firstName,
+    lastName,
+    phone,
+    email,
+    temperature,
+    leadSource,
+    estimatedValue,
+    firstContactNote,
+    followUpNote,
+  ]);
+
+  useEffect(() => {
+    announceDockablePage(
+      companyName.trim() !== '' ? `ثبت: ${companyName.trim()}` : T.newLead,
+      'new',
+    );
+    return clearDockablePage;
+  }, [companyName]);
+
+  const pickPreset = (preset: FollowUpPreset) => {
+    setFollowUpPreset(preset);
+    if (preset !== 'custom') {
+      setFollowUpDate(toLocalInputValue(presetDate(preset)));
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
-    setBusy('Saving…');
+    setBusy(T.saving);
+
+    const parsedValue = Number(
+      estimatedValue.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[,\s]/g, ''),
+    );
 
     const input: NewLeadInput = {
       companyName,
@@ -58,190 +134,346 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
       firstContactNote,
       firstContactDate: new Date(firstContactDate).toISOString(),
       followUpNote,
-      followUpDate: scheduleFollowUp
-        ? new Date(followUpDate).toISOString()
-        : null,
+      followUpDate: scheduleFollowUp ? new Date(followUpDate).toISOString() : null,
+      estimatedAmountAfn:
+        Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null,
       workspaceMemberId: user.workspaceMemberId,
     };
 
     try {
       const result = await registerLead(input, setBusy);
+      clearDraft();
+      invalidateCache('leads:');
+      invalidateCache('today:');
       navigate(`/lead/${result.opportunityId}`);
     } catch (err) {
       setError(
-        `${busy ?? 'Saving'} failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+        `${busy ?? T.saving} ${T.stepFailed}: ${err instanceof Error ? err.message : ''}`,
       );
       setBusy(null);
     }
   };
 
+  const summaryReady = companyName.trim() !== '';
+  const hasContact = firstName.trim() !== '' || lastName.trim() !== '';
+
   return (
-    <>
-      <TopBar title="New Lead" />
-      <main className="app-main">
-        <form onSubmit={handleSubmit}>
-          <div className="card">
-            <h3 className="card-title">Company</h3>
-            <div className="field">
-              <label htmlFor="nl-company">Company name *</label>
-              <input
-                id="nl-company"
-                required
-                autoFocus
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-              />
-            </div>
-          </div>
+    <main className="page">
+      <div className="page-head anim">
+        <div>
+          <h1>{T.newLead}</h1>
+          <div className="sub">همه چیز در یک صفحه — شرکت، شخص تماس، تماس اول و پیگیری</div>
+        </div>
+      </div>
 
-          <div className="card">
-            <h3 className="card-title">Point of contact</h3>
-            <div className="field-row">
-              <div className="field">
-                <label htmlFor="nl-first">First name</label>
+      {draftRestored && (
+        <div
+          className="card card-pad anim"
+          style={{
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            borderColor: 'var(--lapis-500)',
+          }}
+        >
+          <span style={{ flex: 1, fontSize: 13 }}>
+            📝 پیش‌نویس قبلی بازیابی شد — می‌توانید ادامه بدهید.
+          </span>
+          <button
+            type="button"
+            className="btn line sm"
+            onClick={() => {
+              clearDraft();
+              setCompanyName('');
+              setFirstName('');
+              setLastName('');
+              setPhone('');
+              setEmail('');
+              setEstimatedValue('');
+              setFirstContactNote('');
+              setFollowUpNote('');
+              setDraftRestored(false);
+            }}
+          >
+            شروع از نو
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div className="form-grid">
+          <div>
+            <div className="card card-pad fieldset anim d1">
+              <legend>
+                <i>۱</i> {T.company}
+              </legend>
+              <div className="fld" style={{ marginBottom: 0 }}>
+                <label htmlFor="nl-company">{T.companyName} *</label>
                 <input
-                  id="nl-first"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  id="nl-company"
+                  required
+                  autoFocus
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                 />
               </div>
-              <div className="field">
-                <label htmlFor="nl-last">Last name</label>
-                <input
-                  id="nl-last"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
+            </div>
+
+            <div className="card card-pad fieldset anim d2">
+              <legend>
+                <i>۲</i> {T.contactPerson}
+              </legend>
+              <div className="f2">
+                <div className="fld">
+                  <label htmlFor="nl-first">{T.firstName}</label>
+                  <input
+                    id="nl-first"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+                <div className="fld">
+                  <label htmlFor="nl-last">{T.lastName}</label>
+                  <input
+                    id="nl-last"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="f2">
+                <div className="fld" style={{ marginBottom: 0 }}>
+                  <label htmlFor="nl-phone">{T.phone}</label>
+                  <input
+                    id="nl-phone"
+                    type="tel"
+                    inputMode="tel"
+                    dir="ltr"
+                    placeholder="07…"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+                <div className="fld" style={{ marginBottom: 0 }}>
+                  <label htmlFor="nl-email">{T.emailOptional}</label>
+                  <input
+                    id="nl-email"
+                    type="email"
+                    inputMode="email"
+                    dir="ltr"
+                    placeholder="example@company.af"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
-            <div className="field">
-              <label htmlFor="nl-phone">Phone</label>
-              <input
-                id="nl-phone"
-                type="tel"
-                inputMode="tel"
-                placeholder="07…"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="nl-email">Email (optional)</label>
-              <input
-                id="nl-email"
-                type="email"
-                inputMode="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-          </div>
 
-          <div className="card">
-            <h3 className="card-title">Qualification</h3>
-            <div className="field">
-              <label>Temperature</label>
-              <div className="segmented">
-                {(['HOT', 'WARM', 'COLD'] as const).map((t) => (
-                  <button
-                    type="button"
-                    key={t}
-                    className={temperature === t ? 'selected' : ''}
-                    onClick={() =>
-                      setTemperature(temperature === t ? null : t)
-                    }
+            <div className="card card-pad fieldset anim d3">
+              <legend>
+                <i>۳</i> {T.qualification}
+              </legend>
+              <div className="f2">
+                <div className="fld">
+                  <label>{T.temperature}</label>
+                  <div className="temp-seg">
+                    {(['HOT', 'WARM', 'COLD'] as const).map((t) => (
+                      <button
+                        type="button"
+                        key={t}
+                        className={`t-${t.toLowerCase()} ${temperature === t ? 'on' : ''}`}
+                        onClick={() => setTemperature(temperature === t ? null : t)}
+                      >
+                        {TEMP_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="fld">
+                  <label htmlFor="nl-source">{T.leadSource}</label>
+                  <select
+                    id="nl-source"
+                    value={leadSource}
+                    onChange={(e) => setLeadSource(e.target.value)}
                   >
-                    {t === 'HOT' ? '🔥 Hot' : t === 'WARM' ? '🌤 Warm' : '❄️ Cold'}
-                  </button>
-                ))}
+                    {LEAD_SOURCES.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {SOURCE_LABELS[s.value] ?? s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="fld" style={{ maxWidth: 260, marginBottom: 0 }}>
+                <label htmlFor="nl-value">ارزش تخمینی (؋ — اختیاری)</label>
+                <input
+                  id="nl-value"
+                  inputMode="numeric"
+                  dir="ltr"
+                  placeholder="مثلاً 300000"
+                  value={estimatedValue}
+                  onChange={(e) => setEstimatedValue(e.target.value)}
+                />
               </div>
             </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="nl-source">Lead source</label>
-              <select
-                id="nl-source"
-                value={leadSource}
-                onChange={(e) => setLeadSource(e.target.value)}
-              >
-                {LEAD_SOURCES.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          <div className="card">
-            <h3 className="card-title">First contact</h3>
-            <div className="field">
-              <label htmlFor="nl-note">
-                What happened? (call / visit notes)
-              </label>
-              <textarea
-                id="nl-note"
-                placeholder="e.g. Visited the office, spoke with the manager, interested in a demo…"
-                value={firstContactNote}
-                onChange={(e) => setFirstContactNote(e.target.value)}
-              />
-            </div>
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="nl-date">When</label>
-              <input
-                id="nl-date"
-                type="datetime-local"
-                value={firstContactDate}
-                onChange={(e) => setFirstContactDate(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="card-title">Follow-up</h3>
-            <div className="field">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={scheduleFollowUp}
-                  onChange={(e) => setScheduleFollowUp(e.target.checked)}
-                  style={{ width: 'auto' }}
+            <div className="card card-pad fieldset anim d4">
+              <legend>
+                <i>۴</i> {T.firstContact}
+              </legend>
+              <div className="fld">
+                <label htmlFor="nl-note">{T.firstContactHint}</label>
+                <textarea
+                  id="nl-note"
+                  placeholder={T.firstContactPlaceholder}
+                  value={firstContactNote}
+                  onChange={(e) => setFirstContactNote(e.target.value)}
                 />
-                Schedule a follow-up task
-              </label>
+              </div>
+              <div className="fld" style={{ maxWidth: 250, marginBottom: 0 }}>
+                <label htmlFor="nl-date">{T.when}</label>
+                <input
+                  id="nl-date"
+                  type="datetime-local"
+                  value={firstContactDate}
+                  onChange={(e) => setFirstContactDate(e.target.value)}
+                />
+              </div>
             </div>
-            {scheduleFollowUp && (
-              <>
-                <div className="field">
-                  <label htmlFor="nl-fu-note">What to do</label>
+
+            <div className="card card-pad fieldset anim d5">
+              <legend>
+                <i>۵</i> {T.followUp}
+              </legend>
+              <div className="fld">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
-                    id="nl-fu-note"
-                    placeholder="e.g. Call to schedule the demo"
-                    value={followUpNote}
-                    onChange={(e) => setFollowUpNote(e.target.value)}
+                    type="checkbox"
+                    checked={scheduleFollowUp}
+                    onChange={(e) => setScheduleFollowUp(e.target.checked)}
+                    style={{ width: 'auto' }}
                   />
-                </div>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label htmlFor="nl-fu-date">When</label>
-                  <input
-                    id="nl-fu-date"
-                    type="datetime-local"
-                    value={followUpDate}
-                    onChange={(e) => setFollowUpDate(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
+                  {T.scheduleFollowUp}
+                </label>
+              </div>
+              {scheduleFollowUp && (
+                <>
+                  <div className="fld">
+                    <label htmlFor="nl-fu-note">{T.followUpWhat}</label>
+                    <input
+                      id="nl-fu-note"
+                      placeholder={T.followUpPlaceholder}
+                      value={followUpNote}
+                      onChange={(e) => setFollowUpNote(e.target.value)}
+                    />
+                  </div>
+                  <div className="fld" style={{ marginBottom: 0 }}>
+                    <label>{T.when}</label>
+                    <div className="quick-chips">
+                      <button
+                        type="button"
+                        className={followUpPreset === 'tomorrow' ? 'on' : ''}
+                        onClick={() => pickPreset('tomorrow')}
+                      >
+                        {T.tomorrowMorning}
+                      </button>
+                      <button
+                        type="button"
+                        className={followUpPreset === 'threeDays' ? 'on' : ''}
+                        onClick={() => pickPreset('threeDays')}
+                      >
+                        {T.inThreeDays}
+                      </button>
+                      <button
+                        type="button"
+                        className={followUpPreset === 'nextWeek' ? 'on' : ''}
+                        onClick={() => pickPreset('nextWeek')}
+                      >
+                        {T.nextWeek}
+                      </button>
+                      <button
+                        type="button"
+                        className={followUpPreset === 'custom' ? 'on' : ''}
+                        onClick={() => pickPreset('custom')}
+                      >
+                        {T.customTime}
+                      </button>
+                    </div>
+                    {followUpPreset === 'custom' && (
+                      <input
+                        type="datetime-local"
+                        style={{ marginTop: 8, maxWidth: 250 }}
+                        value={followUpDate}
+                        onChange={(e) => setFollowUpDate(e.target.value)}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
-          {error !== null && <div className="error-banner">{error}</div>}
-
-          <div className="form-actions">
-            <button className="btn block" type="submit" disabled={busy !== null}>
-              {busy ?? 'Register Lead'}
+          <div className="card card-pad summary-card anim d2">
+            <h3>خلاصه ثبت</h3>
+            <div className="sub">با یک کلیک، همه این رکوردها ساخته می‌شوند:</div>
+            <ul>
+              <li>
+                <span className={`st ${summaryReady ? '' : 'off'}`}>✓</span>
+                <span>
+                  {T.company}: <b>{companyName.trim() || '—'}</b>
+                </span>
+              </li>
+              <li>
+                <span className={`st ${hasContact ? '' : 'off'}`}>✓</span>
+                <span>
+                  {T.contactPerson}:{' '}
+                  <b>{hasContact ? `${firstName} ${lastName}`.trim() : '—'}</b>
+                </span>
+              </li>
+              <li>
+                <span className={`st ${summaryReady ? '' : 'off'}`}>✓</span>
+                <span>
+                  لید: <b>«لید جدید»{temperature ? ` · ${TEMP_LABELS[temperature]}` : ''}</b>
+                </span>
+              </li>
+              <li>
+                <span className={`st ${firstContactNote.trim() !== '' ? '' : 'off'}`}>✓</span>
+                <span>گزارش تماس اول + یادداشت</span>
+              </li>
+              <li>
+                <span className={`st ${scheduleFollowUp ? '' : 'off'}`}>✓</span>
+                <span>
+                  وظیفه پیگیری:{' '}
+                  <b>
+                    {scheduleFollowUp
+                      ? followUpPreset === 'tomorrow'
+                        ? T.tomorrowMorning
+                        : followUpPreset === 'threeDays'
+                          ? T.inThreeDays
+                          : followUpPreset === 'nextWeek'
+                            ? T.nextWeek
+                            : toPersianDigits(followUpDate.replace('T', ' — '))
+                      : '—'}
+                  </b>
+                </span>
+              </li>
+            </ul>
+            {error !== null && <div className="error-banner">{error}</div>}
+            <button
+              className="btn gold block"
+              type="submit"
+              disabled={busy !== null}
+              style={{ padding: 12 }}
+            >
+              {busy ?? `${T.registerLead} ✓`}
             </button>
+            <div className="sub" style={{ textAlign: 'center', marginTop: 8 }}>
+              ثبت کامل در کمتر از ۳۰ ثانیه
+            </div>
           </div>
-        </form>
-      </main>
-    </>
+        </div>
+      </form>
+    </main>
   );
 };

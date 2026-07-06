@@ -2,10 +2,13 @@ import { coreQuery } from './client';
 
 // ---------- shared types ----------
 
+export type TaskType = 'CALL' | 'MEETING' | 'DEMO' | 'VISIT' | 'OTHER';
+
 export type Task = {
   id: string;
   title: string;
   status: 'TODO' | 'IN_PROGRESS' | 'DONE' | null;
+  taskType: TaskType | null;
   dueAt: string | null;
   createdAt: string;
   bodyV2: { markdown: string | null } | null;
@@ -41,7 +44,27 @@ export type LeadSummary = {
     emails: { primaryEmail: string | null } | null;
   } | null;
   owner: { id: string; name: { firstName: string; lastName: string } } | null;
+  amount: { amountMicros: number | null; currencyCode: string | null } | null;
+  createdBy: { name: string | null; source: string | null } | null;
+  referrer: {
+    id: string;
+    name: string;
+    partnerType: string | null;
+    commissionPercent: number | null;
+  } | null;
 };
+
+// Stages considered "open pipeline" (not yet won or lost).
+export const OPEN_STAGES = [
+  'NEW_LEAD',
+  'FOLLOWING_UP',
+  'DEMO_SCHEDULED',
+  'DEMO_NEGOTIATION',
+  'CONTRACT_SENT',
+  'SIGNED_AWAITING_PAYMENT',
+  'PAID_AWAITING_TRAINING',
+  'IN_TRAINING',
+];
 
 export const STAGES: { value: string; label: string }[] = [
   { value: 'NEW_LEAD', label: 'New Lead' },
@@ -83,6 +106,9 @@ const LEAD_FIELDS = `
     emails { primaryEmail }
   }
   owner { id name { firstName lastName } }
+  amount { amountMicros currencyCode }
+  createdBy { name source }
+  referrer { id name partnerType commissionPercent }
 `;
 
 // ---------- leads ----------
@@ -90,10 +116,15 @@ const LEAD_FIELDS = `
 export const fetchLeads = async (options: {
   search?: string;
   ownerId?: string;
+  openOnly?: boolean;
+  limit?: number;
 }): Promise<LeadSummary[]> => {
   const filters: Record<string, unknown>[] = [];
   if (options.search) {
     filters.push({ name: { ilike: `%${options.search}%` } });
+  }
+  if (options.openOnly) {
+    filters.push({ stage: { in: OPEN_STAGES } });
   }
   if (options.ownerId) {
     filters.push({ ownerId: { eq: options.ownerId } });
@@ -113,7 +144,7 @@ export const fetchLeads = async (options: {
     }`,
     {
       filter: filters.length > 0 ? { and: filters } : undefined,
-      limit: 60,
+      limit: options.limit ?? 60,
     },
   );
 
@@ -165,6 +196,7 @@ export const fetchLeadTasks = async (opportunityId: string): Promise<Task[]> => 
               id
               title
               status
+              taskType
               dueAt
               createdAt
               bodyV2 { markdown }
@@ -243,6 +275,7 @@ export const fetchMyOpenTasks = async (
             id
             title
             status
+            taskType
             dueAt
             createdAt
             bodyV2 { markdown }
@@ -279,6 +312,45 @@ export const setTaskStatus = async (
   );
 };
 
+// Single task with its lead/company targets — for the task execution view.
+export const fetchTask = async (taskId: string): Promise<Task> => {
+  const data = await coreQuery<{ task: Task }>(
+    `query TaskById($id: UUID) {
+      task(filter: { id: { eq: $id } }) {
+        id
+        title
+        status
+        taskType
+        dueAt
+        createdAt
+        bodyV2 { markdown }
+        taskTargets {
+          edges {
+            node {
+              opportunity { id name }
+              company { id name }
+            }
+          }
+        }
+      }
+    }`,
+    { id: taskId },
+  );
+  return data.task;
+};
+
+export const updateTask = async (
+  taskId: string,
+  update: Record<string, unknown>,
+): Promise<void> => {
+  await coreQuery(
+    `mutation UpdateTaskFields($id: UUID!, $data: TaskUpdateInput!) {
+      updateTask(id: $id, data: $data) { id }
+    }`,
+    { id: taskId, data: update },
+  );
+};
+
 // ---------- create: task / note attached to a lead ----------
 
 type LeadTargetIds = {
@@ -290,6 +362,7 @@ export const createTaskForLead = async (input: {
   title: string;
   bodyMarkdown?: string;
   status: 'TODO' | 'DONE';
+  taskType?: TaskType;
   dueAt: string | null;
   assigneeId: string;
   target: LeadTargetIds;
@@ -304,6 +377,7 @@ export const createTaskForLead = async (input: {
         status: input.status,
         dueAt: input.dueAt,
         assigneeId: input.assigneeId,
+        ...(input.taskType ? { taskType: input.taskType } : {}),
         ...(input.bodyMarkdown
           ? { bodyV2: { markdown: input.bodyMarkdown } }
           : {}),
@@ -405,6 +479,7 @@ export type NewLeadInput = {
   firstContactDate: string; // ISO
   followUpNote: string;
   followUpDate: string | null; // ISO or null to skip
+  estimatedAmountAfn: number | null; // plain AFN, converted to micros
   workspaceMemberId: string;
 };
 
@@ -420,7 +495,7 @@ export const registerLead = async (
   input: NewLeadInput,
   onProgress: (step: string) => void,
 ): Promise<NewLeadResult> => {
-  onProgress('Creating company…');
+  onProgress('ایجاد شرکت…');
   const companyData = await coreQuery<{ createCompany: { id: string } }>(
     `mutation CreateCompany($data: CompanyCreateInput!) {
       createCompany(data: $data) { id }
@@ -429,7 +504,7 @@ export const registerLead = async (
   );
   const companyId = companyData.createCompany.id;
 
-  onProgress('Creating contact…');
+  onProgress('ایجاد شخص تماس…');
   const hasContactName =
     input.contactFirstName.trim() !== '' || input.contactLastName.trim() !== '';
   let personId: string | null = null;
@@ -457,7 +532,7 @@ export const registerLead = async (
     personId = personData.createPerson.id;
   }
 
-  onProgress('Creating lead…');
+  onProgress('ایجاد لید…');
   const oppData = await coreQuery<{ createOpportunity: { id: string } }>(
     `mutation CreateOpportunity($data: OpportunityCreateInput!) {
       createOpportunity(data: $data) { id }
@@ -471,6 +546,14 @@ export const registerLead = async (
         ...(personId ? { pointOfContactId: personId } : {}),
         ...(input.temperature ? { temperature: input.temperature } : {}),
         ...(input.leadSource ? { leadSource: input.leadSource } : {}),
+        ...(input.estimatedAmountAfn
+          ? {
+              amount: {
+                amountMicros: Math.round(input.estimatedAmountAfn * 1_000_000),
+                currencyCode: 'AFN',
+              },
+            }
+          : {}),
       },
     },
   );
@@ -478,9 +561,9 @@ export const registerLead = async (
   const target = { opportunityId, companyId };
 
   if (input.firstContactNote.trim() !== '') {
-    onProgress('Saving first contact…');
+    onProgress('ثبت تماس اول…');
     await createTaskForLead({
-      title: `First contact — ${input.companyName.trim()}`,
+      title: `تماس اول — ${input.companyName.trim()}`,
       bodyMarkdown: input.firstContactNote.trim(),
       status: 'DONE',
       dueAt: input.firstContactDate,
@@ -488,19 +571,19 @@ export const registerLead = async (
       target,
     });
     await createNoteForLead({
-      title: `First contact — ${input.companyName.trim()}`,
+      title: `تماس اول — ${input.companyName.trim()}`,
       bodyMarkdown: input.firstContactNote.trim(),
       target,
     });
   }
 
   if (input.followUpDate !== null) {
-    onProgress('Scheduling follow-up…');
+    onProgress('ثبت پیگیری…');
     await createTaskForLead({
       title:
         input.followUpNote.trim() !== ''
           ? input.followUpNote.trim()
-          : `Follow up — ${input.companyName.trim()}`,
+          : `پیگیری — ${input.companyName.trim()}`,
       status: 'TODO',
       dueAt: input.followUpDate,
       assigneeId: input.workspaceMemberId,
@@ -509,4 +592,360 @@ export const registerLead = async (
   }
 
   return { opportunityId, companyId, personId: personId ?? '' };
+};
+
+// ---------- company panel (info + other contacts) ----------
+
+export type CompanyInfo = {
+  id: string;
+  name: string;
+  employees: number | null;
+  domainName: { primaryLinkUrl: string | null } | null;
+  address: {
+    addressCity: string | null;
+    addressStreet1: string | null;
+  } | null;
+  createdAt: string;
+};
+
+export type CompanyContact = {
+  id: string;
+  name: { firstName: string; lastName: string };
+  jobTitle: string | null;
+  phones: {
+    primaryPhoneCallingCode: string | null;
+    primaryPhoneNumber: string | null;
+  } | null;
+  emails: { primaryEmail: string | null } | null;
+};
+
+export const fetchCompanyInfo = async (
+  companyId: string,
+): Promise<CompanyInfo> => {
+  const data = await coreQuery<{ company: CompanyInfo }>(
+    `query CompanyInfo($id: UUID!) {
+      company(filter: { id: { eq: $id } }) {
+        id
+        name
+        employees
+        domainName { primaryLinkUrl }
+        address { addressCity addressStreet1 }
+        createdAt
+      }
+    }`,
+    { id: companyId },
+  );
+  return data.company;
+};
+
+// Fields that only exist on some instances (added ad hoc in production);
+// fetched separately so the main query never breaks.
+export const fetchCompanyExtras = async (
+  companyId: string,
+): Promise<{ businessType: string | null; productsServices: string | null }> => {
+  try {
+    const data = await coreQuery<{
+      company: { businessType: string | null; productsServices: string | null };
+    }>(
+      `query CompanyExtras($id: UUID!) {
+        company(filter: { id: { eq: $id } }) { businessType productsServices }
+      }`,
+      { id: companyId },
+    );
+    return data.company;
+  } catch {
+    return { businessType: null, productsServices: null };
+  }
+};
+
+export const fetchCompanyContacts = async (
+  companyId: string,
+): Promise<CompanyContact[]> => {
+  const data = await coreQuery<{
+    people: { edges: { node: CompanyContact }[] };
+  }>(
+    `query CompanyContacts($companyId: UUID!) {
+      people(filter: { companyId: { eq: $companyId } }, first: 50) {
+        edges {
+          node {
+            id
+            name { firstName lastName }
+            jobTitle
+            phones { primaryPhoneCallingCode primaryPhoneNumber }
+            emails { primaryEmail }
+          }
+        }
+      }
+    }`,
+    { companyId },
+  );
+  return data.people.edges.map((e) => e.node);
+};
+
+// Marketer is a production-only SELECT field on Opportunity.
+export const fetchLeadMarketer = async (
+  opportunityId: string,
+): Promise<string | null> => {
+  try {
+    const data = await coreQuery<{ opportunity: { marketer: string | null } }>(
+      `query LeadMarketer($id: UUID!) {
+        opportunity(filter: { id: { eq: $id } }) { marketer }
+      }`,
+      { id: opportunityId },
+    );
+    return data.opportunity.marketer;
+  } catch {
+    return null;
+  }
+};
+
+// ---------- pricing: deal products + quotations ----------
+
+export type DealProductLine = {
+  id: string;
+  name: string;
+  quantity: number | null;
+  discountPercent: number | null;
+  lineStatus: string | null;
+  installPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+  annualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+  product: { id: string; name: string } | null;
+};
+
+export type QuotationRow = {
+  id: string;
+  name: string;
+  quoteNumber: string | null;
+  status: string | null;
+  issuedAt: string | null;
+  validUntil: string | null;
+  agreedPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+};
+
+export const fetchLeadPricing = async (
+  opportunityId: string,
+): Promise<{ dealProducts: DealProductLine[]; quotations: QuotationRow[] }> => {
+  const [dealProducts, quotations] = await Promise.all([
+    coreQuery<{ dealProducts: { edges: { node: DealProductLine }[] } }>(
+      `query LeadDealProducts($oppId: UUID!) {
+        dealProducts(filter: { opportunityId: { eq: $oppId } }, first: 50) {
+          edges {
+            node {
+              id
+              name
+              quantity
+              discountPercent
+              lineStatus
+              installPrice { amountMicros currencyCode }
+              annualPrice { amountMicros currencyCode }
+              product { id name }
+            }
+          }
+        }
+      }`,
+      { oppId: opportunityId },
+    )
+      .then((d) => d.dealProducts.edges.map((e) => e.node))
+      .catch(() => [] as DealProductLine[]),
+    coreQuery<{ quotations: { edges: { node: QuotationRow }[] } }>(
+      `query LeadQuotations($oppId: UUID!) {
+        quotations(filter: { opportunityId: { eq: $oppId } }, first: 50) {
+          edges {
+            node {
+              id
+              name
+              quoteNumber
+              status
+              issuedAt
+              validUntil
+              agreedPrice { amountMicros currencyCode }
+            }
+          }
+        }
+      }`,
+      { oppId: opportunityId },
+    )
+      .then((d) => d.quotations.edges.map((e) => e.node))
+      .catch(() => [] as QuotationRow[]),
+  ]);
+  return { dealProducts, quotations };
+};
+
+export type ProductOption = {
+  id: string;
+  name: string;
+  baseInstallPrice: { amountMicros: number | null } | null;
+  baseAnnualPrice: { amountMicros: number | null } | null;
+};
+
+export const fetchProducts = async (): Promise<ProductOption[]> => {
+  const data = await coreQuery<{
+    products: { edges: { node: ProductOption }[] };
+  }>(
+    `query Products {
+      products(first: 100, orderBy: [{ name: AscNullsLast }]) {
+        edges {
+          node {
+            id
+            name
+            baseInstallPrice { amountMicros }
+            baseAnnualPrice { amountMicros }
+          }
+        }
+      }
+    }`,
+  );
+  return data.products.edges.map((e) => e.node);
+};
+
+// The server-side PRE hook computes installPrice from the product's pricing
+// model, so we only send the linkage + quantity.
+export const addProductToLead = async (input: {
+  opportunityId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+}): Promise<void> => {
+  await coreQuery(
+    `mutation AddDealProduct($data: DealProductCreateInput!) {
+      createDealProduct(data: $data) { id }
+    }`,
+    {
+      data: {
+        name: input.productName,
+        opportunityId: input.opportunityId,
+        productId: input.productId,
+        quantity: input.quantity,
+      },
+    },
+  );
+};
+
+// ---------- reports ----------
+
+export type DoneTask = {
+  id: string;
+  title: string;
+  updatedAt: string;
+};
+
+export const fetchMyDoneTasksSince = async (
+  assigneeId: string,
+  sinceIso: string,
+): Promise<DoneTask[]> => {
+  const data = await coreQuery<{
+    tasks: { edges: { node: DoneTask }[] };
+  }>(
+    `query MyDoneTasks($filter: TaskFilterInput) {
+      tasks(filter: $filter, first: 200, orderBy: [{ updatedAt: DescNullsLast }]) {
+        edges { node { id title updatedAt } }
+      }
+    }`,
+    {
+      filter: {
+        and: [
+          { assigneeId: { eq: assigneeId } },
+          { status: { eq: 'DONE' } },
+          { updatedAt: { gte: sinceIso } },
+        ],
+      },
+    },
+  );
+  return data.tasks.edges.map((e) => e.node);
+};
+
+// ---------- comprehensive search (native tsvector full-text) ----------
+
+// Twenty's search vectors index names AND long text: task/note bodies,
+// person emails/phones — so deep search reaches inside details.
+export type SearchHit = {
+  recordId: string;
+  objectNameSingular: string;
+  label: string;
+};
+
+export const globalSearch = async (
+  searchInput: string,
+  limit = 16,
+): Promise<SearchHit[]> => {
+  const data = await coreQuery<{
+    search: { edges: { node: SearchHit }[] };
+  }>(
+    `query GlobalSearch($s: String!, $limit: Int!, $included: [String!]) {
+      search(
+        searchInput: $s
+        limit: $limit
+        includedObjectNameSingulars: $included
+      ) {
+        edges { node { recordId objectNameSingular label } }
+      }
+    }`,
+    {
+      s: searchInput,
+      limit,
+      included: ['opportunity', 'person', 'company', 'task', 'note'],
+    },
+  );
+  return data.search.edges.map((e) => e.node);
+};
+
+// Resolve a search hit to a route in this app. Opportunities and tasks have
+// their own pages; people/companies/notes resolve to their related lead.
+export const resolveSearchRoute = async (
+  hit: SearchHit,
+): Promise<string | null> => {
+  if (hit.objectNameSingular === 'opportunity') return `/lead/${hit.recordId}`;
+  if (hit.objectNameSingular === 'task') return `/task/${hit.recordId}`;
+
+  if (hit.objectNameSingular === 'note') {
+    const data = await coreQuery<{
+      noteTargets: {
+        edges: { node: { opportunity: { id: string } | null } }[];
+      };
+    }>(
+      `query NoteLead($noteId: UUID!) {
+        noteTargets(filter: { noteId: { eq: $noteId } }, first: 5) {
+          edges { node { opportunity { id } } }
+        }
+      }`,
+      { noteId: hit.recordId },
+    );
+    const opp = data.noteTargets.edges.find((e) => e.node.opportunity)?.node
+      .opportunity;
+    return opp ? `/lead/${opp.id}` : null;
+  }
+
+  if (hit.objectNameSingular === 'person') {
+    const data = await coreQuery<{
+      opportunities: { edges: { node: { id: string } }[] };
+    }>(
+      `query PersonLead($personId: UUID!) {
+        opportunities(filter: { pointOfContactId: { eq: $personId } }, first: 1) {
+          edges { node { id } }
+        }
+      }`,
+      { personId: hit.recordId },
+    );
+    return data.opportunities.edges[0]
+      ? `/lead/${data.opportunities.edges[0].node.id}`
+      : null;
+  }
+
+  if (hit.objectNameSingular === 'company') {
+    const data = await coreQuery<{
+      opportunities: { edges: { node: { id: string } }[] };
+    }>(
+      `query CompanyLead($companyId: UUID!) {
+        opportunities(filter: { companyId: { eq: $companyId } }, first: 1) {
+          edges { node { id } }
+        }
+      }`,
+      { companyId: hit.recordId },
+    );
+    return data.opportunities.edges[0]
+      ? `/lead/${data.opportunities.edges[0].node.id}`
+      : null;
+  }
+
+  return null;
 };

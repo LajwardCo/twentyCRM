@@ -9,7 +9,8 @@ import {
 } from '../api/ai';
 import { fetchLead } from '../api/records';
 import { IconSend } from '../components/icons';
-import { TopBar } from '../components/Shell';
+import { T } from '../lib/strings';
+import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 
 type LeadChatViewProps = {
   leadId: string;
@@ -19,11 +20,10 @@ type DisplayMessage = {
   id: string;
   role: 'user' | 'ai';
   text: string;
-  pending?: boolean;
 };
 
 export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
-  const [leadName, setLeadName] = useState('AI Chat');
+  const [leadName, setLeadName] = useState('');
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -40,6 +40,11 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
   }, [leadId]);
 
   useEffect(() => {
+    announceDockablePage(leadName ? `AI — ${leadName}` : 'گفتگو با AI', 'lead');
+    return clearDockablePage;
+  }, [leadName]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, waiting]);
 
@@ -52,7 +57,6 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
       }))
       .filter((m) => m.text.trim() !== '');
 
-  // Poll until an assistant message newer than `sinceCount` appears.
   const pollForReply = (thread: string, sinceCount: number, attempt = 0) => {
     window.clearTimeout(pollRef.current);
     pollRef.current = window.setTimeout(
@@ -73,7 +77,7 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
           pollForReply(thread, sinceCount, attempt + 1);
         } else {
           setWaiting(false);
-          setError('The AI did not reply in time. Try again.');
+          setError(T.aiTimeout);
         }
       },
       attempt === 0 ? 1200 : 1500,
@@ -88,7 +92,7 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
     setWaiting(true);
     setMessages((prev) => [
       ...prev,
-      { id: `local-${Date.now()}`, role: 'user', text },
+      { id: `local-${prev.length}`, role: 'user', text },
     ]);
 
     try {
@@ -99,21 +103,24 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
       pollForReply(thread, assistantCount);
     } catch (err) {
       setWaiting(false);
-      setError(err instanceof Error ? err.message : 'Failed to send');
+      setError(err instanceof Error ? err.message : T.sendFailedChat);
     }
   };
 
   return (
-    <>
-      <TopBar title={`AI · ${leadName}`} showBack />
-      <main
-        className="app-main"
-        style={{ paddingBottom: 'calc(96px + var(--safe-bottom))' }}
-      >
+    <div className="chat-page">
+      <div className="chat-scroll">
         {messages.length === 0 && !waiting && (
-          <div className="empty-state">
-            Ask anything about this lead — history, next steps, how to pitch,
-            objections…
+          <div className="empty-state" style={{ paddingTop: 80 }}>
+            <div
+              style={{
+                fontSize: 34,
+                marginBottom: 10,
+              }}
+            >
+              ✨
+            </div>
+            {T.chatEmpty}
           </div>
         )}
         <div className="chat-log">
@@ -123,36 +130,40 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
             </div>
           ))}
           {waiting && (
-            <div className="chat-msg ai muted">Thinking…</div>
+            <div className="chat-msg ai thinking">
+              <span className="dots">{T.thinking}</span>
+            </div>
           )}
         </div>
         {error !== null && <div className="error-banner">{error}</div>}
         <div ref={bottomRef} />
-      </main>
+      </div>
 
       <div className="chat-input-bar">
-        <textarea
-          rows={1}
-          placeholder="Ask about this lead…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <button
-          className="btn"
-          style={{ borderRadius: '50%', width: 44, height: 44, padding: 0 }}
-          disabled={waiting || draft.trim() === ''}
-          onClick={send}
-          aria-label="Send"
-        >
-          <IconSend size={18} />
-        </button>
+        <div className="chat-input-inner">
+          <textarea
+            rows={1}
+            placeholder={leadName ? `${T.chatPlaceholder} (${leadName})` : T.chatPlaceholder}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+          />
+          <button
+            className="btn"
+            style={{ borderRadius: '50%', width: 44, height: 44, padding: 0, flexShrink: 0 }}
+            disabled={waiting || draft.trim() === ''}
+            onClick={send}
+            aria-label={T.send}
+          >
+            <IconSend size={18} />
+          </button>
+        </div>
       </div>
-    </>
+    </div>
   );
 };

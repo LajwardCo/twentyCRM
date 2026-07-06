@@ -9,6 +9,7 @@ export type Prefs = {
   mineOnly: boolean;
   openOnly: boolean;
   leadsSort: 'created' | 'value' | 'name';
+  deepSearch: boolean;
 };
 
 const DEFAULTS: Prefs = {
@@ -17,6 +18,7 @@ const DEFAULTS: Prefs = {
   mineOnly: true,
   openOnly: true,
   leadsSort: 'created',
+  deepSearch: false,
 };
 
 export const loadPrefs = (): Prefs => {

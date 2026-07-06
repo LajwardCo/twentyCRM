@@ -7,6 +7,7 @@ import { toLocalInputValue } from '../lib/format';
 import { clearDraft, loadDraft, saveDraft } from '../lib/prefs';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
+import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { SOURCE_LABELS, T, TEMP_LABELS } from '../lib/strings';
 
 type NewLeadViewProps = {
@@ -97,6 +98,14 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     firstContactNote,
     followUpNote,
   ]);
+
+  useEffect(() => {
+    announceDockablePage(
+      companyName.trim() !== '' ? `ثبت: ${companyName.trim()}` : T.newLead,
+      'new',
+    );
+    return clearDockablePage;
+  }, [companyName]);
 
   const pickPreset = (preset: FollowUpPreset) => {
     setFollowUpPreset(preset);

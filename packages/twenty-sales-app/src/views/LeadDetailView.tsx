@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { generateText } from '../api/ai';
 import { type CurrentUser } from '../api/auth';
@@ -42,6 +42,7 @@ import {
   SUMMARIZE_SYSTEM_PROMPT,
 } from '../lib/leadContext';
 import { navigate } from '../lib/router';
+import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { SOURCE_LABELS, STAGE_LABELS, T, T2, TEMP_LABELS } from '../lib/strings';
 
 type LeadDetailViewProps = {
@@ -99,6 +100,12 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const tasks = data?.tasks ?? [];
   const notes = data?.notes ?? [];
   const error = actionError ?? loadError;
+
+  const leadName = data?.lead.name;
+  useEffect(() => {
+    if (leadName) announceDockablePage(leadName, 'lead');
+    return clearDockablePage;
+  }, [leadName]);
 
   const reload = useCallback(async () => {
     await refresh();

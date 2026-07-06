@@ -12,6 +12,8 @@ import { T } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { LeadsView } from './views/LeadsView';
+import { AdminView } from './views/AdminView';
+import { CompetitorsView } from './views/CompetitorsView';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
 import { ReportsView } from './views/ReportsView';
@@ -151,6 +153,10 @@ export const App = () => {
     view = <TasksView user={user} />;
   } else if (section === 'reports') {
     view = <ReportsView user={user} />;
+  } else if (section === 'competitors') {
+    view = <CompetitorsView />;
+  } else if (section === 'admin') {
+    view = <AdminView />;
   } else {
     view = <TodayView user={user} />;
   }

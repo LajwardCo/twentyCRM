@@ -2130,6 +2130,36 @@ table.leads tbody tr:hover {
   color: var(--ink-3);
 }
 
+.cp-modes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cp-modes button {
+  border: 1px solid var(--line);
+  background: none;
+  border-radius: 999px;
+  padding: 4px 13px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: all 0.13s;
+}
+
+.cp-modes button.on {
+  border-color: var(--lapis-500);
+  background: var(--lapis-50);
+  color: var(--lapis-800);
+}
+
+[data-theme='dark'] .cp-modes button.on {
+  color: #9db8f5;
+}
+
 .cp-list {
   max-height: 320px;
   overflow-y: auto;
@@ -2324,5 +2354,107 @@ table.leads tbody tr:hover {
 
   .chat-input-bar {
     padding: 10px 14px calc(76px + var(--safe-bottom));
+  }
+}
+
+/* ============ workspace dock (minimized pages) ============ */
+
+.dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 232px;
+  z-index: 45;
+  background: rgba(244, 245, 247, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  animation: rise-in 0.25s both;
+}
+
+[data-theme='dark'] .dock {
+  background: rgba(14, 18, 32, 0.92);
+}
+
+.dock-inner {
+  display: flex;
+  gap: 7px;
+  padding: 7px 14px;
+  overflow-x: auto;
+  max-width: 1280px;
+}
+
+.dock-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  box-shadow: var(--sh-1);
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: border-color 0.15s;
+  animation: rise-in 0.2s both;
+}
+
+.dock-chip.on {
+  border-color: var(--lapis-500);
+  background: var(--lapis-50);
+}
+
+.dock-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: none;
+  padding: 6.5px 4px 6.5px 2px;
+  margin-right: 9px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink);
+  cursor: pointer;
+  max-width: 190px;
+}
+
+.dock-open svg {
+  color: var(--lapis-600);
+  flex-shrink: 0;
+}
+
+.dock-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-close {
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font-size: 15px;
+  padding: 4px 9px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.dock-close:hover {
+  color: var(--hot);
+}
+
+/* keep page content clear of the dock */
+.has-dock .page {
+  padding-bottom: calc(110px + var(--safe-bottom));
+}
+
+@media (max-width: 980px) {
+  .dock {
+    right: 0;
+    bottom: calc(58px + var(--safe-bottom));
+    border-bottom: 1px solid var(--line);
+  }
+
+  .has-dock .page {
+    padding-bottom: calc(175px + var(--safe-bottom));
   }
 }

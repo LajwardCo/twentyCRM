@@ -6,15 +6,39 @@ import { jalaliToday } from '../lib/jalali';
 import { navigate, useRoute } from '../lib/router';
 import { T, T2 } from '../lib/strings';
 import {
+  dockAdd,
+  getDockablePage,
+  useDock,
+  type DockKind,
+} from '../lib/workbench';
+import { Dock } from './Dock';
+import {
   IconChart,
+  IconChevronDown,
   IconDashboard,
+  IconFlame,
   IconLeads,
   IconLogout,
   IconMoon,
   IconPlus,
   IconSearch,
   IconSun,
+  IconTasks,
 } from './icons';
+
+// fallback dock labels when a view hasn't announced one yet
+const routeDockDefaults = (
+  parts: string[],
+): { label: string; kind: DockKind } => {
+  const [section] = parts;
+  if (section === 'lead') return { label: T.lead, kind: 'lead' };
+  if (section === 'task') return { label: T.task, kind: 'task' };
+  if (section === 'new') return { label: T.newLead, kind: 'new' };
+  if (section === 'reports') return { label: T2.reports, kind: 'page' };
+  if (section === 'leads') return { label: T.leads, kind: 'page' };
+  if (section === 'tasks') return { label: 'کارها', kind: 'page' };
+  return { label: T.tabToday, kind: 'page' };
+};
 
 type AppShellProps = {
   user: CurrentUser;
@@ -29,8 +53,11 @@ type AppShellProps = {
 
 const NAV = [
   { key: 'today', label: T.tabToday, icon: IconDashboard },
+  { key: 'tasks', label: 'کارها', icon: IconTasks },
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'reports', label: T2.reports, icon: IconChart },
+  { key: 'competitors', label: 'رقبا', icon: IconFlame },
+  { key: 'admin', label: 'کاربران', icon: IconLeads },
 ] as const;
 
 export const AppShell = ({
@@ -43,11 +70,26 @@ export const AppShell = ({
   onOpenPalette,
 }: AppShellProps) => {
   const route = useRoute();
+  const dockItems = useDock();
   const active =
     route.parts[0] === 'lead' ? 'leads' : (route.parts[0] ?? 'today');
 
+  // pages worth minimizing: anything that isn't the dashboard itself
+  const minimizable = route.parts.length > 0 && route.parts[0] !== 'today';
+
+  const minimizePage = () => {
+    const announced = getDockablePage();
+    const fallback = routeDockDefaults(route.parts);
+    dockAdd({
+      route: `/${route.path}`,
+      label: announced?.label ?? fallback.label,
+      kind: announced?.kind ?? fallback.kind,
+    });
+    navigate('/today');
+  };
+
   return (
-    <div className="shell">
+    <div className={`shell ${dockItems.length > 0 ? 'has-dock' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
           <img className="mark" src={logoSquare} alt="Usystems" />
@@ -99,6 +141,16 @@ export const AppShell = ({
           {bar}
           <div className="cmd-right">
             <span className="cmd-date">{jalaliToday()}</span>
+            {minimizable && (
+              <button
+                className="icon-btn"
+                onClick={minimizePage}
+                title="کوچک‌سازی این صفحه (به نوار پایین)"
+                aria-label="کوچک‌سازی صفحه"
+              >
+                <IconChevronDown size={16} />
+              </button>
+            )}
             <button
               className="icon-btn"
               onClick={onOpenPalette}
@@ -118,6 +170,7 @@ export const AppShell = ({
           </div>
         </div>
         {children}
+        <Dock />
       </div>
     </div>
   );

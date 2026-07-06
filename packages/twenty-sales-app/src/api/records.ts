@@ -853,3 +853,99 @@ export const fetchMyDoneTasksSince = async (
   );
   return data.tasks.edges.map((e) => e.node);
 };
+
+// ---------- comprehensive search (native tsvector full-text) ----------
+
+// Twenty's search vectors index names AND long text: task/note bodies,
+// person emails/phones — so deep search reaches inside details.
+export type SearchHit = {
+  recordId: string;
+  objectNameSingular: string;
+  label: string;
+};
+
+export const globalSearch = async (
+  searchInput: string,
+  limit = 16,
+): Promise<SearchHit[]> => {
+  const data = await coreQuery<{
+    search: { edges: { node: SearchHit }[] };
+  }>(
+    `query GlobalSearch($s: String!, $limit: Int!, $included: [String!]) {
+      search(
+        searchInput: $s
+        limit: $limit
+        includedObjectNameSingulars: $included
+      ) {
+        edges { node { recordId objectNameSingular label } }
+      }
+    }`,
+    {
+      s: searchInput,
+      limit,
+      included: ['opportunity', 'person', 'company', 'task', 'note'],
+    },
+  );
+  return data.search.edges.map((e) => e.node);
+};
+
+// Resolve a search hit to a route in this app. Opportunities and tasks have
+// their own pages; people/companies/notes resolve to their related lead.
+export const resolveSearchRoute = async (
+  hit: SearchHit,
+): Promise<string | null> => {
+  if (hit.objectNameSingular === 'opportunity') return `/lead/${hit.recordId}`;
+  if (hit.objectNameSingular === 'task') return `/task/${hit.recordId}`;
+
+  if (hit.objectNameSingular === 'note') {
+    const data = await coreQuery<{
+      noteTargets: {
+        edges: { node: { opportunity: { id: string } | null } }[];
+      };
+    }>(
+      `query NoteLead($noteId: UUID!) {
+        noteTargets(filter: { noteId: { eq: $noteId } }, first: 5) {
+          edges { node { opportunity { id } } }
+        }
+      }`,
+      { noteId: hit.recordId },
+    );
+    const opp = data.noteTargets.edges.find((e) => e.node.opportunity)?.node
+      .opportunity;
+    return opp ? `/lead/${opp.id}` : null;
+  }
+
+  if (hit.objectNameSingular === 'person') {
+    const data = await coreQuery<{
+      opportunities: { edges: { node: { id: string } }[] };
+    }>(
+      `query PersonLead($personId: UUID!) {
+        opportunities(filter: { pointOfContactId: { eq: $personId } }, first: 1) {
+          edges { node { id } }
+        }
+      }`,
+      { personId: hit.recordId },
+    );
+    return data.opportunities.edges[0]
+      ? `/lead/${data.opportunities.edges[0].node.id}`
+      : null;
+  }
+
+  if (hit.objectNameSingular === 'company') {
+    const data = await coreQuery<{
+      opportunities: { edges: { node: { id: string } }[] };
+    }>(
+      `query CompanyLead($companyId: UUID!) {
+        opportunities(filter: { companyId: { eq: $companyId } }, first: 1) {
+          edges { node { id } }
+        }
+      }`,
+      { companyId: hit.recordId },
+    );
+    return data.opportunities.edges[0]
+      ? `/lead/${data.opportunities.edges[0].node.id}`
+      : null;
+  }
+
+  return null;
+};

@@ -1,9 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { fetchLeads, type LeadSummary } from '../api/records';
+import {
+  fetchLeads,
+  globalSearch,
+  resolveSearchRoute,
+  type LeadSummary,
+  type SearchHit,
+} from '../api/records';
 import { navigate } from '../lib/router';
+import { loadPrefs, savePref } from '../lib/prefs';
 import { STAGE_LABELS, T } from '../lib/strings';
-import { IconDashboard, IconLeads, IconPlus, IconSearch } from './icons';
+import {
+  IconBuilding,
+  IconDashboard,
+  IconLeads,
+  IconNote,
+  IconPlus,
+  IconSearch,
+  IconTasks,
+} from './icons';
 
 type CommandPaletteProps = {
   onClose: () => void;
@@ -17,36 +32,109 @@ type Item = {
   run: () => void;
 };
 
+const HIT_TYPE_FA: Record<string, string> = {
+  opportunity: 'لید',
+  person: 'شخص',
+  company: 'شرکت',
+  task: 'وظیفه',
+  note: 'یادداشت',
+};
+
+const hitIcon = (type: string) => {
+  if (type === 'company') return <IconBuilding size={16} />;
+  if (type === 'task') return <IconTasks size={16} />;
+  if (type === 'note') return <IconNote size={16} />;
+  if (type === 'person') return <IconLeads size={16} />;
+  return (
+    <span
+      className="deal-logo"
+      style={{ width: 24, height: 24, fontSize: 11, borderRadius: 7 }}
+    >
+      ل
+    </span>
+  );
+};
+
 export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
   const [query, setQuery] = useState('');
+  const [deep, setDeepState] = useState(() => loadPrefs().deepSearch ?? false);
   const [leads, setLeads] = useState<LeadSummary[]>([]);
+  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [resolving, setResolving] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<number>(0);
+  const requestSeq = useRef(0);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  const setDeep = (value: boolean) => {
+    setDeepState(value);
+    savePref('deepSearch', value);
+    setHits([]);
+    setLeads([]);
+    setActive(0);
+    inputRef.current?.focus();
+  };
+
   useEffect(() => {
     window.clearTimeout(debounceRef.current);
+    setNotice(null);
     if (query.trim() === '') {
       setLeads([]);
+      setHits([]);
+      setSearching(false);
       return;
     }
-    debounceRef.current = window.setTimeout(async () => {
-      try {
-        setLeads(await fetchLeads({ search: query.trim(), limit: 6 }));
-      } catch {
-        setLeads([]);
-      }
-    }, 200);
+    setSearching(true);
+    const seq = ++requestSeq.current;
+    debounceRef.current = window.setTimeout(
+      async () => {
+        try {
+          if (deep) {
+            const found = await globalSearch(query.trim(), 16);
+            if (seq === requestSeq.current) setHits(found);
+          } else {
+            const found = await fetchLeads({ search: query.trim(), limit: 6 });
+            if (seq === requestSeq.current) setLeads(found);
+          }
+        } catch {
+          if (seq === requestSeq.current) {
+            setHits([]);
+            setLeads([]);
+          }
+        } finally {
+          if (seq === requestSeq.current) setSearching(false);
+        }
+      },
+      deep ? 300 : 200,
+    );
     return () => window.clearTimeout(debounceRef.current);
-  }, [query]);
+  }, [query, deep]);
 
   const go = (to: string) => {
     navigate(to);
     onClose();
+  };
+
+  const openHit = async (hit: SearchHit) => {
+    setResolving(hit.recordId);
+    try {
+      const route = await resolveSearchRoute(hit);
+      if (route) {
+        go(route);
+      } else {
+        setNotice('این مورد به لیدی وصل نیست');
+      }
+    } catch {
+      setNotice('باز کردن ناموفق بود');
+    } finally {
+      setResolving(null);
+    }
   };
 
   const actions: Item[] = [
@@ -66,7 +154,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
     {
       key: 'tasks',
       label: 'کارها',
-      icon: <IconLeads size={16} />,
+      icon: <IconTasks size={16} />,
       run: () => go('/tasks'),
     },
     {
@@ -75,21 +163,32 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
       icon: <IconLeads size={16} />,
       run: () => go('/leads'),
     },
-  ].filter(
-    (a) => query.trim() === '' || a.label.includes(query.trim()),
-  );
+  ].filter((a) => query.trim() === '' || a.label.includes(query.trim()));
 
-  const items: Item[] = [
-    ...leads.map((lead) => ({
-      key: lead.id,
-      label: lead.name,
-      hint: STAGE_LABELS[lead.stage ?? ''] ?? undefined,
-      icon: <span className="deal-logo" style={{ width: 24, height: 24, fontSize: 11, borderRadius: 7 }}>{lead.name.charAt(0)}</span>,
-      run: () => go(`/lead/${lead.id}`),
-    })),
-    ...actions,
-  ];
+  const resultItems: Item[] = deep
+    ? hits.map((hit) => ({
+        key: hit.recordId,
+        label: hit.label || '—',
+        hint: HIT_TYPE_FA[hit.objectNameSingular] ?? hit.objectNameSingular,
+        icon: hitIcon(hit.objectNameSingular),
+        run: () => void openHit(hit),
+      }))
+    : leads.map((lead) => ({
+        key: lead.id,
+        label: lead.name,
+        hint: STAGE_LABELS[lead.stage ?? ''] ?? undefined,
+        icon: (
+          <span
+            className="deal-logo"
+            style={{ width: 24, height: 24, fontSize: 11, borderRadius: 7 }}
+          >
+            {lead.name.charAt(0)}
+          </span>
+        ),
+        run: () => go(`/lead/${lead.id}`),
+      }));
 
+  const items: Item[] = [...resultItems, ...actions];
   const clampedActive = Math.min(active, Math.max(0, items.length - 1));
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -104,6 +203,10 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
       items[clampedActive]?.run();
     } else if (e.key === 'Escape') {
       onClose();
+    } else if (e.key === 'Tab') {
+      // Tab flips between fast and deep search
+      e.preventDefault();
+      setDeep(!deep);
     }
   };
 
@@ -114,7 +217,11 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
           <IconSearch size={16} />
           <input
             ref={inputRef}
-            placeholder="جستجوی لید یا فرمان…"
+            placeholder={
+              deep
+                ? 'جستجو در همه‌چیز — یادداشت‌ها، وظایف، متن‌ها…'
+                : 'جستجوی لید یا فرمان…'
+            }
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -123,24 +230,52 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
           />
           <span className="cp-kbd">Esc</span>
         </div>
+
+        <div className="cp-modes">
+          <button className={!deep ? 'on' : ''} onClick={() => setDeep(false)}>
+            سریع
+          </button>
+          <button className={deep ? 'on' : ''} onClick={() => setDeep(true)}>
+            🔎 عمیق — داخل یادداشت‌ها و وظایف
+          </button>
+          <span className="cp-kbd" style={{ marginRight: 'auto' }}>
+            Tab
+          </span>
+        </div>
+
         <div className="cp-list">
-          {items.length === 0 && (
+          {searching && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 6 }}>
+              <div className="skeleton" style={{ height: 34 }} />
+              <div className="skeleton" style={{ height: 34 }} />
+            </div>
+          )}
+          {notice !== null && (
+            <div className="empty-state" style={{ padding: '10px 0' }}>
+              {notice}
+            </div>
+          )}
+          {!searching && items.length === 0 && (
             <div className="empty-state" style={{ padding: '22px 0' }}>
               {T.noLeadsFound}
             </div>
           )}
-          {items.map((item, index) => (
-            <button
-              key={item.key}
-              className={`cp-item ${index === clampedActive ? 'on' : ''}`}
-              onMouseEnter={() => setActive(index)}
-              onClick={item.run}
-            >
-              {item.icon}
-              <span className="cp-label">{item.label}</span>
-              {item.hint && <span className="cp-hint">{item.hint}</span>}
-            </button>
-          ))}
+          {!searching &&
+            items.map((item, index) => (
+              <button
+                key={item.key}
+                className={`cp-item ${index === clampedActive ? 'on' : ''}`}
+                onMouseEnter={() => setActive(index)}
+                onClick={item.run}
+                disabled={resolving !== null}
+              >
+                {item.icon}
+                <span className="cp-label">
+                  {resolving === item.key ? '…' : item.label}
+                </span>
+                {item.hint && <span className="cp-hint">{item.hint}</span>}
+              </button>
+            ))}
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
 import { fetchLead } from '../api/records';
 import { IconSend } from '../components/icons';
 import { T } from '../lib/strings';
+import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 
 type LeadChatViewProps = {
   leadId: string;
@@ -37,6 +38,11 @@ export const LeadChatView = ({ leadId }: LeadChatViewProps) => {
       .catch(() => undefined);
     return () => window.clearTimeout(pollRef.current);
   }, [leadId]);
+
+  useEffect(() => {
+    announceDockablePage(leadName ? `AI — ${leadName}` : 'گفتگو با AI', 'lead');
+    return clearDockablePage;
+  }, [leadName]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

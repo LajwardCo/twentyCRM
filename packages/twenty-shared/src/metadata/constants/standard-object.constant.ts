@@ -2989,6 +2989,9 @@ export const STANDARD_OBJECTS = {
       numberFormat: {
         universalIdentifier: '20202020-7f40-4e7f-b126-11c0eda6b141',
       },
+      calendarSystem: {
+        universalIdentifier: '20202020-ca1e-4d54-b7f0-1e5ca1e5cafe',
+      },
       createdBy: {
         universalIdentifier: '4a3f26d1-033e-4d84-b23a-9adc2fd0c2a8',
       },

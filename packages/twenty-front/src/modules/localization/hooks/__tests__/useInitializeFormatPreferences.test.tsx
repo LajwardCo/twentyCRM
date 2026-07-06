@@ -45,6 +45,7 @@ describe('useInitializeFormatPreferences', () => {
       timeFormat: 'HH:mm' as any,
       numberFormat: '1,000.00' as any,
       calendarStartDay: 'MONDAY' as any,
+      calendarSystem: 'GREGORIAN' as any,
     };
 
     mockGetFormatPreferencesFromWorkspaceMember.mockReturnValue(

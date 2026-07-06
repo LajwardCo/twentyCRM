@@ -7,8 +7,11 @@ import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLo
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { CalendarStartDay } from 'twenty-shared/constants';
 
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
+import { useDateTimeFormat } from '@/localization/hooks/useDateTimeFormat';
 import { detectCalendarStartDay } from '@/localization/utils/detection/detectCalendarStartDay';
 import { DatePickerHeader } from '@/ui/input/components/internal/date/components/DatePickerHeader';
+import { JalaliCalendar } from '@/ui/input/components/internal/date/components/JalaliCalendar';
 import { RelativeDatePickerHeader } from '@/ui/input/components/internal/date/components/RelativeDatePickerHeader';
 import { getHighlightedDates } from '@/ui/input/components/internal/date/utils/getHighlightedDates';
 import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
@@ -466,6 +469,37 @@ export const DatePicker = ({
   const dateForDatePicker = isDefined(dateShiftedToISOString)
     ? new Date(dateShiftedToISOString)
     : null;
+
+  const { calendarSystem } = useDateTimeFormat();
+
+  // Relative dates keep the Gregorian range picker; the Jalali grid only handles
+  // single-date selection.
+  if (calendarSystem === CalendarSystem.JALALI && !isRelative) {
+    const handleJalaliSelect = (pickedPlainDate: Temporal.PlainDate) => {
+      const pickedString = pickedPlainDate.toString();
+      onChange?.(pickedString);
+      handleClose(pickedString);
+    };
+
+    return (
+      <StyledContainer calendarDisabled={false}>
+        <div className={clearable ? 'clearable ' : ''}>
+          <JalaliCalendar
+            selectedPlainDate={plainDate}
+            onSelect={handleJalaliSelect}
+            calendarStartDay={calendarStartDay ?? CalendarStartDay.SATURDAY}
+          />
+        </div>
+        {clearable && (
+          <StyledButtonContainer onClick={handleClear}>
+            <StyledButtonContent>
+              <MenuItemLeftContent LeftIcon={IconCalendarX} text={t`Clear`} />
+            </StyledButtonContent>
+          </StyledButtonContainer>
+        )}
+      </StyledContainer>
+    );
+  }
 
   return (
     <StyledContainer calendarDisabled={isRelative}>

@@ -37,6 +37,12 @@ export enum WorkspaceMemberNumberFormatEnum {
   APOSTROPHE_AND_DOT = 'APOSTROPHE_AND_DOT',
 }
 
+export enum WorkspaceMemberCalendarSystemEnum {
+  SYSTEM = 'SYSTEM',
+  GREGORIAN = 'GREGORIAN',
+  JALALI = 'JALALI',
+}
+
 registerEnumType(WorkspaceMemberNumberFormatEnum, {
   name: 'WorkspaceMemberNumberFormatEnum',
   description: 'Number format for displaying numbers',
@@ -51,6 +57,11 @@ registerEnumType(WorkspaceMemberDateFormatEnum, {
   name: 'WorkspaceMemberDateFormatEnum',
   description:
     'Date format as Month first, Day first, Year first or system as default',
+});
+
+registerEnumType(WorkspaceMemberCalendarSystemEnum, {
+  name: 'WorkspaceMemberCalendarSystemEnum',
+  description: 'Calendar system as Gregorian, Jalali or system as default',
 });
 
 const NAME_FIELD_NAME = 'name';
@@ -73,6 +84,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
   timeZone: string;
   dateFormat: string;
   timeFormat: string;
+  calendarSystem: string;
   assignedTasks: Relation<TaskWorkspaceEntity[]>;
   accountOwnerForCompanies: Relation<CompanyWorkspaceEntity[]>;
   authoredAttachments: Relation<AttachmentWorkspaceEntity[]>;

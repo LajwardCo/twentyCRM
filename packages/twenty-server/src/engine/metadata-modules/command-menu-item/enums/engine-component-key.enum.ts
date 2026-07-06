@@ -51,6 +51,7 @@ export enum EngineComponentKey {
   REPLY_TO_EMAIL_THREAD = 'REPLY_TO_EMAIL_THREAD',
   COMPOSE_EMAIL = 'COMPOSE_EMAIL',
   COMPOSE_CAMPAIGN = 'COMPOSE_CAMPAIGN',
+  SEND_WHATSAPP = 'SEND_WHATSAPP',
 
   // TODO: Remove deprecated keys once upgrade:1-21:refactor-navigation-commands has run on all workspaces
   // Deprecated: replaced by NAVIGATION engine key with payload

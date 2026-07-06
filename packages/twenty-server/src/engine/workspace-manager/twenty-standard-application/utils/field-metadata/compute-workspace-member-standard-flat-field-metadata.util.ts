@@ -17,6 +17,7 @@ import { createStandardRelationFieldFlatMetadata } from 'src/engine/workspace-ma
 import { getTsVectorColumnExpressionFromFields } from 'src/engine/workspace-manager/utils/get-ts-vector-column-expression.util';
 import {
   SEARCH_FIELDS_FOR_WORKSPACE_MEMBER,
+  WorkspaceMemberCalendarSystemEnum,
   WorkspaceMemberNumberFormatEnum,
 } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 
@@ -365,6 +366,48 @@ export const buildWorkspaceMemberStandardFlatFieldMetadatas = ({
           label: i18nLabel(msg`12HRS`),
           position: 2,
           color: 'purple',
+        },
+      ],
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
+  calendarSystem: createStandardFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      fieldName: 'calendarSystem',
+      type: FieldMetadataType.SELECT,
+      label: i18nLabel(msg`Calendar`),
+      description: "User's preferred calendar system",
+      icon: 'IconCalendarBolt',
+      isSystem: true,
+      isNullable: false,
+      isUIEditable: false,
+      defaultValue: `'${WorkspaceMemberCalendarSystemEnum.SYSTEM}'`,
+      options: [
+        {
+          id: '20202020-ca1e-4d54-9a01-1e5ca1e5ca01',
+          value: WorkspaceMemberCalendarSystemEnum.SYSTEM,
+          label: i18nLabel(msg`System`),
+          position: 0,
+          color: 'turquoise',
+        },
+        {
+          id: '20202020-ca1e-4d54-9a01-1e5ca1e5ca02',
+          value: WorkspaceMemberCalendarSystemEnum.GREGORIAN,
+          label: i18nLabel(msg`Gregorian`),
+          position: 1,
+          color: 'blue',
+        },
+        {
+          id: '20202020-ca1e-4d54-9a01-1e5ca1e5ca03',
+          value: WorkspaceMemberCalendarSystemEnum.JALALI,
+          label: i18nLabel(msg`Jalali (Shamsi)`),
+          position: 2,
+          color: 'green',
         },
       ],
     },

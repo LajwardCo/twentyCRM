@@ -402,6 +402,32 @@ export class ConfigVariables {
   EMAIL_DRIVER: EmailDriver = EmailDriver.LOGGER;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.WHATSAPP_SETTINGS,
+    description:
+      'Permanent system-user access token for the Meta WhatsApp Cloud API',
+    type: ConfigVariableType.STRING,
+    isSensitive: true,
+  })
+  @IsOptional()
+  WHATSAPP_ACCESS_TOKEN: string | undefined = undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.WHATSAPP_SETTINGS,
+    description: 'Phone number id of the WhatsApp Business sender number',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  WHATSAPP_PHONE_NUMBER_ID: string | undefined = undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.WHATSAPP_SETTINGS,
+    description: 'WhatsApp Business Account id, used to list message templates',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  WHATSAPP_BUSINESS_ACCOUNT_ID: string | undefined = undefined;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.EMAIL_SETTINGS,
     description: 'SMTP host for sending emails',
     type: ConfigVariableType.STRING,

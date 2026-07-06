@@ -11,6 +11,7 @@ import { type WorkspaceMemberDTO } from 'src/engine/core-modules/user/dtos/works
 import { type RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { fromRoleEntitiesToRoleDtos } from 'src/engine/metadata-modules/role/utils/fromRoleEntityToRoleDto.util';
 import {
+  type WorkspaceMemberCalendarSystemEnum,
   type WorkspaceMemberDateFormatEnum,
   type WorkspaceMemberNumberFormatEnum,
   type WorkspaceMemberTimeFormatEnum,
@@ -75,6 +76,7 @@ export class WorkspaceMemberTranspiler {
       dateFormat,
       calendarStartDay,
       numberFormat,
+      calendarSystem,
     } = workspaceMemberEntity;
 
     const avatarUrl = await this.generateSignedAvatarUrl({
@@ -105,6 +107,7 @@ export class WorkspaceMemberTranspiler {
       roles,
       calendarStartDay,
       numberFormat: numberFormat as WorkspaceMemberNumberFormatEnum,
+      calendarSystem: calendarSystem as WorkspaceMemberCalendarSystemEnum,
     } satisfies WorkspaceMemberDTO;
   }
 

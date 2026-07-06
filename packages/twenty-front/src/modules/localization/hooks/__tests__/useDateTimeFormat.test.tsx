@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { type ReactNode } from 'react';
 
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
 import { DateFormat } from '@/localization/constants/DateFormat';
 import { TimeFormat } from '@/localization/constants/TimeFormat';
 import { useDateTimeFormat } from '@/localization/hooks/useDateTimeFormat';
@@ -15,6 +16,7 @@ const mockPreferences = {
   timeFormat: TimeFormat.HOUR_24,
   numberFormat: '1,000.00' as any,
   calendarStartDay: CalendarStartDay.MONDAY,
+  calendarSystem: CalendarSystem.GREGORIAN,
 };
 
 const Wrapper = ({ children }: { children: ReactNode }) => (
@@ -40,6 +42,7 @@ describe('useDateTimeFormat', () => {
       dateFormat: DateFormat.MONTH_FIRST,
       timeFormat: TimeFormat.HOUR_24,
       calendarStartDay: CalendarStartDay.MONDAY,
+      calendarSystem: CalendarSystem.GREGORIAN,
     });
   });
 
@@ -71,6 +74,7 @@ describe('useDateTimeFormat', () => {
       'dateFormat',
       'timeFormat',
       'calendarStartDay',
+      'calendarSystem',
     ]);
   });
 });

@@ -64,6 +64,12 @@ async function gql(endpoint, query, variables) {
   }
 }
 async function login() {
+  // A pre-made API key / bearer token (Settings -> APIs) skips the
+  // credential login entirely -- preferred for production runs.
+  if (process.env.TWENTY_TOKEN) {
+    TOKEN = process.env.TWENTY_TOKEN.trim();
+    return;
+  }
   const a = await gql(META, `mutation($e:String!,$p:String!,$o:String!){getLoginTokenFromCredentials(email:$e,password:$p,origin:$o){loginToken{token}}}`, { e: EMAIL, p: PASSWORD, o: ORIGIN });
   const b = await gql(META, `mutation($t:String!,$o:String!){getAuthTokensFromLoginToken(loginToken:$t,origin:$o){tokens{accessOrWorkspaceAgnosticToken{token}}}}`, { t: a.getLoginTokenFromCredentials.loginToken.token, o: ORIGIN });
   TOKEN = b.getAuthTokensFromLoginToken.tokens.accessOrWorkspaceAgnosticToken.token;
@@ -97,8 +103,24 @@ async function main() {
   console.log('-> check existing workflow');
   const existing = await gql(GRAPHQL, `query($n:String!) { workflows(filter:{name:{eq:$n}}) { edges { node { id } } } }`, { n: WORKFLOW_NAME });
   if (existing.workflows.edges.length) {
-    console.log('EXISTS, skipping:', JSON.stringify(existing.workflows.edges[0].node));
-    return;
+    if (!process.argv.includes('--rebuild')) {
+      console.log('EXISTS, skipping (pass --rebuild to destroy and re-provision):', JSON.stringify(existing.workflows.edges[0].node));
+      return;
+    }
+    // Rebuild path: ACTIVE versions are immutable, so the only safe way to
+    // change the workflow is destroy + recreate (see file header gotchas).
+    const oldId = existing.workflows.edges[0].node.id;
+    console.log('-> rebuild requested, destroying existing workflow', oldId);
+    const oldVersions = await gql(GRAPHQL, `query($id:UUID!){ workflowVersions(filter:{workflowId:{eq:$id}}) { edges { node { id status } } } }`, { id: oldId });
+    for (const { node } of oldVersions.workflowVersions.edges) {
+      if (node.status === 'ACTIVE') {
+        console.log('  -> deactivateWorkflowVersion', node.id);
+        await gql(GRAPHQL, `mutation($id:UUID!){ deactivateWorkflowVersion(workflowVersionId:$id) }`, { id: node.id });
+      }
+    }
+    await gql(GRAPHQL, `mutation($id:UUID!){ deleteWorkflow(id:$id){ id } }`, { id: oldId });
+    await gql(GRAPHQL, `mutation($id:UUID!){ destroyWorkflow(id:$id){ id } }`, { id: oldId });
+    console.log('  destroyed.');
   }
 
   console.log('-> createWorkflow');
@@ -129,8 +151,16 @@ async function main() {
 
   const sourceHandlerCode = `export const main = async (params: {
   members: any[];
+  existingOwnerId?: string;
 }): Promise<{ pickedOwnerId: string }> => {
-  const { members } = params;
+  const { members, existingOwnerId } = params;
+
+  // Leads registered by a seller (e.g. via the sales app) already carry an
+  // owner -- keep it. Round-robin only distributes leads that arrive unowned.
+  if (existingOwnerId && String(existingOwnerId).trim() !== '') {
+    return { pickedOwnerId: String(existingOwnerId) };
+  }
+
   const pool = (members || []).filter((m) => !!m && !!m.id);
 
   if (pool.length === 0) {
@@ -156,7 +186,10 @@ async function main() {
   await updateStep(workflowVersionId, findPatched);
 
   const codePatched = structuredClone(freshById[code.id]);
-  codePatched.settings.input.logicFunctionInput = { members: `{{${find.id}.all}}` };
+  codePatched.settings.input.logicFunctionInput = {
+    members: `{{${find.id}.all}}`,
+    existingOwnerId: '{{trigger.properties.after.ownerId}}',
+  };
   await updateStep(workflowVersionId, codePatched);
 
   const updatePatched = structuredClone(freshById[update.id]);

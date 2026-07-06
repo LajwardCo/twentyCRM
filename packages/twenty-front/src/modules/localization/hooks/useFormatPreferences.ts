@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
 import { DateFormat } from '@/localization/constants/DateFormat';
 import { NumberFormat } from '@/localization/constants/NumberFormat';
 import { TimeFormat } from '@/localization/constants/TimeFormat';
@@ -75,6 +76,10 @@ export const useFormatPreferences = () => {
               detectCalendarStartDay()
             ] as WorkspaceMemberFormatPreferences[K];
             break;
+          case 'calendarSystem':
+            resolvedValue =
+              CalendarSystem.GREGORIAN as WorkspaceMemberFormatPreferences[K];
+            break;
         }
       }
 
@@ -137,6 +142,9 @@ export const useFormatPreferences = () => {
             case 'calendarStartDay':
               resolvedUpdates.calendarStartDay =
                 CalendarStartDay[detectCalendarStartDay()];
+              break;
+            case 'calendarSystem':
+              resolvedUpdates.calendarSystem = CalendarSystem.GREGORIAN;
               break;
           }
         }

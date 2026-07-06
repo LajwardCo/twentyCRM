@@ -73,6 +73,24 @@ metadata GraphQL API. See the design in
   Replied. Idempotent. **Requires a connected email account** in the
   workspace (Settings > Accounts) — the script fails loudly if none exists.
 
+- `provision-competitor-intel.mjs` — creates the **Competitor Intelligence**
+  objects: **Competitor** (tier, threatLevel, status, overall strengths/
+  weaknesses, website), **Competitor Product** (category, demoUrl, pricingModel,
+  startingPrice, pricingSummary, per-product strengths/weaknesses), **Competitor
+  Update** (a dated news/change feed — `updateType`, date, body, source; `type`
+  is a reserved field name in Twenty so `updateType` is used), and **Competitor
+  Usage** (links one of our leads — Person and/or Opportunity — to a competitor
+  product with status, satisfaction, switchingSignal, renewalDate). Idempotent.
+  See the design in
+  [`docs/superpowers/specs/2026-07-06-competitor-intelligence-design.md`](../../docs/superpowers/specs/2026-07-06-competitor-intelligence-design.md).
+- `provision-competitor-views.mjs` — creates 5 saved Views for the above:
+  **Competitors by Threat** (sorted by threatLevel), **Competitors by Status**
+  (Kanban grouped by status), **Competitor Products**, **Competitor Updates —
+  Recent** (sorted by date desc), and **Switching Signals** (Competitor Usage
+  filtered to `switchingSignal ≠ None` — the actionable list for sellers).
+  Idempotent; run after `provision-competitor-intel.mjs`. An AI pitch/battlecard
+  generator that reads this data is deferred to a later phase.
+
 ### Server-side code (not just config) — `packages/twenty-server/src/modules/sales-crm/`
 
 Twenty has no metadata-only way to (a) synchronously block an invalid save or

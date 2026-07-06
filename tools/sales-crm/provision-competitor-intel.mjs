@@ -7,8 +7,11 @@ const META = process.env.TWENTY_META ?? 'http://localhost:3010/metadata';
 const ORIGIN = process.env.TWENTY_ORIGIN ?? 'http://localhost:3011';
 const EMAIL = process.env.TWENTY_EMAIL ?? 'tim@apple.dev';
 const PASSWORD = process.env.TWENTY_PASSWORD ?? 'tim@apple.dev';
+// Prefer a workspace API key (Settings -> APIs) when provided — no account
+// password needed. Falls back to email/password login otherwise.
+const API_KEY = process.env.TWENTY_API_KEY ?? null;
 
-let TOKEN = null;
+let TOKEN = API_KEY;
 async function gqlOnce(query, variables) {
   const res = await fetch(META, {
     method: 'POST',
@@ -142,8 +145,8 @@ const log = [];
 const rec = (kind, name, status, detail = '') => { log.push({ kind, name, status, detail }); console.log(`  [${status}] ${kind}: ${name}${detail ? ' — ' + detail : ''}`); };
 
 async function main() {
-  await login();
-  console.log('authenticated.\n');
+  if (API_KEY) { console.log('authenticated (API key).\n'); }
+  else { await login(); console.log('authenticated (login).\n'); }
 
   let objs = await fetchObjects();
 

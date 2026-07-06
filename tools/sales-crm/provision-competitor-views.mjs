@@ -6,8 +6,11 @@ const META = process.env.TWENTY_META ?? 'http://localhost:3010/metadata';
 const ORIGIN = process.env.TWENTY_ORIGIN ?? 'http://localhost:3011';
 const EMAIL = process.env.TWENTY_EMAIL ?? 'tim@apple.dev';
 const PASSWORD = process.env.TWENTY_PASSWORD ?? 'tim@apple.dev';
+// Prefer a workspace API key (Settings -> APIs) when provided — no account
+// password needed. Falls back to email/password login otherwise.
+const API_KEY = process.env.TWENTY_API_KEY ?? null;
 
-let TOKEN = null;
+let TOKEN = API_KEY;
 async function gqlOnce(query, variables) {
   const res = await fetch(META, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: ORIGIN, ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}) }, body: JSON.stringify({ query, variables }) });
   const json = await res.json();
@@ -54,7 +57,7 @@ async function ensureView(name, build) {
 }
 
 async function main() {
-  await login();
+  if (!API_KEY) await login();
   const F = await getFieldIds();
   for (const key of ['competitor', 'competitorProduct', 'competitorUpdate', 'competitorUsage']) {
     if (!F[key]) throw new Error(`object ${key} not found — run provision-competitor-intel.mjs first`);

@@ -13,7 +13,8 @@ export const MinimalMetadataGater = ({ children }: React.PropsWithChildren) => {
   const isMinimalMetadataReady = useAtomStateValue(isMinimalMetadataReadyState);
   const location = useLocation();
 
-  const { dateFormat, timeFormat, timeZone } = useDateTimeFormat();
+  const { dateFormat, timeFormat, timeZone, calendarSystem } =
+    useDateTimeFormat();
 
   const isOnExcludedPath =
     isMatchingLocation(location, AppPath.Verify) ||
@@ -38,6 +39,7 @@ export const MinimalMetadataGater = ({ children }: React.PropsWithChildren) => {
         dateFormat,
         timeFormat,
         timeZone,
+        calendarSystem,
       }}
     >
       {children}

@@ -31035,6 +31035,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"date-fns-jalali@npm:4.4.0-0":
+  version: 4.4.0-0
+  resolution: "date-fns-jalali@npm:4.4.0-0"
+  checksum: 10c0/ae8d74c7ca1679a15876e63af36a79264f222d7f575bf1382359b5a3ab98a7212f69abdc102129c77af25a1f736097832a1537635d275fc7aaaed6a8cae26ba1
+  languageName: node
+  linkType: hard
+
 "date-fns-tz@npm:^3.2.0":
   version: 3.2.0
   resolution: "date-fns-tz@npm:3.2.0"
@@ -54038,6 +54045,7 @@ __metadata:
     cron-parser: "npm:5.1.1"
     d3-shape: "npm:^3.2.0"
     date-fns: "npm:^4.4.0"
+    date-fns-jalali: "npm:4.4.0-0"
     date-fns-tz: "npm:^3.2.0"
     deep-equal: "npm:^2.2.2"
     dotenv-cli: "npm:^7.4.4"

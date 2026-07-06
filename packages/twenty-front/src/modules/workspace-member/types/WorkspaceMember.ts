@@ -1,4 +1,5 @@
 import {
+  type WorkspaceMemberCalendarSystemEnum,
   type WorkspaceMemberDateFormatEnum,
   type WorkspaceMemberNumberFormatEnum,
   type WorkspaceMemberTimeFormatEnum,
@@ -27,6 +28,7 @@ export type WorkspaceMember = {
   timeFormat?: WorkspaceMemberTimeFormatEnum | null;
   numberFormat?: WorkspaceMemberNumberFormatEnum | null;
   calendarStartDay?: number | null;
+  calendarSystem?: WorkspaceMemberCalendarSystemEnum | null;
 };
 
 export type WorkspaceInvitation = {

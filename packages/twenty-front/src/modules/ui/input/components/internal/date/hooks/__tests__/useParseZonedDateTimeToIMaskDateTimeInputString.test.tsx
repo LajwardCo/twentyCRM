@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { Temporal } from 'temporal-polyfill';
 
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
 import { DateFormat } from '@/localization/constants/DateFormat';
 import { NumberFormat } from '@/localization/constants/NumberFormat';
 import { TimeFormat } from '@/localization/constants/TimeFormat';
@@ -29,6 +30,7 @@ describe('useParseZonedDateTimeToIMaskDateTimeInputString', () => {
         timeFormat: TimeFormat.HOUR_24,
         numberFormat: NumberFormat.COMMAS_AND_DOT,
         calendarStartDay: CalendarStartDay.MONDAY,
+        calendarSystem: CalendarSystem.GREGORIAN,
       });
       return <JotaiProvider store={jotaiStore}>{children}</JotaiProvider>;
     };

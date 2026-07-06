@@ -2,10 +2,12 @@ import { styled } from '@linaria/react';
 
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
 import { DateFormat } from '@/localization/constants/DateFormat';
 import { NumberFormat } from '@/localization/constants/NumberFormat';
 import { TimeFormat } from '@/localization/constants/TimeFormat';
 import { useFormatPreferences } from '@/localization/hooks/useFormatPreferences';
+import { DateTimeSettingsCalendarSystemSelect } from '@/settings/experience/components/DateTimeSettingsCalendarSystemSelect';
 import { DateTimeSettingsDateFormatSelect } from '@/settings/experience/components/DateTimeSettingsDateFormatSelect';
 import { DateTimeSettingsTimeFormatSelect } from '@/settings/experience/components/DateTimeSettingsTimeFormatSelect';
 import { DateTimeSettingsTimeZoneSelect } from '@/settings/experience/components/DateTimeSettingsTimeZoneSelect';
@@ -13,6 +15,7 @@ import { NumberFormatSelect } from '@/settings/experience/components/NumberForma
 import { CalendarStartDay } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 import {
+  WorkspaceMemberCalendarSystemEnum,
   WorkspaceMemberDateFormatEnum,
   WorkspaceMemberNumberFormatEnum,
   WorkspaceMemberTimeFormatEnum,
@@ -52,6 +55,10 @@ export const FormatPreferencesSettings = () => {
     updateFormatPreference('calendarStartDay', value);
   };
 
+  const handleCalendarSystemChange = (value: CalendarSystem) => {
+    updateFormatPreference('calendarSystem', value);
+  };
+
   const displayTimeZone =
     currentWorkspaceMember.timeZone === 'system'
       ? 'system'
@@ -79,6 +86,13 @@ export const FormatPreferencesSettings = () => {
       ? CalendarStartDay.SYSTEM
       : formatPreferences.calendarStartDay;
 
+  const displayCalendarSystem: CalendarSystem =
+    currentWorkspaceMember.calendarSystem == null ||
+    currentWorkspaceMember.calendarSystem ===
+      WorkspaceMemberCalendarSystemEnum.SYSTEM
+      ? CalendarSystem.SYSTEM
+      : formatPreferences.calendarSystem;
+
   return (
     <StyledContainer>
       <DateTimeSettingsTimeZoneSelect
@@ -102,6 +116,10 @@ export const FormatPreferencesSettings = () => {
       <DateTimeSettingsCalendarStartDaySelect
         value={displayCalendarStartDay}
         onChange={handleCalendarStartDayChange}
+      />
+      <DateTimeSettingsCalendarSystemSelect
+        value={displayCalendarSystem}
+        onChange={handleCalendarSystemChange}
       />
     </StyledContainer>
   );

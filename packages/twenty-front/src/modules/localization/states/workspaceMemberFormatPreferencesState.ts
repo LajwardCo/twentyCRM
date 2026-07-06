@@ -1,3 +1,4 @@
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
 import { DateFormat } from '@/localization/constants/DateFormat';
 import { NumberFormat } from '@/localization/constants/NumberFormat';
 import { TimeFormat } from '@/localization/constants/TimeFormat';
@@ -15,6 +16,7 @@ export type WorkspaceMemberFormatPreferences = {
   timeFormat: TimeFormat;
   numberFormat: NumberFormat;
   calendarStartDay: CalendarStartDay;
+  calendarSystem: CalendarSystem;
 };
 
 export const workspaceMemberFormatPreferencesState =
@@ -26,5 +28,6 @@ export const workspaceMemberFormatPreferencesState =
       timeFormat: TimeFormat[detectTimeFormat()],
       numberFormat: NumberFormat[detectNumberFormat()],
       calendarStartDay: CalendarStartDay[detectCalendarStartDay()],
+      calendarSystem: CalendarSystem.GREGORIAN,
     },
   });

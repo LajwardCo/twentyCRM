@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { Provider as JotaiProvider } from 'jotai';
 
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
+import { CalendarSystem } from '@/localization/constants/CalendarSystem';
 import { DateFormat } from '@/localization/constants/DateFormat';
 import { NumberFormat } from '@/localization/constants/NumberFormat';
 import { TimeFormat } from '@/localization/constants/TimeFormat';
@@ -73,6 +74,7 @@ const mockInitialPreferences = {
   timeFormat: TimeFormat.HOUR_24,
   numberFormat: NumberFormat.COMMAS_AND_DOT,
   calendarStartDay: CalendarStartDay.MONDAY,
+  calendarSystem: CalendarSystem.GREGORIAN,
 };
 
 const createWrapper =

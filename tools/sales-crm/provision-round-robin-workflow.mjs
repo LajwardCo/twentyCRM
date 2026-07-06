@@ -64,6 +64,12 @@ async function gql(endpoint, query, variables) {
   }
 }
 async function login() {
+  // A pre-made API key / bearer token (Settings -> APIs) skips the
+  // credential login entirely -- preferred for production runs.
+  if (process.env.TWENTY_TOKEN) {
+    TOKEN = process.env.TWENTY_TOKEN.trim();
+    return;
+  }
   const a = await gql(META, `mutation($e:String!,$p:String!,$o:String!){getLoginTokenFromCredentials(email:$e,password:$p,origin:$o){loginToken{token}}}`, { e: EMAIL, p: PASSWORD, o: ORIGIN });
   const b = await gql(META, `mutation($t:String!,$o:String!){getAuthTokensFromLoginToken(loginToken:$t,origin:$o){tokens{accessOrWorkspaceAgnosticToken{token}}}}`, { t: a.getLoginTokenFromCredentials.loginToken.token, o: ORIGIN });
   TOKEN = b.getAuthTokensFromLoginToken.tokens.accessOrWorkspaceAgnosticToken.token;

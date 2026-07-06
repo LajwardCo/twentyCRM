@@ -41,7 +41,20 @@ export type LeadSummary = {
     emails: { primaryEmail: string | null } | null;
   } | null;
   owner: { id: string; name: { firstName: string; lastName: string } } | null;
+  amount: { amountMicros: number | null; currencyCode: string | null } | null;
 };
+
+// Stages considered "open pipeline" (not yet won or lost).
+export const OPEN_STAGES = [
+  'NEW_LEAD',
+  'FOLLOWING_UP',
+  'DEMO_SCHEDULED',
+  'DEMO_NEGOTIATION',
+  'CONTRACT_SENT',
+  'SIGNED_AWAITING_PAYMENT',
+  'PAID_AWAITING_TRAINING',
+  'IN_TRAINING',
+];
 
 export const STAGES: { value: string; label: string }[] = [
   { value: 'NEW_LEAD', label: 'New Lead' },
@@ -83,6 +96,7 @@ const LEAD_FIELDS = `
     emails { primaryEmail }
   }
   owner { id name { firstName lastName } }
+  amount { amountMicros currencyCode }
 `;
 
 // ---------- leads ----------
@@ -90,10 +104,15 @@ const LEAD_FIELDS = `
 export const fetchLeads = async (options: {
   search?: string;
   ownerId?: string;
+  openOnly?: boolean;
+  limit?: number;
 }): Promise<LeadSummary[]> => {
   const filters: Record<string, unknown>[] = [];
   if (options.search) {
     filters.push({ name: { ilike: `%${options.search}%` } });
+  }
+  if (options.openOnly) {
+    filters.push({ stage: { in: OPEN_STAGES } });
   }
   if (options.ownerId) {
     filters.push({ ownerId: { eq: options.ownerId } });
@@ -113,7 +132,7 @@ export const fetchLeads = async (options: {
     }`,
     {
       filter: filters.length > 0 ? { and: filters } : undefined,
-      limit: 60,
+      limit: options.limit ?? 60,
     },
   );
 
@@ -405,6 +424,7 @@ export type NewLeadInput = {
   firstContactDate: string; // ISO
   followUpNote: string;
   followUpDate: string | null; // ISO or null to skip
+  estimatedAmountAfn: number | null; // plain AFN, converted to micros
   workspaceMemberId: string;
 };
 
@@ -420,7 +440,7 @@ export const registerLead = async (
   input: NewLeadInput,
   onProgress: (step: string) => void,
 ): Promise<NewLeadResult> => {
-  onProgress('Creating company…');
+  onProgress('ایجاد شرکت…');
   const companyData = await coreQuery<{ createCompany: { id: string } }>(
     `mutation CreateCompany($data: CompanyCreateInput!) {
       createCompany(data: $data) { id }
@@ -429,7 +449,7 @@ export const registerLead = async (
   );
   const companyId = companyData.createCompany.id;
 
-  onProgress('Creating contact…');
+  onProgress('ایجاد شخص تماس…');
   const hasContactName =
     input.contactFirstName.trim() !== '' || input.contactLastName.trim() !== '';
   let personId: string | null = null;
@@ -457,7 +477,7 @@ export const registerLead = async (
     personId = personData.createPerson.id;
   }
 
-  onProgress('Creating lead…');
+  onProgress('ایجاد لید…');
   const oppData = await coreQuery<{ createOpportunity: { id: string } }>(
     `mutation CreateOpportunity($data: OpportunityCreateInput!) {
       createOpportunity(data: $data) { id }
@@ -471,6 +491,14 @@ export const registerLead = async (
         ...(personId ? { pointOfContactId: personId } : {}),
         ...(input.temperature ? { temperature: input.temperature } : {}),
         ...(input.leadSource ? { leadSource: input.leadSource } : {}),
+        ...(input.estimatedAmountAfn
+          ? {
+              amount: {
+                amountMicros: Math.round(input.estimatedAmountAfn * 1_000_000),
+                currencyCode: 'AFN',
+              },
+            }
+          : {}),
       },
     },
   );
@@ -478,9 +506,9 @@ export const registerLead = async (
   const target = { opportunityId, companyId };
 
   if (input.firstContactNote.trim() !== '') {
-    onProgress('Saving first contact…');
+    onProgress('ثبت تماس اول…');
     await createTaskForLead({
-      title: `First contact — ${input.companyName.trim()}`,
+      title: `تماس اول — ${input.companyName.trim()}`,
       bodyMarkdown: input.firstContactNote.trim(),
       status: 'DONE',
       dueAt: input.firstContactDate,
@@ -488,19 +516,19 @@ export const registerLead = async (
       target,
     });
     await createNoteForLead({
-      title: `First contact — ${input.companyName.trim()}`,
+      title: `تماس اول — ${input.companyName.trim()}`,
       bodyMarkdown: input.firstContactNote.trim(),
       target,
     });
   }
 
   if (input.followUpDate !== null) {
-    onProgress('Scheduling follow-up…');
+    onProgress('ثبت پیگیری…');
     await createTaskForLead({
       title:
         input.followUpNote.trim() !== ''
           ? input.followUpNote.trim()
-          : `Follow up — ${input.companyName.trim()}`,
+          : `پیگیری — ${input.companyName.trim()}`,
       status: 'TODO',
       dueAt: input.followUpDate,
       assigneeId: input.workspaceMemberId,

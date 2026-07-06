@@ -1,0 +1,949 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>فروش هماگان — نمونه اولیه ۲</title>
+<style>
+  :root {
+    --lapis-950: #081737;
+    --lapis-900: #0c2050;
+    --lapis-800: #143177;
+    --lapis-600: #2453d6;
+    --lapis-500: #3b6ae8;
+    --lapis-100: #e9eefc;
+    --lapis-50: #f3f6fe;
+    --gold-500: #c9a227;
+    --gold-400: #d9b64a;
+    --gold-300: #e6cf7d;
+    --paper: #f4f5f7;
+    --card: #ffffff;
+    --ink: #14192b;
+    --ink-2: #4a5164;
+    --ink-3: #8a90a3;
+    --line: #e6e8ee;
+    --line-soft: #eff1f5;
+    --hot: #d8402e;
+    --hot-bg: #fcebe8;
+    --warmc: #b3670f;
+    --warm-bg: #fbf1de;
+    --cold: #3a6fc4;
+    --cold-bg: #e9f0fb;
+    --ok: #178048;
+    --ok-bg: #e5f5ec;
+    --r: 16px;
+    --r-sm: 10px;
+    --sh-1: 0 1px 2px rgba(12, 22, 54, .05), 0 1px 1px rgba(12, 22, 54, .03);
+    --sh-2: 0 2px 4px rgba(12, 22, 54, .05), 0 12px 32px -16px rgba(12, 22, 54, .18);
+    --font: "Vazirmatn", "SF Arabic", "Segoe UI", Tahoma, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { direction: rtl; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font); font-size: 14px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  button { font-family: inherit; }
+
+  /* ---------- prototype switcher ---------- */
+  .proto-bar {
+    position: fixed; bottom: 14px; left: 14px; z-index: 99;
+    background: rgba(16, 20, 34, .92); backdrop-filter: blur(8px); color: #fff; border-radius: 999px;
+    padding: 5px 7px; display: flex; gap: 3px; align-items: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,.4); font-size: 12px;
+  }
+  .proto-bar span { padding: 0 9px; opacity: .55; }
+  .proto-bar button { border: 0; background: transparent; color: #fff; font-size: 12px; padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+  .proto-bar button.on { background: var(--gold-500); color: #1a1503; font-weight: 700; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+
+  /* ---------- shell ---------- */
+  .shell { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  .sidebar {
+    background:
+      radial-gradient(1.5px 1.5px at 18% 22%, rgba(230,207,125,.45) 50%, transparent 51%),
+      radial-gradient(1px 1px at 72% 9%, rgba(230,207,125,.35) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 84% 41%, rgba(230,207,125,.3) 50%, transparent 51%),
+      radial-gradient(1px 1px at 33% 58%, rgba(230,207,125,.35) 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 61% 76%, rgba(230,207,125,.25) 50%, transparent 51%),
+      radial-gradient(1px 1px at 14% 88%, rgba(230,207,125,.3) 50%, transparent 51%),
+      linear-gradient(172deg, var(--lapis-900), var(--lapis-950) 58%);
+    color: #dfe6f7; display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 20px 18px 16px; }
+  .brand .mark {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(140deg, var(--gold-300), var(--gold-500));
+    color: var(--lapis-950); font-weight: 800; font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,.15), 0 4px 14px -4px rgba(201,162,39,.5);
+  }
+  .brand b { font-size: 16px; color: #fff; display: block; line-height: 1.3; }
+  .brand small { font-size: 11px; opacity: .6; letter-spacing: .2px; }
+  .nav { padding: 6px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-lbl { font-size: 10px; letter-spacing: 1.5px; opacity: .4; padding: 14px 12px 6px; font-weight: 700; }
+  .nav a {
+    display: flex; align-items: center; gap: 11px; color: #b9c4e4; text-decoration: none;
+    padding: 10px 12px; border-radius: 11px; font-size: 13.5px; position: relative;
+    transition: background .15s, color .15s;
+  }
+  .nav a svg { width: 18px; height: 18px; opacity: .9; }
+  .nav a:hover { background: rgba(255,255,255,.06); color: #fff; }
+  .nav a.on { background: linear-gradient(90deg, rgba(59,106,232,.28), rgba(59,106,232,.10)); color: #fff; font-weight: 600; }
+  .nav a.on::before {
+    content: ""; position: absolute; right: -12px; top: 9px; bottom: 9px; width: 3.5px;
+    border-radius: 4px 0 0 4px; background: var(--gold-500);
+  }
+  .nav a .count { margin-right: auto; font-size: 11px; background: rgba(255,255,255,.12); border-radius: 999px; padding: 1px 8px; }
+  .nav a .count.hotn { background: rgba(216,64,46,.35); color: #ffc9c2; }
+  .side-cta { margin: 14px 12px 4px; }
+  .side-cta button {
+    width: 100%; border: 0; border-radius: 12px; padding: 12px;
+    background: linear-gradient(140deg, var(--gold-400), var(--gold-500));
+    color: #221b04; font-weight: 800; font-size: 13.5px; cursor: pointer;
+    box-shadow: 0 6px 20px -6px rgba(201,162,39,.55);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .side-cta button:hover { transform: translateY(-1px); box-shadow: 0 10px 26px -6px rgba(201,162,39,.65); }
+  .side-user { margin-top: auto; padding: 14px 18px; border-top: 1px solid rgba(255,255,255,.08); display: flex; gap: 10px; align-items: center; font-size: 12.5px; }
+  .side-user .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--lapis-600); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .side-user small { display: block; opacity: .5; font-size: 10.5px; }
+  .side-user .out { margin-right: auto; opacity: .5; cursor: pointer; background: none; border: 0; color: inherit; }
+  .side-user .out:hover { opacity: 1; }
+
+  /* ---------- content & command bar ---------- */
+  .content { min-width: 0; }
+  .cmd-bar {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 28px; background: rgba(244,245,247,.86); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .cmd-search {
+    flex: 1; max-width: 460px; position: relative;
+  }
+  .cmd-search input {
+    width: 100%; padding: 9px 38px 9px 60px; border-radius: 11px; border: 1px solid var(--line);
+    background: var(--card); font-family: inherit; font-size: 13.5px; box-shadow: var(--sh-1);
+  }
+  .cmd-search input:focus { outline: 2px solid var(--lapis-500); outline-offset: -1px; }
+  .cmd-search .s-ico { position: absolute; right: 12px; top: 9px; width: 16px; height: 16px; color: var(--ink-3); }
+  .cmd-search .kbd { position: absolute; left: 10px; top: 8px; font-size: 10.5px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; background: var(--paper); }
+  .cmd-right { margin-right: auto; display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--card);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink-2); position: relative;
+    box-shadow: var(--sh-1);
+  }
+  .icon-btn svg { width: 17px; height: 17px; }
+  .icon-btn .ndot { position: absolute; top: 7px; left: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); border: 1.5px solid #fff; }
+  .cmd-date { font-size: 12px; color: var(--ink-3); }
+
+  .page { padding: 22px 28px 70px; max-width: 1280px; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .page-head h1 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.2px; }
+  .page-head .sub { color: var(--ink-3); font-size: 12.5px; margin-top: 2px; }
+
+  /* ---------- shared ---------- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--sh-1); }
+  .card.hoverable { transition: box-shadow .18s, transform .18s; }
+  .card.hoverable:hover { box-shadow: var(--sh-2); }
+  .card-pad { padding: 16px 18px; }
+  .card h3 { margin: 0; font-size: 14px; font-weight: 750; }
+  .card .sub { color: var(--ink-3); font-size: 12px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2.5px 10px; font-size: 11.5px; font-weight: 650; white-space: nowrap; }
+  .pill.stage { background: var(--lapis-100); color: var(--lapis-800); }
+  .pill.hot { background: var(--hot-bg); color: var(--hot); }
+  .pill.warm { background: var(--warm-bg); color: var(--warmc); }
+  .pill.cold { background: var(--cold-bg); color: var(--cold); }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .tdot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .tdot.hot { background: var(--hot); box-shadow: 0 0 0 3px var(--hot-bg); }
+  .tdot.warm { background: var(--warmc); box-shadow: 0 0 0 3px var(--warm-bg); }
+  .tdot.cold { background: var(--cold); box-shadow: 0 0 0 3px var(--cold-bg); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-radius: var(--r-sm); padding: 9.5px 16px;
+    font-size: 13.5px; font-weight: 700; cursor: pointer;
+    background: var(--lapis-600); color: #fff; transition: background .15s, transform .12s;
+  }
+  .btn:hover { background: var(--lapis-800); }
+  .btn.soft { background: var(--lapis-100); color: var(--lapis-800); }
+  .btn.soft:hover { background: #dde6fa; }
+  .btn.gold { background: linear-gradient(140deg, var(--gold-400), var(--gold-500)); color: #221b04; }
+  .btn.line { background: var(--card); border: 1px solid var(--line); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1); }
+  .btn.line:hover { background: var(--paper); }
+  .btn.sm { padding: 6.5px 12px; font-size: 12.5px; }
+  .avatar { border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+  .av-26 { width: 26px; height: 26px; font-size: 11px; background: var(--lapis-100); color: var(--lapis-800); }
+
+  /* ---------- KPI ---------- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+  .kpi { padding: 15px 16px 13px; display: flex; flex-direction: column; gap: 8px; }
+  .kpi .top { display: flex; align-items: center; gap: 10px; }
+  .kpi .k-ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .kpi .k-ico svg { width: 17px; height: 17px; }
+  .kpi .k-ico.blue { background: var(--lapis-100); color: var(--lapis-600); }
+  .kpi .k-ico.red { background: var(--hot-bg); color: var(--hot); }
+  .kpi .k-ico.amber { background: var(--warm-bg); color: var(--warmc); }
+  .kpi .k-ico.green { background: var(--ok-bg); color: var(--ok); }
+  .kpi .lbl { color: var(--ink-2); font-size: 12px; font-weight: 600; }
+  .kpi .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+  .kpi .big { font-size: 27px; font-weight: 800; line-height: 1.05; letter-spacing: -.5px; }
+  .kpi .delta { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; }
+  .kpi .delta.up { background: var(--ok-bg); color: var(--ok); }
+  .kpi .delta.down { background: var(--hot-bg); color: var(--hot); }
+  .kpi .delta.flat { background: var(--line-soft); color: var(--ink-3); }
+  .kpi svg.spark { width: 76px; height: 30px; flex-shrink: 0; }
+
+  .dash-grid { display: grid; grid-template-columns: 1.65fr 1fr; gap: 16px; align-items: start; }
+  .stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  /* ---------- tasks ---------- */
+  .tab-row { display: flex; gap: 4px; background: var(--line-soft); border-radius: 10px; padding: 3px; width: fit-content; }
+  .tab-row button { border: 0; background: none; font-size: 12px; padding: 5px 13px; border-radius: 8px; cursor: pointer; color: var(--ink-2); font-weight: 650; }
+  .tab-row button.on { background: var(--card); color: var(--ink); box-shadow: var(--sh-1); }
+  .task { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--line-soft); transition: background .12s; }
+  .task:hover { background: var(--lapis-50); }
+  .chk {
+    width: 22px; height: 22px; border-radius: 7px; border: 1.8px solid #ccd2e0;
+    flex-shrink: 0; cursor: pointer; background: var(--card); transition: all .15s;
+  }
+  .chk:hover { border-color: var(--ok); background: var(--ok-bg); }
+  .task .t-main { flex: 1; min-width: 0; }
+  .task .t-title { font-weight: 650; font-size: 13.5px; }
+  .task .t-sub { font-size: 12px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; }
+  .lead-chip { color: var(--lapis-600); font-weight: 650; text-decoration: none; }
+  .lead-chip:hover { text-decoration: underline; }
+  .due { font-size: 11.5px; font-weight: 750; border-radius: 8px; padding: 3px 9px; }
+  .due.over { color: var(--hot); background: var(--hot-bg); }
+  .due.today { color: var(--warmc); background: var(--warm-bg); }
+  .due.later { color: var(--ink-3); background: var(--line-soft); }
+
+  /* ---------- chart card ---------- */
+  .chart-wrap { padding: 4px 10px 6px 6px; }
+  .legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--ink-3); }
+  .legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-left: 5px; }
+
+  /* ---------- funnel ---------- */
+  .funnel { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .f-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; font-size: 12px; }
+  .f-lbl { color: var(--ink-2); font-weight: 600; }
+  .f-bar { height: 22px; border-radius: 7px; background: var(--line-soft); overflow: hidden; position: relative; }
+  .f-bar i { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg, var(--lapis-500), var(--lapis-800)); }
+  .f-row.won i { background: linear-gradient(90deg, var(--gold-400), var(--gold-500)); }
+  .f-meta { text-align: left; color: var(--ink-3); white-space: nowrap; }
+  .f-meta b { color: var(--ink); font-weight: 750; }
+
+  /* ---------- top deals ---------- */
+  .deal-row { display: flex; align-items: center; gap: 11px; padding: 11px 18px; border-top: 1px solid var(--line-soft); cursor: pointer; }
+  .deal-row:hover { background: var(--lapis-50); }
+  .deal-logo { width: 34px; height: 34px; border-radius: 10px; font-size: 13px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .deal-main { flex: 1; min-width: 0; }
+  .deal-name { font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deal-sub { font-size: 11.5px; color: var(--ink-3); }
+  .deal-val { font-weight: 800; font-size: 13px; white-space: nowrap; }
+  .deal-val small { display: block; font-weight: 400; color: var(--ink-3); font-size: 10.5px; text-align: left; }
+
+  /* ---------- leads table ---------- */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .seg { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3px; box-shadow: var(--sh-1); }
+  .seg button { border: 0; background: none; font-size: 12.5px; padding: 6px 14px; border-radius: 8px; cursor: pointer; color: var(--ink-2); font-weight: 650; display: inline-flex; gap: 6px; align-items: center; }
+  .seg button svg { width: 14px; height: 14px; }
+  .seg button.on { background: var(--lapis-600); color: #fff; }
+  table.leads { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.leads th {
+    text-align: right; font-size: 10.5px; color: var(--ink-3); font-weight: 750;
+    letter-spacing: .6px; padding: 11px 18px; border-bottom: 1px solid var(--line); background: #fafbfc;
+  }
+  table.leads td { padding: 12px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  table.leads tr:last-child td { border-bottom: 0; }
+  table.leads tbody tr { cursor: pointer; transition: background .12s; }
+  table.leads tbody tr:hover { background: var(--lapis-50); }
+  .lead-cell { display: flex; align-items: center; gap: 11px; }
+  .lead-name { font-weight: 700; }
+  .lead-name small { display: block; font-weight: 400; color: var(--ink-3); font-size: 11.5px; }
+  .owner { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+
+  /* ---------- kanban ---------- */
+  .kanban { display: grid; grid-template-columns: repeat(4, minmax(240px, 1fr)); gap: 12px; overflow-x: auto; align-items: start; }
+  .kcol { background: var(--line-soft); border-radius: 14px; padding: 10px; min-width: 240px; }
+  .kcol-h { display: flex; align-items: center; gap: 8px; padding: 4px 8px 10px; font-size: 12.5px; font-weight: 750; }
+  .kcol-h .cnt { color: var(--ink-3); font-weight: 600; }
+  .kcol-h .sum { margin-right: auto; font-size: 11px; color: var(--ink-3); font-weight: 600; }
+  .kcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; margin-bottom: 9px; cursor: pointer; box-shadow: var(--sh-1); transition: box-shadow .15s, transform .15s; }
+  .kcard:hover { box-shadow: var(--sh-2); transform: translateY(-1px); }
+  .kcard .kn { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .kcard .kc { font-size: 11.5px; color: var(--ink-3); margin: 3px 0 8px; }
+  .kcard .kf { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--ink-3); }
+  .kcard .kv { font-weight: 800; color: var(--ink); font-size: 12px; }
+
+  /* ---------- lead detail ---------- */
+  .lead-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+  .hero-logo {
+    width: 58px; height: 58px; border-radius: 16px; font-size: 23px; font-weight: 800; color: #fff;
+    background: linear-gradient(140deg, var(--lapis-500), var(--lapis-900));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 10px 24px -8px rgba(20, 49, 119, .5);
+  }
+  .hero-main { flex: 1; min-width: 200px; }
+  .hero-main h1 { margin: 0; font-size: 20px; font-weight: 800; }
+  .hero-meta { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--ink-3); }
+  .hero-actions { display: flex; gap: 8px; }
+
+  .journey { padding: 16px 20px 18px; margin-bottom: 16px; }
+  .journey-top { display: flex; justify-content: space-between; align-items: center; }
+  .journey-track { display: flex; align-items: flex-start; margin-top: 14px; }
+  .j-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; }
+  .j-step::before { content: ""; position: absolute; top: 7px; right: 50%; width: 100%; height: 3px; background: var(--line); }
+  .j-step:last-child::before { display: none; }
+  .j-step.done::before { background: linear-gradient(90deg, var(--lapis-600), var(--lapis-500)); }
+  .j-dot { width: 15px; height: 15px; border-radius: 50%; background: var(--card); border: 2.5px solid var(--line); z-index: 1; }
+  .j-step.done .j-dot { background: var(--lapis-600); border-color: var(--lapis-600); }
+  .j-step.now .j-dot { background: var(--gold-500); border-color: var(--gold-500); box-shadow: 0 0 0 5px rgba(201,162,39,.2); animation: pulse 2.4s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 4px rgba(201,162,39,.22); } 50% { box-shadow: 0 0 0 8px rgba(201,162,39,.1); } }
+  @media (prefers-reduced-motion: reduce) { .j-step.now .j-dot { animation: none; } }
+  .j-lbl { font-size: 10.5px; color: var(--ink-3); text-align: center; line-height: 1.35; max-width: 78px; }
+  .j-step.now .j-lbl { color: var(--ink); font-weight: 750; }
+
+  .detail-grid { display: grid; grid-template-columns: 1.65fr 1fr; gap: 16px; align-items: start; }
+  .tl-item { display: flex; gap: 13px; padding: 14px 18px; position: relative; }
+  .tl-item::before { content: ""; position: absolute; right: 34px; top: 48px; bottom: -2px; width: 2px; background: var(--line-soft); }
+  .tl-item:last-child::before { display: none; }
+  .tl-ico { width: 33px; height: 33px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; z-index: 1; }
+  .tl-ico.call { background: var(--ok-bg); color: var(--ok); }
+  .tl-ico.note { background: var(--warm-bg); color: var(--warmc); }
+  .tl-ico.todo { background: var(--lapis-100); color: var(--lapis-800); }
+  .tl-ico svg { width: 16px; height: 16px; }
+  .tl-body { flex: 1; min-width: 0; }
+  .tl-t { font-weight: 700; font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tl-note { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+  .tl-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+
+  .contact-rows { display: flex; flex-direction: column; gap: 9px; font-size: 13px; margin-top: 11px; }
+  .c-row { display: flex; justify-content: space-between; gap: 10px; }
+  .c-row b { font-weight: 650; }
+  .c-row span { color: var(--ink-3); }
+  .actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .a-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+    padding: 11px 4px; font-size: 11.5px; font-weight: 650; cursor: pointer; color: var(--ink);
+    transition: all .15s;
+  }
+  .a-btn svg { width: 19px; height: 19px; color: var(--lapis-600); }
+  .a-btn:hover { border-color: var(--lapis-500); background: var(--lapis-50); transform: translateY(-1px); box-shadow: var(--sh-2); }
+
+  .ai-card { background: linear-gradient(155deg, var(--lapis-900) 20%, var(--lapis-950)); color: #e8edfb; border: 0; position: relative; overflow: hidden; }
+  .ai-card::after {
+    content: ""; position: absolute; top: -46px; left: -46px; width: 150px; height: 150px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,162,39,.28), transparent 65%);
+  }
+  .ai-card h3 { color: #fff; display: flex; gap: 8px; align-items: center; }
+  .ai-card h3 svg { color: var(--gold-300); }
+  .ai-card .sub { color: #9fb0da; }
+  .ai-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 13px; position: relative; z-index: 1; }
+  .ai-actions .btn { background: rgba(255,255,255,.09); color: #fff; font-size: 12.5px; padding: 9px 14px; justify-content: flex-start; border: 1px solid rgba(255,255,255,.09); }
+  .ai-actions .btn:hover { background: rgba(255,255,255,.18); }
+  .ai-actions .btn.gold { background: linear-gradient(140deg, var(--gold-400), var(--gold-500)); color: #221b04; border: 0; justify-content: center; }
+  .ai-actions .btn svg { width: 15px; height: 15px; opacity: .85; }
+
+  /* ---------- new lead form ---------- */
+  .form-grid { display: grid; grid-template-columns: 1fr 330px; gap: 16px; align-items: start; }
+  .fieldset { margin-bottom: 14px; }
+  .fieldset legend {
+    font-size: 11.5px; font-weight: 800; color: var(--lapis-800); letter-spacing: .4px;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  }
+  .fieldset legend i { width: 22px; height: 22px; border-radius: 7px; background: var(--lapis-100); color: var(--lapis-800); font-style: normal; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+  .f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fld { margin-bottom: 11px; }
+  .fld label { display: block; font-size: 12px; font-weight: 650; color: var(--ink-2); margin-bottom: 5px; }
+  .fld input, .fld select, .fld textarea {
+    width: 100%; padding: 10px 13px; border-radius: var(--r-sm); border: 1px solid var(--line);
+    background: var(--card); font-family: inherit; font-size: 13.5px; color: var(--ink);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .fld textarea { min-height: 80px; resize: vertical; }
+  .fld input:focus, .fld select:focus, .fld textarea:focus { outline: 0; border-color: var(--lapis-500); box-shadow: 0 0 0 3px rgba(59,106,232,.15); }
+  .temp-seg { display: flex; gap: 8px; }
+  .temp-seg button {
+    flex: 1; padding: 9.5px; border-radius: var(--r-sm); border: 1.5px solid var(--line); background: var(--card);
+    font-size: 13px; font-weight: 700; cursor: pointer; color: var(--ink-3); transition: all .13s;
+  }
+  .temp-seg .t-hot.on { border-color: var(--hot); background: var(--hot-bg); color: var(--hot); }
+  .temp-seg .t-warm.on { border-color: var(--warmc); background: var(--warm-bg); color: var(--warmc); }
+  .temp-seg .t-cold.on { border-color: var(--cold); background: var(--cold-bg); color: var(--cold); }
+  .summary-card { position: sticky; top: 76px; }
+  .summary-card ul { list-style: none; margin: 12px 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+  .summary-card li { display: flex; gap: 9px; align-items: center; color: var(--ink-3); }
+  .summary-card li b { color: var(--ink); font-weight: 650; }
+  .summary-card li .st { width: 19px; height: 19px; border-radius: 50%; background: var(--ok-bg); color: var(--ok); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 10.5px; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 980px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: fixed; inset: auto 0 0 0; height: auto; flex-direction: row; align-items: center; z-index: 40; padding: 0 4px; }
+    .brand, .side-user, .nav-lbl, .nav a .count, .side-cta { display: none; }
+    .nav { flex-direction: row; flex: 1; justify-content: space-around; padding: 7px 4px calc(7px + env(safe-area-inset-bottom)); }
+    .nav a { flex-direction: column; gap: 3px; font-size: 10px; padding: 6px 10px; }
+    .nav a.on::before { display: none; }
+    .nav a.m-cta { background: linear-gradient(140deg, var(--gold-400), var(--gold-500)); color: #221b04; font-weight: 800; border-radius: 12px; }
+    .cmd-bar { padding: 10px 14px; }
+    .cmd-date { display: none; }
+    .page { padding: 16px 14px 130px; }
+    .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .kpi svg.spark { display: none; }
+    .dash-grid, .detail-grid, .form-grid { grid-template-columns: 1fr; }
+    table.leads .hide-m { display: none; }
+    .kanban { display: flex; overflow-x: auto; padding-bottom: 8px; }
+    .kcol { min-width: 250px; }
+    .journey-track { overflow-x: auto; padding-bottom: 6px; }
+    .j-step { min-width: 72px; }
+    .summary-card { position: static; }
+    .proto-bar { bottom: 92px; left: 50%; transform: translateX(-50%); }
+  }
+</style>
+
+<!-- shared sidebar template is duplicated per screen for a static prototype -->
+
+<!-- ======================= DASHBOARD ======================= -->
+<div class="screen on" id="s-dash">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">هـ</div><div><b>فروش هماگان</b><small>سیستم مدیریت فروش</small></div></div>
+    <div class="side-cta"><button onclick="go('new')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>ثبت لید جدید</button></div>
+    <nav class="nav">
+      <div class="nav-lbl">منو</div>
+      <a class="on" href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>داشبورد</a>
+      <a href="#" onclick="return go('leads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>لیدها<span class="count">۳۸</span></a>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>کارهای من<span class="count hotn">۷</span></a>
+    </nav>
+    <div class="side-user"><div class="avatar">ر</div><div>رشید<br><small>rashid@hamagan.com</small></div><button class="out" title="خروج"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
+  </aside>
+
+  <div class="content">
+    <div class="cmd-bar">
+      <div class="cmd-search">
+        <svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input placeholder="جستجوی شرکت، شخص، لید…">
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="cmd-right">
+        <span class="cmd-date">سه‌شنبه، ۱۶ سرطان ۱۴۰۵</span>
+        <button class="icon-btn" title="اعلان‌ها"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="ndot"></span></button>
+      </div>
+    </div>
+
+    <main class="page">
+      <div class="page-head">
+        <div><h1>صبح بخیر، رشید</h1><div class="sub">امروز ۷ کار در پیش داری — ۳ کار عقب‌مانده اول</div></div>
+      </div>
+
+      <div class="stats">
+        <div class="card hoverable kpi">
+          <div class="top"><span class="k-ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span class="lbl">کار برای امروز</span></div>
+          <div class="row"><span class="big num">۷</span>
+            <svg class="spark" viewBox="0 0 76 30"><path d="M0 22 L11 18 L22 20 L33 12 L44 15 L55 8 L66 10 L76 5" fill="none" stroke="#2453d6" stroke-width="2"/><circle cx="76" cy="5" r="3" fill="#2453d6"/></svg></div>
+        </div>
+        <div class="card hoverable kpi">
+          <div class="top"><span class="k-ico red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span><span class="lbl">عقب‌مانده</span></div>
+          <div class="row"><span class="big num" style="color:var(--hot)">۳</span><span class="delta down">۲+ از دیروز</span></div>
+        </div>
+        <div class="card hoverable kpi">
+          <div class="top"><span class="k-ico amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c1 4-1 5-2 7 2-1 3 0 3 2 0 1.5-1 3-3 3 4 1 8-1 8-6 0-2-1-4-2-5 0 2-1 3-2 3 1-2 0-3-2-4z"/></svg></span><span class="lbl">لید داغ و گرم</span></div>
+          <div class="row"><span class="big num">۱۲</span><span class="delta up">۳+ این هفته</span></div>
+        </div>
+        <div class="card hoverable kpi">
+          <div class="top"><span class="k-ico green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="lbl">ارزش قیف باز</span></div>
+          <div class="row"><span class="big num">۴٫۶<small style="font-size:13px;font-weight:650;color:var(--ink-3)"> میلیون ؋</small></span><span class="delta up">↑ ۱۲٪</span></div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="stack">
+          <div class="card">
+            <div class="card-pad" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:10px">
+              <div><h3>کارهای امروز</h3><div class="sub">۳ عقب‌مانده · ۴ برای امروز</div></div>
+              <div class="tab-row"><button class="on">همه ۷</button><button>عقب‌مانده ۳</button><button>امروز ۴</button></div>
+            </div>
+            <div class="task"><button class="chk" aria-label="انجام شد"></button>
+              <div class="t-main"><div class="t-title">تماس برای تعیین وقت دمو</div><div class="t-sub"><a class="lead-chip" href="#" onclick="return go('lead')">شرکت ادویه‌سازی هرات</a></div></div>
+              <span class="due over">۲ روز پیش</span></div>
+            <div class="task"><button class="chk" aria-label="انجام شد"></button>
+              <div class="t-main"><div class="t-title">ارسال پیشنهاد قیمت</div><div class="t-sub"><a class="lead-chip" href="#">تولیدی نساجی بلخ</a></div></div>
+              <span class="due over">دیروز</span></div>
+            <div class="task"><button class="chk" aria-label="انجام شد"></button>
+              <div class="t-main"><div class="t-title">پیگیری بعد از دمو — نظر مدیرعامل</div><div class="t-sub"><a class="lead-chip" href="#">شفاخانه آریانا</a></div></div>
+              <span class="due over">دیروز</span></div>
+            <div class="task"><button class="chk" aria-label="انجام شد"></button>
+              <div class="t-main"><div class="t-title">تماس اول بعد از معرفی</div><div class="t-sub"><a class="lead-chip" href="#">شرکت لوژستیک پامیر</a></div></div>
+              <span class="due today">امروز ۱۰:۰۰</span></div>
+            <div class="task"><button class="chk" aria-label="انجام شد"></button>
+              <div class="t-main"><div class="t-title">فرستادن ویدیوی معرفی سیستم</div><div class="t-sub"><a class="lead-chip" href="#">فروشگاه کابل‌مارت</a></div></div>
+              <span class="due today">امروز ۱۴:۰۰</span></div>
+            <div class="task"><button class="chk" aria-label="انجام شد"></button>
+              <div class="t-main"><div class="t-title">هماهنگی جلسه حضوری</div><div class="t-sub"><a class="lead-chip" href="#">شرکت ساختمانی سپین‌غر</a></div></div>
+              <span class="due today">امروز ۱۶:۳۰</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-pad" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:4px">
+              <div><h3>روند لیدهای جدید</h3><div class="sub">۳۰ روز گذشته</div></div>
+              <div class="legend"><span><i style="background:var(--lapis-500)"></i>ثبت‌شده</span><span><i style="background:var(--gold-500)"></i>موفق</span></div>
+            </div>
+            <div class="chart-wrap">
+              <svg viewBox="0 0 640 150" style="width:100%;height:150px" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#3b6ae8" stop-opacity=".28"/><stop offset="1" stop-color="#3b6ae8" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <g stroke="#eef0f4" stroke-width="1"><line x1="0" y1="35" x2="640" y2="35"/><line x1="0" y1="72" x2="640" y2="72"/><line x1="0" y1="109" x2="640" y2="109"/></g>
+                <path d="M0 118 C40 110 60 95 95 98 C130 101 150 78 190 80 C230 82 255 60 300 66 C345 72 360 52 400 48 C440 44 470 58 510 46 C550 34 590 30 640 22 L640 150 L0 150 Z" fill="url(#ga)"/>
+                <path d="M0 118 C40 110 60 95 95 98 C130 101 150 78 190 80 C230 82 255 60 300 66 C345 72 360 52 400 48 C440 44 470 58 510 46 C550 34 590 30 640 22" fill="none" stroke="#3b6ae8" stroke-width="2.5"/>
+                <circle cx="640" cy="22" r="4" fill="#3b6ae8"/>
+                <path d="M0 138 C60 136 120 132 190 133 C260 134 330 126 400 124 C470 122 560 116 640 110" fill="none" stroke="#c9a227" stroke-width="2" stroke-dasharray="1 0"/>
+                <circle cx="640" cy="110" r="3.5" fill="#c9a227"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card card-pad">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h3>قیف فروش</h3><span class="sub">لیدهای باز شما</span></div>
+            <div class="funnel">
+              <div class="f-row"><span class="f-lbl">لید جدید</span><div class="f-bar"><i style="width:92%"></i></div><span class="f-meta num"><b>۲۳</b> · ۱٫۲م ؋</span></div>
+              <div class="f-row"><span class="f-lbl">در حال پیگیری</span><div class="f-bar"><i style="width:64%"></i></div><span class="f-meta num"><b>۱۶</b> · ۹۶۰هزار ؋</span></div>
+              <div class="f-row"><span class="f-lbl">دمو تنظیم‌شده</span><div class="f-bar"><i style="width:30%"></i></div><span class="f-meta num"><b>۷</b> · ۸۴۰هزار ؋</span></div>
+              <div class="f-row"><span class="f-lbl">دمو و مذاکره</span><div class="f-bar"><i style="width:22%"></i></div><span class="f-meta num"><b>۵</b> · ۹۰۰هزار ؋</span></div>
+              <div class="f-row"><span class="f-lbl">ارسال قرارداد</span><div class="f-bar"><i style="width:10%"></i></div><span class="f-meta num"><b>۲</b> · ۷۲۰هزار ؋</span></div>
+              <div class="f-row won"><span class="f-lbl">مشتری فعال</span><div class="f-bar"><i style="width:38%"></i></div><span class="f-meta num"><b>۹</b></span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-pad" style="padding-bottom:8px;display:flex;justify-content:space-between;align-items:center"><h3>معاملات مهم</h3><a class="lead-chip" style="font-size:12px" href="#" onclick="return go('leads')">همه ←</a></div>
+            <div class="deal-row" onclick="go('lead')">
+              <div class="deal-logo" style="background:linear-gradient(140deg,#3b6ae8,#143177)">ا</div>
+              <div class="deal-main"><div class="deal-name">شرکت ادویه‌سازی هرات</div><div class="deal-sub">دمو و مذاکره · <span style="color:var(--hot)">داغ</span></div></div>
+              <div class="deal-val num">۴۲۰هزار ؋<small>احتمال ۷۰٪</small></div>
+            </div>
+            <div class="deal-row">
+              <div class="deal-logo" style="background:linear-gradient(140deg,#8a5fbf,#4c2a75)">ن</div>
+              <div class="deal-main"><div class="deal-name">تولیدی نساجی بلخ</div><div class="deal-sub">ارسال قرارداد · <span style="color:var(--hot)">داغ</span></div></div>
+              <div class="deal-val num">۳۸۰هزار ؋<small>احتمال ۸۵٪</small></div>
+            </div>
+            <div class="deal-row">
+              <div class="deal-logo" style="background:linear-gradient(140deg,#1f9d6b,#0d5c3c)">ش</div>
+              <div class="deal-main"><div class="deal-name">شفاخانه آریانا</div><div class="deal-sub">دمو تنظیم‌شده · <span style="color:var(--hot)">داغ</span></div></div>
+              <div class="deal-val num">۳۴۰هزار ؋<small>احتمال ۵۰٪</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</div>
+
+<!-- ======================= LEADS ======================= -->
+<div class="screen" id="s-leads">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">هـ</div><div><b>فروش هماگان</b><small>سیستم مدیریت فروش</small></div></div>
+    <div class="side-cta"><button onclick="go('new')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>ثبت لید جدید</button></div>
+    <nav class="nav">
+      <div class="nav-lbl">منو</div>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>داشبورد</a>
+      <a class="on" href="#" onclick="return go('leads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>لیدها<span class="count">۳۸</span></a>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>کارهای من<span class="count hotn">۷</span></a>
+    </nav>
+    <div class="side-user"><div class="avatar">ر</div><div>رشید<br><small>rashid@hamagan.com</small></div></div>
+  </aside>
+
+  <div class="content">
+    <div class="cmd-bar">
+      <div class="cmd-search"><svg class="s-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg><input placeholder="جستجوی شرکت، شخص، لید…"><span class="kbd">⌘K</span></div>
+      <div class="cmd-right"><span class="cmd-date">سه‌شنبه، ۱۶ سرطان ۱۴۰۵</span><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="ndot"></span></button></div>
+    </div>
+
+    <main class="page">
+      <div class="page-head">
+        <div><h1>لیدها</h1><div class="sub">۱۴۵ لید · ۳۸ متعلق به شما · ارزش باز ۴٫۶ میلیون ؋</div></div>
+        <button class="btn gold" onclick="go('new')">＋ ثبت لید جدید</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="seg"><button class="on">لیدهای من</button><button>همه</button></div>
+        <div class="seg"><button class="on">باز</button><button>همه مراحل</button></div>
+        <div class="seg" style="margin-right:auto">
+          <button class="on" onclick="leadsView('table')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>جدول</button>
+          <button onclick="leadsView('kanban')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1.5"/><rect x="10" y="3" width="5" height="12" rx="1.5"/><rect x="17" y="3" width="5" height="8" rx="1.5"/></svg>کانبان</button>
+        </div>
+      </div>
+
+      <div id="leads-table" class="card" style="overflow:hidden">
+        <table class="leads">
+          <thead><tr><th>شرکت</th><th>مرحله</th><th>علاقمندی</th><th class="hide-m">ارزش</th><th class="hide-m">منبع</th><th class="hide-m">مسئول</th><th>آخرین فعالیت</th></tr></thead>
+          <tbody>
+            <tr onclick="go('lead')">
+              <td><div class="lead-cell"><div class="deal-logo" style="background:linear-gradient(140deg,#3b6ae8,#143177)">ا</div><span class="lead-name">شرکت ادویه‌سازی هرات<small>داکتر فرید احمدی · ۰۷۹۹ ۴۵۶ ۱۲۳</small></span></div></td>
+              <td><span class="pill stage">دمو و مذاکره</span></td>
+              <td><span style="display:inline-flex;align-items:center;gap:7px"><span class="tdot hot"></span>داغ</span></td>
+              <td class="hide-m num">۴۲۰هزار ؋</td>
+              <td class="hide-m">بازدید حضوری</td>
+              <td class="hide-m"><div class="owner"><span class="avatar av-26">ر</span>رشید</div></td>
+              <td class="num" style="color:var(--ink-3)">دیروز</td>
+            </tr>
+            <tr>
+              <td><div class="lead-cell"><div class="deal-logo" style="background:linear-gradient(140deg,#8a5fbf,#4c2a75)">ن</div><span class="lead-name">تولیدی نساجی بلخ<small>حاجی نعمت‌الله · ۰۷۸۶ ۲۲۱ ۹۸۷</small></span></div></td>
+              <td><span class="pill stage">ارسال قرارداد</span></td>
+              <td><span style="display:inline-flex;align-items:center;gap:7px"><span class="tdot hot"></span>داغ</span></td>
+              <td class="hide-m num">۳۸۰هزار ؋</td>
+              <td class="hide-m">معرفی</td>
+              <td class="hide-m"><div class="owner"><span class="avatar av-26">ف</span>فرید</div></td>
+              <td class="num" style="color:var(--ink-3)">۲ روز پیش</td>
+            </tr>
+            <tr>
+              <td><div class="lead-cell"><div class="deal-logo" style="background:linear-gradient(140deg,#1f9d6b,#0d5c3c)">ش</div><span class="lead-name">شفاخانه آریانا<small>داکتر مریم صافی · ۰۷۰۰ ۸۷۶ ۵۴۳</small></span></div></td>
+              <td><span class="pill stage">دمو تنظیم‌شده</span></td>
+              <td><span style="display:inline-flex;align-items:center;gap:7px"><span class="tdot hot"></span>داغ</span></td>
+              <td class="hide-m num">۳۴۰هزار ؋</td>
+              <td class="hide-m">واتساپ</td>
+              <td class="hide-m"><div class="owner"><span class="avatar av-26">ر</span>رشید</div></td>
+              <td class="num" style="color:var(--ink-3)">۳ روز پیش</td>
+            </tr>
+            <tr>
+              <td><div class="lead-cell"><div class="deal-logo" style="background:linear-gradient(140deg,#d98e2b,#8a5410)">پ</div><span class="lead-name">شرکت لوژستیک پامیر<small>انجنیر ولید کریمی · ۰۷۹۳ ۱۱۲ ۳۳۴</small></span></div></td>
+              <td><span class="pill stage">در حال پیگیری</span></td>
+              <td><span style="display:inline-flex;align-items:center;gap:7px"><span class="tdot warm"></span>گرم</span></td>
+              <td class="hide-m num">—</td>
+              <td class="hide-m">بازدید حضوری</td>
+              <td class="hide-m"><div class="owner"><span class="avatar av-26">ر</span>رشید</div></td>
+              <td class="num" style="color:var(--ink-3)">۴ روز پیش</td>
+            </tr>
+            <tr>
+              <td><div class="lead-cell"><div class="deal-logo" style="background:linear-gradient(140deg,#e05252,#8a1f1f)">ک</div><span class="lead-name">فروشگاه کابل‌مارت<small>احمد ضیا · ۰۷۴۴ ۵۶۷ ۸۹۰</small></span></div></td>
+              <td><span class="pill stage">لید جدید</span></td>
+              <td><span style="display:inline-flex;align-items:center;gap:7px"><span class="tdot warm"></span>گرم</span></td>
+              <td class="hide-m num">—</td>
+              <td class="hide-m">فیسبوک</td>
+              <td class="hide-m"><div class="owner"><span class="avatar av-26">س</span>سهیل</div></td>
+              <td class="num" style="color:var(--ink-3)">۵ روز پیش</td>
+            </tr>
+            <tr>
+              <td><div class="lead-cell"><div class="deal-logo" style="background:linear-gradient(140deg,#5a6c8c,#2c394f)">س</div><span class="lead-name">شرکت ساختمانی سپین‌غر<small>محمد آصف · ۰۷۸۸ ۹۹۰ ۱۲۳</small></span></div></td>
+              <td><span class="pill stage">لید جدید</span></td>
+              <td><span style="display:inline-flex;align-items:center;gap:7px"><span class="tdot cold"></span>سرد</span></td>
+              <td class="hide-m num">—</td>
+              <td class="hide-m">تلگرام</td>
+              <td class="hide-m"><div class="owner"><span class="avatar av-26">ر</span>رشید</div></td>
+              <td class="num" style="color:var(--ink-3)">۱ هفته پیش</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="leads-kanban" class="kanban" style="display:none">
+        <div class="kcol">
+          <div class="kcol-h"><span>لید جدید</span><span class="cnt num">۲۳</span><span class="sum num">۱٫۲م ؋</span></div>
+          <div class="kcard"><div class="kn"><span class="tdot warm"></span>فروشگاه کابل‌مارت</div><div class="kc">احمد ضیا · فیسبوک</div><div class="kf"><span class="owner"><span class="avatar av-26">س</span></span><span>۵ روز پیش</span></div></div>
+          <div class="kcard"><div class="kn"><span class="tdot cold"></span>شرکت ساختمانی سپین‌غر</div><div class="kc">محمد آصف · تلگرام</div><div class="kf"><span class="owner"><span class="avatar av-26">ر</span></span><span>۱ هفته پیش</span></div></div>
+          <div class="kcard"><div class="kn"><span class="tdot cold"></span>مکتب خصوصی نور</div><div class="kc">عبدالله رحیمی · معرفی</div><div class="kf"><span class="owner"><span class="avatar av-26">ف</span></span><span>۱ هفته پیش</span></div></div>
+        </div>
+        <div class="kcol">
+          <div class="kcol-h"><span>در حال پیگیری</span><span class="cnt num">۱۶</span><span class="sum num">۹۶۰هزار ؋</span></div>
+          <div class="kcard"><div class="kn"><span class="tdot warm"></span>شرکت لوژستیک پامیر</div><div class="kc">انجنیر ولید کریمی</div><div class="kf"><span class="owner"><span class="avatar av-26">ر</span></span><span>۴ روز پیش</span></div></div>
+          <div class="kcard"><div class="kn"><span class="tdot warm"></span>رستورانت قصر شرق</div><div class="kc">حاجی صمد</div><div class="kf"><span class="owner"><span class="avatar av-26">س</span></span><span>۳ روز پیش</span></div></div>
+        </div>
+        <div class="kcol">
+          <div class="kcol-h"><span>دمو تنظیم‌شده</span><span class="cnt num">۷</span><span class="sum num">۸۴۰هزار ؋</span></div>
+          <div class="kcard"><div class="kn"><span class="tdot hot"></span>شفاخانه آریانا</div><div class="kc">داکتر مریم صافی · <b class="num">۳۴۰هزار ؋</b></div><div class="kf"><span class="owner"><span class="avatar av-26">ر</span></span><span>۳ روز پیش</span></div></div>
+        </div>
+        <div class="kcol">
+          <div class="kcol-h"><span>دمو و مذاکره</span><span class="cnt num">۵</span><span class="sum num">۹۰۰هزار ؋</span></div>
+          <div class="kcard" onclick="go('lead')"><div class="kn"><span class="tdot hot"></span>شرکت ادویه‌سازی هرات</div><div class="kc">داکتر فرید احمدی · <b class="num">۴۲۰هزار ؋</b></div><div class="kf"><span class="owner"><span class="avatar av-26">ر</span></span><span>دیروز</span></div></div>
+          <div class="kcard"><div class="kn"><span class="tdot hot"></span>تولیدی نساجی بلخ</div><div class="kc">حاجی نعمت‌الله · <b class="num">۳۸۰هزار ؋</b></div><div class="kf"><span class="owner"><span class="avatar av-26">ف</span></span><span>۲ روز پیش</span></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</div>
+
+<!-- ======================= LEAD DETAIL ======================= -->
+<div class="screen" id="s-lead">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">هـ</div><div><b>فروش هماگان</b><small>سیستم مدیریت فروش</small></div></div>
+    <div class="side-cta"><button onclick="go('new')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>ثبت لید جدید</button></div>
+    <nav class="nav">
+      <div class="nav-lbl">منو</div>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>داشبورد</a>
+      <a class="on" href="#" onclick="return go('leads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>لیدها<span class="count">۳۸</span></a>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>کارهای من<span class="count hotn">۷</span></a>
+    </nav>
+    <div class="side-user"><div class="avatar">ر</div><div>رشید<br><small>rashid@hamagan.com</small></div></div>
+  </aside>
+
+  <div class="content">
+    <div class="cmd-bar">
+      <button class="btn line sm" onclick="go('leads')">→ لیدها</button>
+      <div class="cmd-right"><span class="cmd-date">سه‌شنبه، ۱۶ سرطان ۱۴۰۵</span><button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button></div>
+    </div>
+
+    <main class="page">
+      <div class="lead-hero">
+        <div class="hero-logo">ا</div>
+        <div class="hero-main">
+          <h1>شرکت ادویه‌سازی هرات</h1>
+          <div class="hero-meta">
+            <span class="pill hot">🔥 داغ</span>
+            <span class="pill stage">دمو و مذاکره</span>
+            <span>ارزش: <b class="num" style="color:var(--ink)">۴۲۰هزار ؋</b></span>
+            <span>مسئول: رشید</span>
+            <span>ثبت: ۱۲ سرطان ۱۴۰۵</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn line sm">ویرایش</button>
+          <button class="btn sm">تغییر مرحله ▾</button>
+        </div>
+      </div>
+
+      <div class="card journey">
+        <div class="journey-top"><h3>مسیر فروش</h3><span class="sub">۴ از ۹ مرحله</span></div>
+        <div class="journey-track">
+          <div class="j-step done"><div class="j-dot"></div><div class="j-lbl">لید جدید</div></div>
+          <div class="j-step done"><div class="j-dot"></div><div class="j-lbl">در حال پیگیری</div></div>
+          <div class="j-step done"><div class="j-dot"></div><div class="j-lbl">دمو تنظیم‌شده</div></div>
+          <div class="j-step now"><div class="j-dot"></div><div class="j-lbl">دمو و مذاکره</div></div>
+          <div class="j-step"><div class="j-dot"></div><div class="j-lbl">ارسال قرارداد</div></div>
+          <div class="j-step"><div class="j-dot"></div><div class="j-lbl">امضا شده</div></div>
+          <div class="j-step"><div class="j-dot"></div><div class="j-lbl">پرداخت شده</div></div>
+          <div class="j-step"><div class="j-dot"></div><div class="j-lbl">در حال آموزش</div></div>
+          <div class="j-step"><div class="j-dot"></div><div class="j-lbl">مشتری فعال</div></div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="stack">
+          <div class="card">
+            <div class="card-pad" style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px">
+              <h3>تاریخچه فعالیت‌ها</h3>
+              <div style="display:flex;gap:7px">
+                <button class="btn soft sm">＋ یادداشت</button>
+                <button class="btn soft sm">＋ پیگیری</button>
+              </div>
+            </div>
+            <div class="card-pad" style="padding-top:0;padding-bottom:10px">
+              <div class="tab-row"><button class="on">همه</button><button>وظایف</button><button>یادداشت‌ها</button></div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-ico todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+              <div class="tl-body">
+                <div class="tl-t">تماس برای تعیین وقت دمو <span class="pill warm">در انتظار</span></div>
+                <div class="tl-meta">موعد: ۱۴ سرطان <button class="btn line sm" style="padding:1.5px 10px;font-size:11px">✓ انجام شد</button></div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-ico call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+              <div class="tl-body">
+                <div class="tl-t">دموی حضوری برگزار شد <span class="pill ok">انجام شده</span></div>
+                <div class="tl-note">دمو برای مدیرعامل و مسئول مالی برگزار شد. به ماژول گدام و راپورگیری علاقه زیاد نشان دادند. روی قیمت بحث شد، تخفیف ۱۰٪ خواستند.</div>
+                <div class="tl-meta">۱۳ سرطان ۱۴۰۵ · ۱۵:۰۰ · رشید</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-ico note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+              <div class="tl-body">
+                <div class="tl-t">یادداشت</div>
+                <div class="tl-note">رقیب اصلی: سیستم دستی اکسل. تصمیم‌گیرنده نهایی مدیرعامل است، برادرش در دبی از سیستم مشابه استفاده می‌کند و راضی است.</div>
+                <div class="tl-meta">۱۲ سرطان ۱۴۰۵ · رشید</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-ico call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+              <div class="tl-body">
+                <div class="tl-t">تماس اول — معرفی <span class="pill ok">انجام شده</span></div>
+                <div class="tl-note">بازدید حضوری از دفترشان در هرات. مدیرعامل آقای احمدی، حدود ۸۰ کارمند. سیستم فعلی: اکسل. برای دمو ابراز آمادگی کردند.</div>
+                <div class="tl-meta">۱۲ سرطان ۱۴۰۵ · ۱۰:۳۰ · رشید</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <h3>ثبت سریع</h3>
+            <div class="fld" style="margin-top:10px"><textarea placeholder="یادداشت جدید… چه اتفاقی افتاد؟"></textarea></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn soft sm" style="flex:1">ثبت یادداشت</button>
+              <button class="btn line sm" style="flex:1">＋ پیگیری بعدی</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card card-pad">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h3>شخص تماس</h3><span class="avatar av-26">ف</span></div>
+            <div class="contact-rows">
+              <div class="c-row"><span>نام</span><b>داکتر فرید احمدی</b></div>
+              <div class="c-row"><span>تلفن</span><b class="num" dir="ltr">+93 799 456 123</b></div>
+              <div class="c-row"><span>ایمیل</span><b dir="ltr" style="font-size:12px">f.ahmadi@herat-pharma.af</b></div>
+              <div class="c-row"><span>منبع لید</span><b>بازدید حضوری</b></div>
+            </div>
+            <div class="actions-grid" style="margin-top:14px">
+              <button class="a-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>تماس</button>
+              <button class="a-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>پیامک</button>
+              <button class="a-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/></svg>واتساپ</button>
+              <button class="a-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>ایمیل</button>
+            </div>
+          </div>
+
+          <div class="card card-pad ai-card">
+            <h3><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>دستیار هوشمند</h3>
+            <div class="sub">تحلیل این لید با هوش مصنوعی</div>
+            <div class="ai-actions">
+              <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="6" x2="3" y2="6"/><line x1="17" y1="12" x2="3" y2="12"/><line x1="13" y1="18" x2="3" y2="18"/></svg>خلاصه این لید</button>
+              <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m5 12-3 3 3 3"/><path d="m9 18 3-3-3-3"/></svg>متن تماس بساز</button>
+              <button class="btn gold">گفتگو درباره این لید</button>
+            </div>
+          </div>
+
+          <div class="card card-pad">
+            <h3>معلومات معامله</h3>
+            <div class="contact-rows">
+              <div class="c-row"><span>ارزش تخمینی</span><b class="num">۴۲۰هزار ؋</b></div>
+              <div class="c-row"><span>محصول</span><b>سیستم مدیریت شفاخانه</b></div>
+              <div class="c-row"><span>احتمال موفقیت</span><b class="num">۷۰٪</b></div>
+              <div class="c-row"><span>در این مرحله</span><b class="num">۳ روز</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</div>
+
+<!-- ======================= NEW LEAD ======================= -->
+<div class="screen" id="s-new">
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">هـ</div><div><b>فروش هماگان</b><small>سیستم مدیریت فروش</small></div></div>
+    <div class="side-cta"><button onclick="go('new')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>ثبت لید جدید</button></div>
+    <nav class="nav">
+      <div class="nav-lbl">منو</div>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>داشبورد</a>
+      <a href="#" onclick="return go('leads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>لیدها<span class="count">۳۸</span></a>
+      <a href="#" onclick="return go('dash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>کارهای من<span class="count hotn">۷</span></a>
+    </nav>
+    <div class="side-user"><div class="avatar">ر</div><div>رشید<br><small>rashid@hamagan.com</small></div></div>
+  </aside>
+
+  <div class="content">
+    <div class="cmd-bar">
+      <button class="btn line sm" onclick="go('dash')">→ داشبورد</button>
+      <div class="cmd-right"><span class="cmd-date">سه‌شنبه، ۱۶ سرطان ۱۴۰۵</span></div>
+    </div>
+
+    <main class="page">
+      <div class="page-head">
+        <div><h1>ثبت لید جدید</h1><div class="sub">همه چیز در یک صفحه — شرکت، شخص تماس، تماس اول و پیگیری</div></div>
+      </div>
+
+      <div class="form-grid">
+        <div>
+          <div class="card card-pad fieldset">
+            <legend><i>۱</i> شرکت</legend>
+            <div class="fld"><label>نام شرکت *</label><input value="شرکت ادویه‌سازی هرات"></div>
+          </div>
+          <div class="card card-pad fieldset">
+            <legend><i>۲</i> شخص تماس</legend>
+            <div class="f2">
+              <div class="fld"><label>نام</label><input value="داکتر فرید"></div>
+              <div class="fld"><label>تخلص</label><input value="احمدی"></div>
+            </div>
+            <div class="f2">
+              <div class="fld"><label>شماره تلفن</label><input dir="ltr" value="0799 456 123"></div>
+              <div class="fld"><label>ایمیل (اختیاری)</label><input dir="ltr" placeholder="example@company.af"></div>
+            </div>
+          </div>
+          <div class="card card-pad fieldset">
+            <legend><i>۳</i> ارزیابی</legend>
+            <div class="f2">
+              <div class="fld">
+                <label>میزان علاقمندی</label>
+                <div class="temp-seg">
+                  <button class="t-hot on">🔥 داغ</button>
+                  <button class="t-warm">گرم</button>
+                  <button class="t-cold">سرد</button>
+                </div>
+              </div>
+              <div class="fld"><label>منبع لید</label>
+                <select><option>بازدید حضوری</option><option>واتساپ</option><option>تلگرام</option><option>فیسبوک</option><option>معرفی</option><option>دیگر</option></select>
+              </div>
+            </div>
+          </div>
+          <div class="card card-pad fieldset">
+            <legend><i>۴</i> تماس اول</legend>
+            <div class="fld"><label>چه اتفاقی افتاد؟ (گزارش تماس / بازدید)</label>
+              <textarea>بازدید حضوری از دفترشان در هرات. مدیرعامل آقای احمدی، حدود ۸۰ کارمند، سیستم فعلی اکسل. برای دمو ابراز آمادگی کردند.</textarea></div>
+            <div class="fld" style="max-width:250px"><label>تاریخ و ساعت</label><input dir="ltr" value="۱۶ سرطان ۱۴۰۵ — ۱۰:۳۰"></div>
+          </div>
+          <div class="card card-pad fieldset">
+            <legend><i>۵</i> پیگیری بعدی</legend>
+            <div class="f2">
+              <div class="fld"><label>چه کاری؟</label><input value="تماس برای تعیین وقت دمو"></div>
+              <div class="fld"><label>چه وقت؟</label><input dir="ltr" value="فردا — ۰۹:۰۰"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-pad summary-card">
+          <h3>خلاصه ثبت</h3>
+          <div class="sub">با یک کلیک، همه این رکوردها ساخته می‌شوند:</div>
+          <ul>
+            <li><span class="st">✓</span><span>شرکت: <b>ادویه‌سازی هرات</b></span></li>
+            <li><span class="st">✓</span><span>شخص تماس: <b>داکتر فرید احمدی</b></span></li>
+            <li><span class="st">✓</span><span>لید: <b>مرحله «لید جدید» · داغ</b></span></li>
+            <li><span class="st">✓</span><span>گزارش تماس اول + یادداشت</span></li>
+            <li><span class="st">✓</span><span>وظیفه پیگیری: <b>فردا ۰۹:۰۰</b></span></li>
+          </ul>
+          <button class="btn gold" style="width:100%;padding:12px">ثبت لید ✓</button>
+          <div class="sub" style="text-align:center;margin-top:8px">ثبت کامل در کمتر از ۳۰ ثانیه</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+</div>
+
+<div class="proto-bar">
+  <span>نمونه ۲</span>
+  <button class="on" data-s="dash" onclick="go('dash')">داشبورد</button>
+  <button data-s="leads" onclick="go('leads')">لیدها</button>
+  <button data-s="lead" onclick="go('lead')">صفحه لید</button>
+  <button data-s="new" onclick="go('new')">ثبت لید</button>
+</div>
+
+<script>
+  function go(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+    document.getElementById('s-' + id).classList.add('on');
+    document.querySelectorAll('.proto-bar button').forEach(b =>
+      b.classList.toggle('on', b.dataset.s === id));
+    window.scrollTo(0, 0);
+    return false;
+  }
+  function leadsView(v) {
+    document.getElementById('leads-table').style.display = v === 'table' ? 'block' : 'none';
+    document.getElementById('leads-kanban').style.display = v === 'kanban' ? 'grid' : 'none';
+    const seg = document.querySelectorAll('#s-leads .toolbar .seg')[2].querySelectorAll('button');
+    seg[0].classList.toggle('on', v === 'table');
+    seg[1].classList.toggle('on', v === 'kanban');
+  }
+</script>

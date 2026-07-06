@@ -126,3 +126,75 @@ export const IconSummary = ({ size }: IconProps) => (
     <line x1="13" y1="18" x2="3" y2="18" />
   </svg>
 );
+
+export const IconDashboard = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="3" y="3" width="7" height="9" rx="1.5" />
+    <rect x="14" y="3" width="7" height="5" rx="1.5" />
+    <rect x="14" y="12" width="7" height="9" rx="1.5" />
+    <rect x="3" y="16" width="7" height="5" rx="1.5" />
+  </svg>
+);
+
+export const IconTasks = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M9 11l3 3 8-8" />
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+  </svg>
+);
+
+export const IconBell = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);
+
+export const IconSearch = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m21 21-4-4" />
+  </svg>
+);
+
+export const IconTable = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <line x1="3" y1="7" x2="21" y2="7" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="17" x2="21" y2="17" />
+  </svg>
+);
+
+export const IconKanban = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="3" y="3" width="5" height="18" rx="1.5" />
+    <rect x="10" y="3" width="5" height="12" rx="1.5" />
+    <rect x="17" y="3" width="5" height="8" rx="1.5" />
+  </svg>
+);
+
+export const IconFlame = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M12 2c1 4-1 5-2 7 2-1 3 0 3 2 0 1.5-1 3-3 3 4 1 8-1 8-6 0-2-1-4-2-5 0 2-1 3-2 3 1-2 0-3-2-4z" />
+  </svg>
+);
+
+export const IconClock = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 3" />
+  </svg>
+);
+
+export const IconMoney = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+);
+
+export const IconEdit = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
+  </svg>
+);

@@ -1,8 +1,8 @@
 // All UI text in Dari (Afghan Persian). Single-language app by design.
 export const T = {
-  appName: 'فروش هماگان',
-  brand: 'هماگان',
-  brandSub: 'سیستم مدیریت فروش',
+  appName: 'شرکت خدمات تکنالوژی همگان',
+  brand: 'همگان',
+  brandSub: 'CRM',
 
   // auth
   signInTitle: 'ورود به حساب',

@@ -94,7 +94,7 @@ export const AppShell = ({
         <div className="brand">
           <img className="mark" src={logoSquare} alt="Usystems" />
           <div>
-            <b>{T.appName}</b>
+            <b>{T.brand}</b>
             <small>{T.brandSub}</small>
           </div>
         </div>

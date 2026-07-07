@@ -2382,9 +2382,13 @@ table.leads tbody tr:hover {
   padding: 7px 14px;
   overflow-x: auto;
   max-width: 1280px;
+  /* tabs anchor at the left and grow rightward, like browser tabs */
+  direction: ltr;
+  justify-content: flex-start;
 }
 
 .dock-chip {
+  direction: rtl;
   display: inline-flex;
   align-items: center;
   background: var(--card);

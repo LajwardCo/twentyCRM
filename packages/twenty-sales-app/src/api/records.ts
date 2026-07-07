@@ -118,6 +118,8 @@ export const fetchLeads = async (options: {
   ownerId?: string;
   openOnly?: boolean;
   limit?: number;
+  companyId?: string;
+  pointOfContactId?: string;
 }): Promise<LeadSummary[]> => {
   const filters: Record<string, unknown>[] = [];
   if (options.search) {
@@ -128,6 +130,12 @@ export const fetchLeads = async (options: {
   }
   if (options.ownerId) {
     filters.push({ ownerId: { eq: options.ownerId } });
+  }
+  if (options.companyId) {
+    filters.push({ companyId: { eq: options.companyId } });
+  }
+  if (options.pointOfContactId) {
+    filters.push({ pointOfContactId: { eq: options.pointOfContactId } });
   }
 
   const data = await coreQuery<{
@@ -889,63 +897,121 @@ export const globalSearch = async (
   return data.search.edges.map((e) => e.node);
 };
 
-// Resolve a search hit to a route in this app. Opportunities and tasks have
-// their own pages; people/companies/notes resolve to their related lead.
-export const resolveSearchRoute = async (
-  hit: SearchHit,
-): Promise<string | null> => {
-  if (hit.objectNameSingular === 'opportunity') return `/lead/${hit.recordId}`;
-  if (hit.objectNameSingular === 'task') return `/task/${hit.recordId}`;
+// Every search hit opens its own page — no dead ends.
+export const searchHitRoute = (hit: SearchHit): string => {
+  switch (hit.objectNameSingular) {
+    case 'opportunity':
+      return `/lead/${hit.recordId}`;
+    case 'task':
+      return `/task/${hit.recordId}`;
+    case 'note':
+      return `/note/${hit.recordId}`;
+    case 'person':
+      return `/person/${hit.recordId}`;
+    case 'company':
+      return `/company/${hit.recordId}`;
+    default:
+      return `/lead/${hit.recordId}`;
+  }
+};
 
-  if (hit.objectNameSingular === 'note') {
-    const data = await coreQuery<{
+// ---------- entity viewers (note / person / company pages) ----------
+
+export type NoteDetail = {
+  id: string;
+  title: string;
+  createdAt: string;
+  createdBy: { name: string | null } | null;
+  bodyV2: { markdown: string | null } | null;
+  targets: {
+    opportunity: { id: string; name: string } | null;
+    company: { id: string; name: string } | null;
+    person: {
+      id: string;
+      name: { firstName: string; lastName: string };
+    } | null;
+  }[];
+};
+
+export const fetchNote = async (id: string): Promise<NoteDetail> => {
+  const data = await coreQuery<{
+    note: {
+      id: string;
+      title: string;
+      createdAt: string;
+      createdBy: { name: string | null } | null;
+      bodyV2: { markdown: string | null } | null;
       noteTargets: {
-        edges: { node: { opportunity: { id: string } | null } }[];
+        edges: {
+          node: {
+            opportunity: { id: string; name: string } | null;
+            company: { id: string; name: string } | null;
+            person: {
+              id: string;
+              name: { firstName: string; lastName: string };
+            } | null;
+          };
+        }[];
       };
-    }>(
-      `query NoteLead($noteId: UUID!) {
-        noteTargets(filter: { noteId: { eq: $noteId } }, first: 5) {
-          edges { node { opportunity { id } } }
+    };
+  }>(
+    `query NoteDetail($id: UUID!) {
+      note(filter: { id: { eq: $id } }) {
+        id
+        title
+        createdAt
+        createdBy { name }
+        bodyV2 { markdown }
+        noteTargets {
+          edges {
+            node {
+              opportunity { id name }
+              company { id name }
+              person { id name { firstName lastName } }
+            }
+          }
         }
-      }`,
-      { noteId: hit.recordId },
-    );
-    const opp = data.noteTargets.edges.find((e) => e.node.opportunity)?.node
-      .opportunity;
-    return opp ? `/lead/${opp.id}` : null;
-  }
+      }
+    }`,
+    { id },
+  );
+  return {
+    id: data.note.id,
+    title: data.note.title,
+    createdAt: data.note.createdAt,
+    createdBy: data.note.createdBy,
+    bodyV2: data.note.bodyV2,
+    targets: data.note.noteTargets.edges.map((e) => e.node),
+  };
+};
 
-  if (hit.objectNameSingular === 'person') {
-    const data = await coreQuery<{
-      opportunities: { edges: { node: { id: string } }[] };
-    }>(
-      `query PersonLead($personId: UUID!) {
-        opportunities(filter: { pointOfContactId: { eq: $personId } }, first: 1) {
-          edges { node { id } }
-        }
-      }`,
-      { personId: hit.recordId },
-    );
-    return data.opportunities.edges[0]
-      ? `/lead/${data.opportunities.edges[0].node.id}`
-      : null;
-  }
+export type PersonDetail = {
+  id: string;
+  name: { firstName: string; lastName: string };
+  jobTitle: string | null;
+  phones: {
+    primaryPhoneCallingCode: string | null;
+    primaryPhoneNumber: string | null;
+  } | null;
+  emails: { primaryEmail: string | null } | null;
+  company: { id: string; name: string } | null;
+  createdAt: string;
+};
 
-  if (hit.objectNameSingular === 'company') {
-    const data = await coreQuery<{
-      opportunities: { edges: { node: { id: string } }[] };
-    }>(
-      `query CompanyLead($companyId: UUID!) {
-        opportunities(filter: { companyId: { eq: $companyId } }, first: 1) {
-          edges { node { id } }
-        }
-      }`,
-      { companyId: hit.recordId },
-    );
-    return data.opportunities.edges[0]
-      ? `/lead/${data.opportunities.edges[0].node.id}`
-      : null;
-  }
-
-  return null;
+export const fetchPerson = async (id: string): Promise<PersonDetail> => {
+  const data = await coreQuery<{ person: PersonDetail }>(
+    `query PersonDetail($id: UUID!) {
+      person(filter: { id: { eq: $id } }) {
+        id
+        name { firstName lastName }
+        jobTitle
+        phones { primaryPhoneCallingCode primaryPhoneNumber }
+        emails { primaryEmail }
+        company { id name }
+        createdAt
+      }
+    }`,
+    { id },
+  );
+  return data.person;
 };

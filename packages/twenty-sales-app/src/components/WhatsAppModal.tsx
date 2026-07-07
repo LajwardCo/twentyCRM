@@ -10,7 +10,7 @@ import { T } from '../lib/strings';
 
 type WhatsAppModalProps = {
   personId: string;
-  opportunityId: string;
+  opportunityId?: string;
   onClose: () => void;
 };
 
@@ -64,7 +64,7 @@ export const WhatsAppModal = ({
     try {
       const result = await sendWhatsappMessage({
         personId,
-        opportunityId,
+        ...(opportunityId ? { opportunityId } : {}),
         ...(mode === 'text'
           ? { text }
           : {

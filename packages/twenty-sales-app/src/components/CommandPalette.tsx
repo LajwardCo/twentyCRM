@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { enrichedGlobalSearch, type EnrichedHit } from '../api/deepSearch';
 import {
   fetchLeads,
-  globalSearch,
-  resolveSearchRoute,
+  searchHitRoute,
   type LeadSummary,
-  type SearchHit,
 } from '../api/records';
+import { startBackgroundSearch } from '../lib/backgroundSearch';
+import { Highlight } from './Highlight';
 import { navigate } from '../lib/router';
 import { loadPrefs, savePref } from '../lib/prefs';
 import { STAGE_LABELS, T } from '../lib/strings';
@@ -27,6 +28,7 @@ type CommandPaletteProps = {
 type Item = {
   key: string;
   label: string;
+  desc?: string | null;
   hint?: string;
   icon?: React.ReactNode;
   run: () => void;
@@ -59,10 +61,10 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
   const [query, setQuery] = useState('');
   const [deep, setDeepState] = useState(() => loadPrefs().deepSearch ?? false);
   const [leads, setLeads] = useState<LeadSummary[]>([]);
-  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [hits, setHits] = useState<EnrichedHit[]>([]);
   const [searching, setSearching] = useState(false);
-  const [resolving, setResolving] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const resolving: string | null = null;
+  const notice: string | null = null;
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<number>(0);
@@ -83,7 +85,6 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
 
   useEffect(() => {
     window.clearTimeout(debounceRef.current);
-    setNotice(null);
     if (query.trim() === '') {
       setLeads([]);
       setHits([]);
@@ -96,7 +97,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
       async () => {
         try {
           if (deep) {
-            const found = await globalSearch(query.trim(), 16);
+            const found = await enrichedGlobalSearch(query.trim(), 16);
             if (seq === requestSeq.current) setHits(found);
           } else {
             const found = await fetchLeads({ search: query.trim(), limit: 6 });
@@ -121,20 +122,8 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
     onClose();
   };
 
-  const openHit = async (hit: SearchHit) => {
-    setResolving(hit.recordId);
-    try {
-      const route = await resolveSearchRoute(hit);
-      if (route) {
-        go(route);
-      } else {
-        setNotice('این مورد به لیدی وصل نیست');
-      }
-    } catch {
-      setNotice('باز کردن ناموفق بود');
-    } finally {
-      setResolving(null);
-    }
+  const openHit = (hit: EnrichedHit) => {
+    go(searchHitRoute(hit));
   };
 
   const actions: Item[] = [
@@ -169,9 +158,10 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
     ? hits.map((hit) => ({
         key: hit.recordId,
         label: hit.label || '—',
+        desc: hit.description,
         hint: HIT_TYPE_FA[hit.objectNameSingular] ?? hit.objectNameSingular,
         icon: hitIcon(hit.objectNameSingular),
-        run: () => void openHit(hit),
+        run: () => openHit(hit),
       }))
     : leads.map((lead) => ({
         key: lead.id,
@@ -238,6 +228,18 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
           <button className={deep ? 'on' : ''} onClick={() => setDeep(true)}>
             🔎 عمیق — داخل یادداشت‌ها و وظایف
           </button>
+          {deep && query.trim() !== '' && (
+            <button
+              className="cp-bg-btn"
+              onClick={() => {
+                startBackgroundSearch(query.trim());
+                onClose();
+              }}
+              title="جستجو در پس‌زمینه ادامه می‌یابد و به تب‌ها اضافه می‌شود"
+            >
+              🕐 در پس‌زمینه
+            </button>
+          )}
           <span className="cp-kbd" style={{ marginRight: 'auto' }}>
             Tab
           </span>
@@ -270,8 +272,21 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
                 disabled={resolving !== null}
               >
                 {item.icon}
-                <span className="cp-label">
-                  {resolving === item.key ? '…' : item.label}
+                <span className="cp-main">
+                  <span className="cp-label">
+                    {resolving === item.key ? (
+                      '…'
+                    ) : deep ? (
+                      <Highlight text={item.label} query={query} />
+                    ) : (
+                      item.label
+                    )}
+                  </span>
+                  {item.desc && (
+                    <span className="cp-desc">
+                      <Highlight text={item.desc} query={query} />
+                    </span>
+                  )}
                 </span>
                 {item.hint && <span className="cp-hint">{item.hint}</span>}
               </button>

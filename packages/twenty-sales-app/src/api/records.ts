@@ -707,6 +707,32 @@ export const fetchLeadMarketer = async (
   }
 };
 
+// Bulk variant for reports: one marketer per lead id, in a single request.
+// Same defensive try/catch as fetchLeadMarketer — the field doesn't exist on
+// every environment (e.g. local dev), so callers must treat {} as "no data".
+export const fetchLeadsMarketers = async (
+  ids: string[],
+): Promise<Record<string, string | null>> => {
+  if (ids.length === 0) return {};
+  try {
+    const data = await coreQuery<{
+      opportunities: { edges: { node: { id: string; marketer: string | null } }[] };
+    }>(
+      `query LeadsMarketers($ids: [UUID!]!, $limit: Int!) {
+        opportunities(filter: { id: { in: $ids } }, first: $limit) {
+          edges { node { id marketer } }
+        }
+      }`,
+      { ids, limit: ids.length },
+    );
+    return Object.fromEntries(
+      data.opportunities.edges.map((e) => [e.node.id, e.node.marketer]),
+    );
+  } catch {
+    return {};
+  }
+};
+
 // ---------- pricing: deal products + quotations ----------
 
 export type DealProductLine = {
@@ -835,29 +861,41 @@ export type DoneTask = {
   id: string;
   title: string;
   updatedAt: string;
+  bodyV2: { markdown: string | null } | null;
+  assignee: { id: string; name: { firstName: string; lastName: string } } | null;
 };
 
-export const fetchMyDoneTasksSince = async (
-  assigneeId: string,
+// assigneeId omitted = every seller's done tasks since sinceIso (used for
+// team-wide reporting); passed = one seller's (used for "my" reports).
+export const fetchDoneTasksSince = async (
   sinceIso: string,
+  assigneeId?: string,
 ): Promise<DoneTask[]> => {
+  const filters: Record<string, unknown>[] = [
+    { status: { eq: 'DONE' } },
+    { updatedAt: { gte: sinceIso } },
+  ];
+  if (assigneeId) {
+    filters.push({ assigneeId: { eq: assigneeId } });
+  }
+
   const data = await coreQuery<{
     tasks: { edges: { node: DoneTask }[] };
   }>(
-    `query MyDoneTasks($filter: TaskFilterInput) {
+    `query DoneTasksSince($filter: TaskFilterInput) {
       tasks(filter: $filter, first: 200, orderBy: [{ updatedAt: DescNullsLast }]) {
-        edges { node { id title updatedAt } }
+        edges {
+          node {
+            id
+            title
+            updatedAt
+            bodyV2 { markdown }
+            assignee { id name { firstName lastName } }
+          }
+        }
       }
     }`,
-    {
-      filter: {
-        and: [
-          { assigneeId: { eq: assigneeId } },
-          { status: { eq: 'DONE' } },
-          { updatedAt: { gte: sinceIso } },
-        ],
-      },
-    },
+    { filter: { and: filters } },
   );
   return data.tasks.edges.map((e) => e.node);
 };

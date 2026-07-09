@@ -139,7 +139,7 @@ main().catch((e) => { console.error('FATAL:', e.message); process.exit(1); });
 Ensure the `twenty-server` dev server is running on port 3010 first (`npx nx start twenty-server`, or the `twenty-server` launch config). Then:
 
 Run: `node tools/sales-crm/provision-daily-report-object.mjs`
-Expected: `SUMMARY: 6 created, 0 skipped, 0 failed` on first run (1 object + 4 fields + 1 relation). Re-running immediately should print `SUMMARY: 0 created, 6 skipped, 0 failed` (idempotency check).
+Expected: `SUMMARY: 7 created, 0 skipped, 0 failed` on first run (1 object + 5 fields + 1 relation). Re-running immediately should print `SUMMARY: 0 created, 7 skipped, 0 failed` (idempotency check).
 
 - [ ] **Step 3: Commit**
 

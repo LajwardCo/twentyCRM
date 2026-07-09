@@ -1375,6 +1375,55 @@ git commit -m "feat(sales-app): add SellerLeaderboard component"
 
 **Files:**
 - Modify: `packages/twenty-sales-app/src/views/ReportsView.tsx`
+- Modify: `packages/twenty-sales-app/src/views/TasksView.tsx`
+
+> **Addendum (found during Task 2 implementation):** `fetchMyDoneTasksSince` had a
+> second call site the plan missed — `TasksView.tsx`'s "done" tab. Step 0 below
+> fixes it. Without this fix the build stays broken after this task.
+
+- [ ] **Step 0: Fix the second `fetchMyDoneTasksSince` call site in `TasksView.tsx`**
+
+Find:
+
+```tsx
+import {
+  fetchMyDoneTasksSince,
+  fetchMyOpenTasks,
+  setTaskStatus,
+  type Task,
+  type TaskType,
+} from '../api/records';
+```
+
+Replace with:
+
+```tsx
+import {
+  fetchDoneTasksSince,
+  fetchMyOpenTasks,
+  setTaskStatus,
+  type Task,
+  type TaskType,
+} from '../api/records';
+```
+
+Find:
+
+```tsx
+    const [open, done] = await Promise.all([
+      fetchMyOpenTasks(user.workspaceMemberId, { limit: 200 }),
+      fetchMyDoneTasksSince(user.workspaceMemberId, since.toISOString()),
+    ]);
+```
+
+Replace with:
+
+```tsx
+    const [open, done] = await Promise.all([
+      fetchMyOpenTasks(user.workspaceMemberId, { limit: 200 }),
+      fetchDoneTasksSince(since.toISOString(), user.workspaceMemberId),
+    ]);
+```
 
 - [ ] **Step 1: Fix imports**
 
@@ -1555,7 +1604,7 @@ Expected: no errors.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add packages/twenty-sales-app/src/views/ReportsView.tsx
+git add packages/twenty-sales-app/src/views/ReportsView.tsx packages/twenty-sales-app/src/views/TasksView.tsx
 git commit -m "feat(sales-app): add marketer breakdown and seller leaderboard to Reports"
 ```
 

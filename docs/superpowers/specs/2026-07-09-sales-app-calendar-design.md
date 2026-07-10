@@ -141,6 +141,21 @@ kebab-case class names, following existing patterns like `.dash-grid`,
   confirm pills render correctly, drag one to another day and confirm the
   due date change via API read-back, click into a task and back.
 
+**Implementation-time revision:** the component-test line above was scoped
+down during planning (`docs/superpowers/plans/2026-07-09-sales-app-calendar.md`,
+"Note on testing scope") because this package had zero test infrastructure
+and no React Testing Library — adding a full RTL+jsdom harness for one
+feature's component tests was judged disproportionate. What actually shipped:
+real Vitest unit tests for the pure logic (`jalali.test.ts`,
+`calendarGrid.test.ts` — 20 tests, including grid construction, task
+bucketing, and Esfand-boundary rollover), plus thorough manual browser
+verification covering every scenario listed above (grid rendering, DONE
+styling, day-click agenda, drag-drop reschedule confirmed via direct
+GraphQL read-back with time-of-day preserved, persistence across a hard
+reload). No automated component/rendering tests exist for `CalendarGrid`/
+`CalendarView` — a legitimate follow-up if this app grows a real
+component-test habit later, not a gap introduced silently.
+
 ## Deferred (not in this build)
 
 - Team-member calendar switcher for managers/admins.

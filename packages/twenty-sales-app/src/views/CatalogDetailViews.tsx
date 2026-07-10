@@ -22,7 +22,7 @@ import { navigate } from '../lib/router';
 import {
   CATALOG_STATUS_LABELS,
   PRICING_MODEL_LABELS,
-  T3,
+  T4,
 } from '../lib/strings';
 
 const ViewSkeleton = () => (
@@ -135,38 +135,38 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
         <div className="card card-pad anim d1" style={{ marginBottom: 16 }}>
           <div className="contact-rows">
             <div className="c-row">
-              <span>{T3.baseInstallPriceLbl}</span>
+              <span>{T4.baseInstallPriceLbl}</span>
               <b className="num">{formatAfn(product.baseInstallPrice?.amountMicros)}</b>
             </div>
             <div className="c-row">
-              <span>{T3.baseAnnualPriceLbl}</span>
+              <span>{T4.baseAnnualPriceLbl}</span>
               <b className="num">{formatAfn(product.baseAnnualPrice?.amountMicros)}</b>
             </div>
             <div className="c-row">
-              <span>{T3.maxDiscountPercentLbl}</span>
+              <span>{T4.maxDiscountPercentLbl}</span>
               <b className="num">{product.maxDiscountPercent ?? '—'}</b>
             </div>
             {product.pricingFactorNotes && (
               <div className="c-row">
-                <span>{T3.pricingFactorNotesLbl}</span>
+                <span>{T4.pricingFactorNotesLbl}</span>
                 <b>{product.pricingFactorNotes}</b>
               </div>
             )}
           </div>
           <button className="btn line sm" style={{ marginTop: 12 }} onClick={startEdit}>
-            {T3.edit}
+            {T4.edit}
           </button>
         </div>
       ) : (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
-          <h3>{T3.editProduct}</h3>
+          <h3>{T4.editProduct}</h3>
           <div className="f2" style={{ marginTop: 10 }}>
             <div className="fld">
-              <label>{T3.nameLbl}</label>
+              <label>{T4.nameLbl}</label>
               <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
             </div>
             <div className="fld">
-              <label>{T3.pricingModelLbl}</label>
+              <label>{T4.pricingModelLbl}</label>
               <select
                 value={editing.pricingModel ?? 'FLAT'}
                 onChange={(e) => set({ pricingModel: e.target.value })}
@@ -181,7 +181,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
           </div>
           <div className="f2">
             <div className="fld">
-              <label>{T3.baseInstallPriceLbl}</label>
+              <label>{T4.baseInstallPriceLbl}</label>
               <input
                 inputMode="decimal"
                 dir="ltr"
@@ -192,7 +192,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
               />
             </div>
             <div className="fld">
-              <label>{T3.baseAnnualPriceLbl}</label>
+              <label>{T4.baseAnnualPriceLbl}</label>
               <input
                 inputMode="decimal"
                 dir="ltr"
@@ -205,7 +205,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
           </div>
           <div className="f2">
             <div className="fld">
-              <label>{T3.maxDiscountPercentLbl}</label>
+              <label>{T4.maxDiscountPercentLbl}</label>
               <input
                 inputMode="numeric"
                 dir="ltr"
@@ -222,12 +222,12 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                   checked={editing.isSellable ?? true}
                   onChange={(e) => set({ isSellable: e.target.checked })}
                 />
-                {T3.isSellableLbl}
+                {T4.isSellableLbl}
               </label>
             </div>
           </div>
           <div className="fld">
-            <label>{T3.pricingFactorNotesLbl}</label>
+            <label>{T4.pricingFactorNotesLbl}</label>
             <textarea
               value={editing.pricingFactorNotes ?? ''}
               onChange={(e) => set({ pricingFactorNotes: e.target.value })}
@@ -236,10 +236,10 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
           {error !== null && <div className="error-banner">{error}</div>}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn" disabled={busy || editing.name.trim() === ''} onClick={save}>
-              {busy ? '…' : T3.save}
+              {busy ? '…' : T4.save}
             </button>
             <button className="btn line" onClick={() => setEditing(null)}>
-              {T3.cancel}
+              {T4.cancel}
             </button>
           </div>
         </div>
@@ -247,9 +247,9 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
 
       <div className="card anim d2">
         <div className="card-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>{T3.packagesSection}</h3>
+          <h3>{T4.packagesSection}</h3>
           <button className="btn soft sm" onClick={startNewPackage}>
-            ＋ {T3.newPackage}
+            ＋ {T4.newPackage}
           </button>
         </div>
 
@@ -257,14 +257,14 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
           <div className="card-pad" style={{ paddingTop: 0 }}>
             <div className="f2">
               <div className="fld">
-                <label>{T3.nameLbl}</label>
+                <label>{T4.nameLbl}</label>
                 <input
                   value={newPackage.name}
                   onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
                 />
               </div>
               <div className="fld">
-                <label>{T3.statusLbl}</label>
+                <label>{T4.statusLbl}</label>
                 <select
                   value={newPackage.status ?? 'ACTIVE'}
                   onChange={(e) => setNewPackage({ ...newPackage, status: e.target.value })}
@@ -284,11 +284,11 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                   checked={newPackage.allowsCustomPricing ?? false}
                   onChange={(e) => setNewPackage({ ...newPackage, allowsCustomPricing: e.target.checked })}
                 />
-                {T3.allowsCustomPricingLbl}
+                {T4.allowsCustomPricingLbl}
               </label>
             </div>
             <div className="fld">
-              <label>{T3.notesLbl}</label>
+              <label>{T4.notesLbl}</label>
               <textarea
                 value={newPackage.notes ?? ''}
                 onChange={(e) => setNewPackage({ ...newPackage, notes: e.target.value })}
@@ -301,10 +301,10 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                 disabled={packageBusy || newPackage.name.trim() === ''}
                 onClick={savePkg}
               >
-                {packageBusy ? '…' : T3.save}
+                {packageBusy ? '…' : T4.save}
               </button>
               <button className="btn line sm" onClick={() => setNewPackage(null)}>
-                {T3.cancel}
+                {T4.cancel}
               </button>
             </div>
           </div>
@@ -321,7 +321,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
           </div>
         )}
         {packages !== null && packages.length === 0 && newPackage === null && (
-          <div className="empty-state">{T3.noPackages}</div>
+          <div className="empty-state">{T4.noPackages}</div>
         )}
         {packages?.map((pkg: CatalogPackage) => (
           <div className="task" key={pkg.id} onClick={() => navigate(`/catalog/package/${pkg.id}`)}>
@@ -329,7 +329,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
               <div className="t-title">{pkg.name}</div>
               <div className="t-sub">
                 {pkg.status && <span className={`pill ${pkg.status === 'ARCHIVED' ? 'cold' : 'ok'}`}>{CATALOG_STATUS_LABELS[pkg.status] ?? pkg.status}</span>}
-                {pkg.allowsCustomPricing && <span className="pill">{T3.allowsCustomPricingLbl}</span>}
+                {pkg.allowsCustomPricing && <span className="pill">{T4.allowsCustomPricingLbl}</span>}
               </div>
             </div>
           </div>
@@ -454,7 +454,7 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
               style={{ background: 'none', border: 0, cursor: 'pointer', fontSize: 12 }}
               onClick={() => pkg.productId && navigate(`/catalog/product/${pkg.productId}`)}
             >
-              {T3.back} ←
+              {T4.back} ←
             </button>
           </div>
         </div>
@@ -464,34 +464,34 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
         <div className="card card-pad anim d1" style={{ marginBottom: 16 }}>
           <div className="contact-rows">
             <div className="c-row">
-              <span>{T3.statusLbl}</span>
+              <span>{T4.statusLbl}</span>
               <b>{pkg.status ? CATALOG_STATUS_LABELS[pkg.status] ?? pkg.status : '—'}</b>
             </div>
             <div className="c-row">
-              <span>{T3.allowsCustomPricingLbl}</span>
+              <span>{T4.allowsCustomPricingLbl}</span>
               <b>{pkg.allowsCustomPricing ? 'بله' : 'خیر'}</b>
             </div>
             {pkg.notes && (
               <div className="c-row">
-                <span>{T3.notesLbl}</span>
+                <span>{T4.notesLbl}</span>
                 <b>{pkg.notes}</b>
               </div>
             )}
           </div>
           <button className="btn line sm" style={{ marginTop: 12 }} onClick={startEdit}>
-            {T3.edit}
+            {T4.edit}
           </button>
         </div>
       ) : (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
-          <h3>{T3.editPackage}</h3>
+          <h3>{T4.editPackage}</h3>
           <div className="f2" style={{ marginTop: 10 }}>
             <div className="fld">
-              <label>{T3.nameLbl}</label>
+              <label>{T4.nameLbl}</label>
               <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
             </div>
             <div className="fld">
-              <label>{T3.statusLbl}</label>
+              <label>{T4.statusLbl}</label>
               <select value={editing.status ?? 'ACTIVE'} onChange={(e) => set({ status: e.target.value })}>
                 {Object.entries(CATALOG_STATUS_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>
@@ -508,20 +508,20 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
                 checked={editing.allowsCustomPricing ?? false}
                 onChange={(e) => set({ allowsCustomPricing: e.target.checked })}
               />
-              {T3.allowsCustomPricingLbl}
+              {T4.allowsCustomPricingLbl}
             </label>
           </div>
           <div className="fld">
-            <label>{T3.notesLbl}</label>
+            <label>{T4.notesLbl}</label>
             <textarea value={editing.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
           </div>
           {error !== null && <div className="error-banner">{error}</div>}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn" disabled={busy || editing.name.trim() === ''} onClick={save}>
-              {busy ? '…' : T3.save}
+              {busy ? '…' : T4.save}
             </button>
             <button className="btn line" onClick={() => setEditing(null)}>
-              {T3.cancel}
+              {T4.cancel}
             </button>
           </div>
         </div>
@@ -529,9 +529,9 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
 
       <div className="card anim d2">
         <div className="card-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>{T3.pricingVersionsSection}</h3>
+          <h3>{T4.pricingVersionsSection}</h3>
           <button className="btn soft sm" onClick={startNewVersion}>
-            ＋ {T3.newPricingVersion}
+            ＋ {T4.newPricingVersion}
           </button>
         </div>
 
@@ -539,12 +539,12 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
           <div className="card-pad" style={{ paddingTop: 0 }}>
             {!versionDraft.id && (
               <div className="sub" style={{ marginBottom: 10 }}>
-                {T3.deactivatedVersionNote}
+                {T4.deactivatedVersionNote}
               </div>
             )}
             <div className="f2">
               <div className="fld">
-                <label>{T3.effectiveFromLbl}</label>
+                <label>{T4.effectiveFromLbl}</label>
                 <input
                   type="datetime-local"
                   value={toLocalInputValue(new Date(versionDraft.input.effectiveFrom ?? Date.now()))}
@@ -557,7 +557,7 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
                 />
               </div>
               <div className="fld">
-                <label>{T3.currencyCodeLbl}</label>
+                <label>{T4.currencyCodeLbl}</label>
                 <input
                   dir="ltr"
                   value={versionDraft.input.currencyCode ?? 'AFN'}
@@ -576,7 +576,7 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
                     setVersionDraft({ ...versionDraft, input: { ...versionDraft.input, isActive: e.target.checked } })
                   }
                 />
-                {T3.isActiveLbl}
+                {T4.isActiveLbl}
               </label>
             </div>
 
@@ -593,10 +593,10 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
             {versionError !== null && <div className="error-banner" style={{ marginTop: 10 }}>{versionError}</div>}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button className="btn sm" disabled={versionBusy} onClick={saveVersion}>
-                {versionBusy ? '…' : T3.save}
+                {versionBusy ? '…' : T4.save}
               </button>
               <button className="btn line sm" onClick={() => setVersionDraft(null)}>
-                {T3.cancel}
+                {T4.cancel}
               </button>
             </div>
           </div>
@@ -613,17 +613,17 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
           </div>
         )}
         {versions !== null && versions.length === 0 && versionDraft === null && (
-          <div className="empty-state">{T3.noPricingVersions}</div>
+          <div className="empty-state">{T4.noPricingVersions}</div>
         )}
         {versions?.map((v) => (
           <div className="task" key={v.id} style={{ cursor: 'pointer' }} onClick={() => startEditVersion(v)}>
             <div className="t-main" style={{ cursor: 'pointer' }}>
               <div className="t-title">
-                {T3.version} {v.versionNumber ?? '—'}
+                {T4.version} {v.versionNumber ?? '—'}
               </div>
               <div className="t-sub">
                 <span className={`pill ${v.isActive ? 'ok' : 'cold'}`}>
-                  {v.isActive ? T3.activeVersionBadge : 'غیرفعال'}
+                  {v.isActive ? T4.activeVersionBadge : 'غیرفعال'}
                 </span>
                 {v.effectiveFrom && <span className="num">{formatJalaliDate(v.effectiveFrom)}</span>}
                 {v.currencyCode && <span dir="ltr">{v.currencyCode}</span>}

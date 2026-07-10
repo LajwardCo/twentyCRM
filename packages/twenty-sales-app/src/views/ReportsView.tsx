@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import {
+  fetchDoneTasksSince,
   fetchLeads,
-  fetchMyDoneTasksSince,
+  fetchLeadsMarketers,
   OPEN_STAGES,
   type LeadSummary,
 } from '../api/records';
@@ -13,6 +14,7 @@ import {
   IconMoney,
   IconTasks,
 } from '../components/icons';
+import { SellerLeaderboard } from '../components/SellerLeaderboard';
 import { useCached } from '../lib/cache';
 import { formatAfn, sumAmountMicros } from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
@@ -140,10 +142,15 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
           limit: 300,
         }),
         scope === 'me'
-          ? fetchMyDoneTasksSince(user.workspaceMemberId, start.toISOString())
+          ? fetchDoneTasksSince(start.toISOString(), user.workspaceMemberId)
           : Promise.resolve([]),
       ]);
-      return { leads, doneTasks };
+      const inPeriodIds = leads
+        .filter((l) => new Date(l.createdAt) >= start)
+        .map((l) => l.id);
+      const marketerMap =
+        scope === 'team' ? await fetchLeadsMarketers(inPeriodIds) : {};
+      return { leads, doneTasks, marketerMap };
     },
   );
 
@@ -216,14 +223,12 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
     () => groupBy(inPeriod, (l) => l.temperature, TEMP_LABELS),
     [inPeriod],
   );
-  const byOwner = useMemo(
-    () =>
-      groupBy(
-        inPeriod,
-        (l) => l.owner?.name.firstName ?? null,
-        MARKETER_LABELS,
-      ),
-    [inPeriod],
+  const hasMarketerData = Object.values(data?.marketerMap ?? {}).some(
+    (v) => v !== null && v !== undefined,
+  );
+  const byMarketer = useMemo(
+    () => groupBy(inPeriod, (l) => data?.marketerMap?.[l.id] ?? null, MARKETER_LABELS),
+    [inPeriod, data?.marketerMap],
   );
 
   const loading = leads === null && error === null;
@@ -366,12 +371,8 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
           </div>
           {scope === 'team' && (
             <div className="card card-pad anim d4">
-              <h3>{T2.byOwner}</h3>
-              {inPeriod.length === 0 ? (
-                <div className="empty-state">{T2.noData}</div>
-              ) : (
-                <BreakdownRows rows={byOwner} />
-              )}
+              <h3>{T2.sellerPerformance}</h3>
+              <SellerLeaderboard leads={inPeriod} periodStartIso={start.toISOString()} />
             </div>
           )}
         </div>
@@ -392,6 +393,12 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
               <BreakdownRows rows={byTemp} />
             )}
           </div>
+          {scope === 'team' && hasMarketerData && (
+            <div className="card card-pad anim d5">
+              <h3>{T2.byMarketer}</h3>
+              <BreakdownRows rows={byMarketer} />
+            </div>
+          )}
         </div>
       </div>
     </main>

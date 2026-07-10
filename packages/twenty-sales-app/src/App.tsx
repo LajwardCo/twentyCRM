@@ -15,9 +15,11 @@ import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
+import { CalendarView } from './views/CalendarView';
 import { CatalogView } from './views/CatalogView';
 import { PackageCatalogDetailView, ProductCatalogDetailView } from './views/CatalogDetailViews';
 import { CompetitorsView } from './views/CompetitorsView';
+import { DailyReportView } from './views/DailyReportView';
 import { CompanyView, NoteView, PersonView } from './views/EntityViews';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
@@ -181,6 +183,8 @@ export const App = () => {
     view = <NewLeadView user={user} />;
   } else if (section === 'tasks') {
     view = <TasksView user={user} />;
+  } else if (section === 'calendar') {
+    view = <CalendarView user={user} />;
   } else if (section === 'note' && param) {
     view = <NoteView noteId={param} />;
     bar = backButton;
@@ -194,6 +198,8 @@ export const App = () => {
     view = <SearchResultsView searchId={param} />;
   } else if (section === 'reports') {
     view = <ReportsView user={user} />;
+  } else if (section === 'daily-report') {
+    view = <DailyReportView user={user} />;
   } else if (section === 'competitors') {
     view = <CompetitorsView />;
   } else if (section === 'catalog' && param === 'product' && sub) {

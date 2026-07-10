@@ -233,10 +233,15 @@ export const T2 = {
   calendarMore: 'بیشتر',
   calendarNoTasksOnDay: 'کاری در این روز نیست',
   calendarRescheduleFailed: 'جابه‌جایی کار ناموفق بود',
+
+  sellerPerformance: 'عملکرد فروشندگان',
+  byMarketer: 'به تفکیک بازاریاب',
+  wonLbl: 'برنده شده',
+  winRateLbl: 'نرخ موفقیت',
 };
 
 // catalog management: Product / Package / Pricing Version / Discount Rule
-export const T3 = {
+export const T4 = {
   catalog: 'کاتالوگ',
   catalogSub: 'مدیریت محصولات، بسته‌ها، نسخه‌های قیمت‌گذاری و قوانین تخفیف',
   productsTab: 'محصولات',
@@ -329,4 +334,28 @@ export const QUOTE_STATUS_LABELS: Record<string, string> = {
   ACCEPTED: 'پذیرفته شده',
   EXPIRED: 'منقضی',
   CONVERTED: 'قرارداد شده',
+};
+
+// daily report (added with the daily-report + performance-reports build)
+export const T3 = {
+  dailyReport: 'گزارش روزانه',
+  mine: 'من',
+  team: 'تیم',
+  whatIDidToday: 'امروز چه کار کردید؟',
+  whatIDidTodayHint: 'به صورت خودکار از وظایف امروز شما پر شده — ویرایش کنید',
+  tomorrowPlanLabel: 'برنامهٔ فردا',
+  tomorrowPlanHint: 'به صورت خودکار از وظایف فردا پر شده — ویرایش کنید',
+  regenerateDraft: 'بازتولید از وظایف',
+  submitReport: 'ثبت گزارش',
+  updateReport: 'بروزرسانی گزارش',
+  submitting: 'در حال ثبت…',
+  reportSubmitFailed: 'ثبت گزارش ناموفق بود',
+  reportSubmitted: 'گزارش امروز ثبت شد ✓',
+  lastUpdated: 'آخرین بروزرسانی',
+  myReportHistory: 'گزارش‌های پیشین من',
+  noReportsYet: 'هنوز گزارشی ثبت نکرده‌اید',
+  notSubmittedYet: 'هنوز ثبت نکرده‌اند',
+  everyoneSubmitted: 'همه ثبت کردند ✓',
+  noReportsForDate: 'برای این تاریخ گزارشی ثبت نشده',
+  tasksDoneBadge: 'وظیفه',
 };

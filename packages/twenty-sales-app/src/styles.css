@@ -2471,6 +2471,127 @@ table.leads tbody tr:hover {
   }
 }
 
+/* ============ calendar ============ */
+
+.cal-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.cal-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--line-soft);
+}
+
+.cal-header-row {
+  border-bottom: 1px solid var(--line);
+}
+
+.cal-header-cell {
+  background: var(--card);
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.cal-cell {
+  background: var(--card);
+  min-height: 96px;
+  padding: 6px 6px 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-cell:hover {
+  background: var(--lapis-50);
+}
+
+.cal-cell.muted {
+  background: var(--line-soft);
+}
+
+.cal-cell.muted .cal-day-num {
+  color: var(--ink-3);
+}
+
+.cal-cell.today .cal-day-num {
+  background: var(--lapis-600);
+  color: #fff;
+}
+
+.cal-cell.selected {
+  box-shadow: inset 0 0 0 2px var(--lapis-600);
+}
+
+.cal-day-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cal-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cal-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--lapis-100);
+  color: var(--lapis-800);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 10.5px;
+  font-weight: 650;
+  cursor: grab;
+  overflow: hidden;
+}
+
+.cal-pill svg {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+}
+
+.cal-pill-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-pill.done {
+  background: var(--ok-bg);
+  color: var(--ok);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.cal-overflow {
+  font-size: 10px;
+  color: var(--ink-3);
+  font-weight: 650;
+}
+
 /* ============ workspace dock (minimized pages) ============ */
 
 .dock {

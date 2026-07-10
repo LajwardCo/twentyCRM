@@ -18,7 +18,7 @@ import {
   CONDITION_TYPE_LABELS,
   DISCOUNT_TYPE_LABELS,
   PRICING_MODEL_LABELS,
-  T3,
+  T4,
 } from '../lib/strings';
 
 type Tab = 'products' | 'discountRules';
@@ -79,9 +79,9 @@ const ProductsTab = () => {
   return (
     <>
       <div className="page-head anim" style={{ marginTop: 4 }}>
-        <div className="sub">{T3.productsTab}</div>
+        <div className="sub">{T4.productsTab}</div>
         <button className="btn gold" onClick={() => startEdit()}>
-          ＋ {T3.newProduct}
+          ＋ {T4.newProduct}
         </button>
       </div>
 
@@ -89,14 +89,14 @@ const ProductsTab = () => {
 
       {editing !== null && (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
-          <h3>{editingId ? T3.editProduct : T3.newProduct}</h3>
+          <h3>{editingId ? T4.editProduct : T4.newProduct}</h3>
           <div className="f2" style={{ marginTop: 10 }}>
             <div className="fld">
-              <label>{T3.nameLbl}</label>
+              <label>{T4.nameLbl}</label>
               <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
             </div>
             <div className="fld">
-              <label>{T3.pricingModelLbl}</label>
+              <label>{T4.pricingModelLbl}</label>
               <select
                 value={editing.pricingModel ?? 'FLAT'}
                 onChange={(e) => set({ pricingModel: e.target.value })}
@@ -111,7 +111,7 @@ const ProductsTab = () => {
           </div>
           <div className="f2">
             <div className="fld">
-              <label>{T3.baseInstallPriceLbl}</label>
+              <label>{T4.baseInstallPriceLbl}</label>
               <input
                 inputMode="decimal"
                 dir="ltr"
@@ -122,7 +122,7 @@ const ProductsTab = () => {
               />
             </div>
             <div className="fld">
-              <label>{T3.baseAnnualPriceLbl}</label>
+              <label>{T4.baseAnnualPriceLbl}</label>
               <input
                 inputMode="decimal"
                 dir="ltr"
@@ -135,7 +135,7 @@ const ProductsTab = () => {
           </div>
           <div className="f2">
             <div className="fld">
-              <label>{T3.maxDiscountPercentLbl}</label>
+              <label>{T4.maxDiscountPercentLbl}</label>
               <input
                 inputMode="numeric"
                 dir="ltr"
@@ -152,12 +152,12 @@ const ProductsTab = () => {
                   checked={editing.isSellable ?? true}
                   onChange={(e) => set({ isSellable: e.target.checked })}
                 />
-                {T3.isSellableLbl}
+                {T4.isSellableLbl}
               </label>
             </div>
           </div>
           <div className="fld">
-            <label>{T3.pricingFactorNotesLbl}</label>
+            <label>{T4.pricingFactorNotesLbl}</label>
             <textarea
               value={editing.pricingFactorNotes ?? ''}
               onChange={(e) => set({ pricingFactorNotes: e.target.value })}
@@ -166,10 +166,10 @@ const ProductsTab = () => {
           {error !== null && <div className="error-banner">{error}</div>}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn" disabled={busy || editing.name.trim() === ''} onClick={save}>
-              {busy ? '…' : T3.save}
+              {busy ? '…' : T4.save}
             </button>
             <button className="btn line" onClick={() => setEditing(null)}>
-              {T3.cancel}
+              {T4.cancel}
             </button>
           </div>
         </div>
@@ -184,7 +184,7 @@ const ProductsTab = () => {
       )}
 
       {products !== null && products.length === 0 && editing === null && (
-        <div className="empty-state">{T3.noProducts}</div>
+        <div className="empty-state">{T4.noProducts}</div>
       )}
 
       {products?.map((p) => (
@@ -215,7 +215,7 @@ const ProductsTab = () => {
                 startEdit(p);
               }}
             >
-              {T3.edit}
+              {T4.edit}
             </button>
           </div>
         </div>
@@ -287,9 +287,9 @@ const DiscountRulesTab = () => {
   return (
     <>
       <div className="page-head anim" style={{ marginTop: 4 }}>
-        <div className="sub">{T3.discountRulesTab}</div>
+        <div className="sub">{T4.discountRulesTab}</div>
         <button className="btn gold" onClick={() => startEdit()}>
-          ＋ {T3.newDiscountRule}
+          ＋ {T4.newDiscountRule}
         </button>
       </div>
 
@@ -297,14 +297,14 @@ const DiscountRulesTab = () => {
 
       {editing !== null && (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
-          <h3>{editingId ? T3.editDiscountRule : T3.newDiscountRule}</h3>
+          <h3>{editingId ? T4.editDiscountRule : T4.newDiscountRule}</h3>
           <div className="f2" style={{ marginTop: 10 }}>
             <div className="fld">
-              <label>{T3.nameLbl}</label>
+              <label>{T4.nameLbl}</label>
               <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
             </div>
             <div className="fld">
-              <label>{T3.appliesToProductLbl} *</label>
+              <label>{T4.appliesToProductLbl} *</label>
               <select
                 value={editing.appliesToProductId}
                 onChange={(e) => set({ appliesToProductId: e.target.value })}
@@ -321,7 +321,7 @@ const DiscountRulesTab = () => {
 
           <div className="f2">
             <div className="fld">
-              <label>{T3.conditionTypeLbl}</label>
+              <label>{T4.conditionTypeLbl}</label>
               <select
                 value={editing.conditionType}
                 onChange={(e) => set({ conditionType: e.target.value })}
@@ -335,7 +335,7 @@ const DiscountRulesTab = () => {
             </div>
             {editing.conditionType === 'MIN_QUANTITY' && (
               <div className="fld">
-                <label>{T3.conditionMinQuantityLbl}</label>
+                <label>{T4.conditionMinQuantityLbl}</label>
                 <input
                   inputMode="numeric"
                   dir="ltr"
@@ -350,7 +350,7 @@ const DiscountRulesTab = () => {
             )}
             {editing.conditionType === 'SIBLING_PRODUCT_PURCHASED' && (
               <div className="fld">
-                <label>{T3.conditionSiblingProductLbl}</label>
+                <label>{T4.conditionSiblingProductLbl}</label>
                 <select
                   value={editing.conditionSiblingProductId ?? ''}
                   onChange={(e) => set({ conditionSiblingProductId: e.target.value || undefined })}
@@ -368,7 +368,7 @@ const DiscountRulesTab = () => {
 
           <div className="f2">
             <div className="fld">
-              <label>{T3.discountTypeLbl}</label>
+              <label>{T4.discountTypeLbl}</label>
               <select value={editing.discountType} onChange={(e) => set({ discountType: e.target.value })}>
                 {Object.entries(DISCOUNT_TYPE_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>
@@ -379,7 +379,7 @@ const DiscountRulesTab = () => {
             </div>
             {editing.discountType === 'PERCENTAGE' && (
               <div className="fld">
-                <label>{T3.discountPercentValueLbl}</label>
+                <label>{T4.discountPercentValueLbl}</label>
                 <input
                   inputMode="numeric"
                   dir="ltr"
@@ -394,7 +394,7 @@ const DiscountRulesTab = () => {
             )}
             {editing.discountType === 'FIXED_AMOUNT' && (
               <div className="fld">
-                <label>{T3.discountFixedAmountLbl}</label>
+                <label>{T4.discountFixedAmountLbl}</label>
                 <input
                   inputMode="decimal"
                   dir="ltr"
@@ -411,7 +411,7 @@ const DiscountRulesTab = () => {
 
           <div className="f2">
             <div className="fld">
-              <label>{T3.statusLbl}</label>
+              <label>{T4.statusLbl}</label>
               <select value={editing.status ?? 'ACTIVE'} onChange={(e) => set({ status: e.target.value })}>
                 {Object.entries(CATALOG_STATUS_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>
@@ -421,7 +421,7 @@ const DiscountRulesTab = () => {
               </select>
             </div>
             <div className="fld">
-              <label>{T3.notesLbl}</label>
+              <label>{T4.notesLbl}</label>
               <input value={editing.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
             </div>
           </div>
@@ -433,10 +433,10 @@ const DiscountRulesTab = () => {
               disabled={busy || editing.name.trim() === '' || editing.appliesToProductId === ''}
               onClick={save}
             >
-              {busy ? '…' : T3.save}
+              {busy ? '…' : T4.save}
             </button>
             <button className="btn line" onClick={() => setEditing(null)}>
-              {T3.cancel}
+              {T4.cancel}
             </button>
           </div>
         </div>
@@ -451,7 +451,7 @@ const DiscountRulesTab = () => {
       )}
 
       {rules !== null && rules.length === 0 && editing === null && (
-        <div className="empty-state">{T3.noDiscountRules}</div>
+        <div className="empty-state">{T4.noDiscountRules}</div>
       )}
 
       {rules?.map((r) => (
@@ -475,7 +475,7 @@ const DiscountRulesTab = () => {
               </div>
             </div>
             <button className="btn line sm" onClick={() => startEdit(r)}>
-              {T3.edit}
+              {T4.edit}
             </button>
           </div>
         </div>
@@ -491,17 +491,17 @@ export const CatalogView = () => {
     <main className="page">
       <div className="page-head anim">
         <div>
-          <h1>{T3.catalog}</h1>
-          <div className="sub">{T3.catalogSub}</div>
+          <h1>{T4.catalog}</h1>
+          <div className="sub">{T4.catalogSub}</div>
         </div>
       </div>
 
       <div className="seg">
         <button className={tab === 'products' ? 'on' : ''} onClick={() => setTab('products')}>
-          {T3.productsTab}
+          {T4.productsTab}
         </button>
         <button className={tab === 'discountRules' ? 'on' : ''} onClick={() => setTab('discountRules')}>
-          {T3.discountRulesTab}
+          {T4.discountRulesTab}
         </button>
       </div>
 

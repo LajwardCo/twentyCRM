@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
+import { TeamDailyReportsFeed } from '../components/TeamDailyReportsFeed';
 import {
   fetchMyDailyReportForDate,
   fetchMyDailyReports,
@@ -128,7 +129,7 @@ export const DailyReportView = ({ user }: DailyReportViewProps) => {
       )}
 
       {scope === 'team' ? (
-        <div className="empty-state">{T3.team} — coming in Task 7</div>
+        <TeamDailyReportsFeed />
       ) : loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="skeleton" style={{ height: 200 }} />

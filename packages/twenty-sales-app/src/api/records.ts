@@ -308,6 +308,53 @@ export const fetchMyOpenTasks = async (
   return data.tasks.edges.map((e) => e.node);
 };
 
+// Calendar: same task shape as fetchMyOpenTasks, but no status filter (DONE
+// tasks are shown on the calendar too, styled differently) and a plain
+// dueAt range instead of the today/upcoming split.
+export const fetchTasksForCalendar = async (
+  assigneeId: string,
+  range: { fromIso: string; toIso: string },
+): Promise<Task[]> => {
+  const data = await coreQuery<{
+    tasks: { edges: { node: Task }[] };
+  }>(
+    `query TasksForCalendar($filter: TaskFilterInput) {
+      tasks(filter: $filter, first: 500, orderBy: [{ dueAt: AscNullsLast }]) {
+        edges {
+          node {
+            id
+            title
+            status
+            taskType
+            dueAt
+            createdAt
+            bodyV2 { markdown }
+            taskTargets {
+              edges {
+                node {
+                  opportunity { id name }
+                  company { id name }
+                }
+              }
+            }
+          }
+        }
+      }
+    }`,
+    {
+      filter: {
+        and: [
+          { assigneeId: { eq: assigneeId } },
+          { dueAt: { gte: range.fromIso } },
+          { dueAt: { lte: range.toIso } },
+        ],
+      },
+    },
+  );
+
+  return data.tasks.edges.map((e) => e.node);
+};
+
 export const setTaskStatus = async (
   taskId: string,
   status: 'TODO' | 'DONE',

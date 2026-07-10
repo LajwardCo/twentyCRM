@@ -13,6 +13,7 @@ import {
 } from '../lib/workbench';
 import { Dock } from './Dock';
 import {
+  IconCalendar,
   IconChart,
   IconChevronDown,
   IconDashboard,
@@ -38,6 +39,7 @@ const routeDockDefaults = (
   if (section === 'reports') return { label: T2.reports, kind: 'page' };
   if (section === 'leads') return { label: T.leads, kind: 'page' };
   if (section === 'tasks') return { label: 'کارها', kind: 'page' };
+  if (section === 'calendar') return { label: T2.calendar, kind: 'page' };
   if (section === 'catalog') return { label: T4.catalog, kind: 'page' };
   return { label: T.tabToday, kind: 'page' };
 };
@@ -55,6 +57,7 @@ type AppShellProps = {
 
 const NAV = [
   { key: 'today', label: T.tabToday, icon: IconDashboard },
+  { key: 'calendar', label: T2.calendar, icon: IconCalendar },
   { key: 'tasks', label: 'کارها', icon: IconTasks },
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'reports', label: T2.reports, icon: IconChart },

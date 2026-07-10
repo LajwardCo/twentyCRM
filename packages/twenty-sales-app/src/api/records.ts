@@ -310,7 +310,8 @@ export const fetchMyOpenTasks = async (
 
 // Calendar: same task shape as fetchMyOpenTasks, but no status filter (DONE
 // tasks are shown on the calendar too, styled differently) and a plain
-// dueAt range instead of the today/upcoming split.
+// dueAt range instead of the today/upcoming split. Tasks with no dueAt are
+// excluded by the gte/lte filter — there's no cell to place them in.
 export const fetchTasksForCalendar = async (
   assigneeId: string,
   range: { fromIso: string; toIso: string },

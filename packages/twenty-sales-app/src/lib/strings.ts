@@ -226,6 +226,75 @@ export const T2 = {
   total: 'مجموع',
 };
 
+// catalog management: Product / Package / Pricing Version / Discount Rule
+export const T3 = {
+  catalog: 'کاتالوگ',
+  catalogSub: 'مدیریت محصولات، بسته‌ها، نسخه‌های قیمت‌گذاری و قوانین تخفیف',
+  productsTab: 'محصولات',
+  discountRulesTab: 'قوانین تخفیف',
+  newProduct: 'محصول جدید',
+  editProduct: 'ویرایش محصول',
+  nameLbl: 'نام *',
+  baseInstallPriceLbl: 'قیمت نصب پایه (؋)',
+  baseAnnualPriceLbl: 'قیمت سالانه پایه (؋)',
+  maxDiscountPercentLbl: 'حداکثر درصد تخفیف',
+  pricingModelLbl: 'مدل قیمت‌گذاری',
+  pricingFactorNotesLbl: 'یادداشت عوامل قیمت‌گذاری',
+  isSellableLbl: 'قابل فروش',
+  packagesSection: 'بسته‌ها',
+  newPackage: 'بسته جدید',
+  editPackage: 'ویرایش بسته',
+  statusLbl: 'وضعیت',
+  allowsCustomPricingLbl: 'اجازه قیمت‌گذاری سفارشی',
+  notesLbl: 'یادداشت',
+  pricingVersionsSection: 'نسخه‌های قیمت‌گذاری',
+  newPricingVersion: 'نسخه جدید',
+  activeVersionBadge: 'فعال',
+  deactivatedVersionNote: 'ثبت این نسخه، نسخه فعال فعلی این بسته را غیرفعال می‌کند.',
+  effectiveFromLbl: 'مؤثر از',
+  currencyCodeLbl: 'کد ارز',
+  isActiveLbl: 'فعال',
+  version: 'نسخه',
+  newDiscountRule: 'قانون تخفیف جدید',
+  editDiscountRule: 'ویرایش قانون تخفیف',
+  appliesToProductLbl: 'برای محصول',
+  conditionTypeLbl: 'نوع شرط',
+  conditionMinQuantityLbl: 'حداقل تعداد شرط',
+  conditionSiblingProductLbl: 'محصول همراه (باندل)',
+  discountTypeLbl: 'نوع تخفیف',
+  discountPercentValueLbl: 'درصد تخفیف',
+  discountFixedAmountLbl: 'مبلغ تخفیف (؋)',
+  noProducts: 'هنوز محصولی ثبت نشده — اولین را اضافه کنید',
+  noPackages: 'هنوز بسته‌ای برای این محصول ثبت نشده',
+  noPricingVersions: 'هنوز نسخه قیمتی برای این بسته ثبت نشده',
+  noDiscountRules: 'هنوز قانون تخفیفی ثبت نشده',
+  save: 'ذخیره',
+  cancel: 'انصراف',
+  edit: 'ویرایش',
+  back: 'بازگشت',
+};
+
+export const CONDITION_TYPE_LABELS: Record<string, string> = {
+  ALWAYS: 'همیشه',
+  MIN_QUANTITY: 'حداقل تعداد',
+  SIBLING_PRODUCT_PURCHASED: 'با خرید محصول همراه (باندل)',
+};
+
+export const DISCOUNT_TYPE_LABELS: Record<string, string> = {
+  PERCENTAGE: 'درصدی',
+  FIXED_AMOUNT: 'مبلغ ثابت',
+};
+
+export const PRICING_MODEL_LABELS: Record<string, string> = {
+  FLAT: 'ثابت',
+  PER_FACTOR: 'بر اساس عامل',
+};
+
+export const CATALOG_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'فعال',
+  ARCHIVED: 'بایگانی‌شده',
+};
+
 export const MARKETER_LABELS: Record<string, string> = {
   ALAVI: 'مصطفی علوی',
   SHABAB: 'نذیراحمد شباب',

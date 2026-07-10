@@ -1,0 +1,511 @@
+import { useState } from 'react';
+
+import {
+  fetchCatalogProducts,
+  fetchDiscountRules,
+  saveCatalogProduct,
+  saveDiscountRule,
+  type CatalogDiscountRule,
+  type CatalogProduct,
+  type CatalogProductInput,
+  type CatalogDiscountRuleInput,
+} from '../api/catalog';
+import { useCached } from '../lib/cache';
+import { formatAfn } from '../lib/format';
+import { navigate } from '../lib/router';
+import {
+  CATALOG_STATUS_LABELS,
+  CONDITION_TYPE_LABELS,
+  DISCOUNT_TYPE_LABELS,
+  PRICING_MODEL_LABELS,
+  T3,
+} from '../lib/strings';
+
+type Tab = 'products' | 'discountRules';
+
+const EMPTY_PRODUCT: CatalogProductInput = { name: '', isSellable: true, pricingModel: 'FLAT' };
+
+const ProductsTab = () => {
+  const [editing, setEditing] = useState<CatalogProductInput | null>(null);
+  const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: products, error: loadError, refresh } = useCached(
+    'catalog:products',
+    fetchCatalogProducts,
+  );
+
+  const startEdit = (p?: CatalogProduct) => {
+    setEditing(
+      p
+        ? {
+            name: p.name,
+            baseInstallPriceAfn: p.baseInstallPrice?.amountMicros
+              ? p.baseInstallPrice.amountMicros / 1_000_000
+              : null,
+            baseAnnualPriceAfn: p.baseAnnualPrice?.amountMicros
+              ? p.baseAnnualPrice.amountMicros / 1_000_000
+              : null,
+            maxDiscountPercent: p.maxDiscountPercent,
+            pricingModel: p.pricingModel,
+            pricingFactorNotes: p.pricingFactorNotes,
+            isSellable: p.isSellable,
+          }
+        : { ...EMPTY_PRODUCT },
+    );
+    setEditingId(p?.id);
+    setError(null);
+  };
+
+  const set = (patch: Partial<CatalogProductInput>) =>
+    setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
+
+  const save = async () => {
+    if (!editing || editing.name.trim() === '') return;
+    setBusy(true);
+    setError(null);
+    try {
+      await saveCatalogProduct(editing, editingId);
+      setEditing(null);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطا در ذخیره');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="page-head anim" style={{ marginTop: 4 }}>
+        <div className="sub">{T3.productsTab}</div>
+        <button className="btn gold" onClick={() => startEdit()}>
+          ＋ {T3.newProduct}
+        </button>
+      </div>
+
+      {loadError !== null && <div className="error-banner">{loadError}</div>}
+
+      {editing !== null && (
+        <div className="card card-pad anim" style={{ marginBottom: 16 }}>
+          <h3>{editingId ? T3.editProduct : T3.newProduct}</h3>
+          <div className="f2" style={{ marginTop: 10 }}>
+            <div className="fld">
+              <label>{T3.nameLbl}</label>
+              <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
+            </div>
+            <div className="fld">
+              <label>{T3.pricingModelLbl}</label>
+              <select
+                value={editing.pricingModel ?? 'FLAT'}
+                onChange={(e) => set({ pricingModel: e.target.value })}
+              >
+                {Object.entries(PRICING_MODEL_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="f2">
+            <div className="fld">
+              <label>{T3.baseInstallPriceLbl}</label>
+              <input
+                inputMode="decimal"
+                dir="ltr"
+                value={editing.baseInstallPriceAfn ?? ''}
+                onChange={(e) =>
+                  set({ baseInstallPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
+                }
+              />
+            </div>
+            <div className="fld">
+              <label>{T3.baseAnnualPriceLbl}</label>
+              <input
+                inputMode="decimal"
+                dir="ltr"
+                value={editing.baseAnnualPriceAfn ?? ''}
+                onChange={(e) =>
+                  set({ baseAnnualPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
+                }
+              />
+            </div>
+          </div>
+          <div className="f2">
+            <div className="fld">
+              <label>{T3.maxDiscountPercentLbl}</label>
+              <input
+                inputMode="numeric"
+                dir="ltr"
+                value={editing.maxDiscountPercent ?? ''}
+                onChange={(e) =>
+                  set({ maxDiscountPercent: e.target.value === '' ? null : Number(e.target.value) })
+                }
+              />
+            </div>
+            <div className="fld">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={editing.isSellable ?? true}
+                  onChange={(e) => set({ isSellable: e.target.checked })}
+                />
+                {T3.isSellableLbl}
+              </label>
+            </div>
+          </div>
+          <div className="fld">
+            <label>{T3.pricingFactorNotesLbl}</label>
+            <textarea
+              value={editing.pricingFactorNotes ?? ''}
+              onChange={(e) => set({ pricingFactorNotes: e.target.value })}
+            />
+          </div>
+          {error !== null && <div className="error-banner">{error}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn" disabled={busy || editing.name.trim() === ''} onClick={save}>
+              {busy ? '…' : T3.save}
+            </button>
+            <button className="btn line" onClick={() => setEditing(null)}>
+              {T3.cancel}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {products === null && loadError === null && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton" style={{ height: 64 }} />
+          ))}
+        </div>
+      )}
+
+      {products !== null && products.length === 0 && editing === null && (
+        <div className="empty-state">{T3.noProducts}</div>
+      )}
+
+      {products?.map((p) => (
+        <div
+          className="card card-pad anim"
+          key={p.id}
+          style={{ marginBottom: 10, cursor: 'pointer' }}
+          onClick={() => navigate(`/catalog/product/${p.id}`)}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="deal-logo">{p.name.charAt(0)}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 750 }}>{p.name}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                {p.pricingModel && (
+                  <span className="pill stage">{PRICING_MODEL_LABELS[p.pricingModel] ?? p.pricingModel}</span>
+                )}
+                {p.isSellable === false && <span className="pill cold">غیرفعال</span>}
+                {p.baseInstallPrice?.amountMicros ? (
+                  <span className="sub num">{formatAfn(p.baseInstallPrice.amountMicros)}</span>
+                ) : null}
+              </div>
+            </div>
+            <button
+              className="btn line sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                startEdit(p);
+              }}
+            >
+              {T3.edit}
+            </button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+};
+
+const EMPTY_RULE: CatalogDiscountRuleInput = {
+  name: '',
+  appliesToProductId: '',
+  conditionType: 'ALWAYS',
+  discountType: 'PERCENTAGE',
+};
+
+const DiscountRulesTab = () => {
+  const [editing, setEditing] = useState<CatalogDiscountRuleInput | null>(null);
+  const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: rules, error: loadError, refresh } = useCached(
+    'catalog:discountRules',
+    fetchDiscountRules,
+  );
+  const { data: products } = useCached('catalog:products', fetchCatalogProducts);
+
+  const startEdit = (r?: CatalogDiscountRule) => {
+    setEditing(
+      r
+        ? {
+            name: r.name,
+            status: r.status,
+            appliesToProductId: r.appliesToProductId ?? '',
+            conditionType: r.conditionType ?? 'ALWAYS',
+            conditionMinQuantity: r.conditionMinQuantity,
+            conditionSiblingProductId: r.conditionSiblingProductId ?? undefined,
+            discountType: r.discountType ?? 'PERCENTAGE',
+            discountPercentValue: r.discountPercentValue,
+            discountFixedAmountAfn: r.discountFixedAmount?.amountMicros
+              ? r.discountFixedAmount.amountMicros / 1_000_000
+              : null,
+            notes: r.notes,
+          }
+        : { ...EMPTY_RULE },
+    );
+    setEditingId(r?.id);
+    setError(null);
+  };
+
+  const set = (patch: Partial<CatalogDiscountRuleInput>) =>
+    setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
+
+  const save = async () => {
+    if (!editing || editing.name.trim() === '' || editing.appliesToProductId === '') return;
+    setBusy(true);
+    setError(null);
+    try {
+      await saveDiscountRule(editing, editingId);
+      setEditing(null);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطا در ذخیره');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="page-head anim" style={{ marginTop: 4 }}>
+        <div className="sub">{T3.discountRulesTab}</div>
+        <button className="btn gold" onClick={() => startEdit()}>
+          ＋ {T3.newDiscountRule}
+        </button>
+      </div>
+
+      {loadError !== null && <div className="error-banner">{loadError}</div>}
+
+      {editing !== null && (
+        <div className="card card-pad anim" style={{ marginBottom: 16 }}>
+          <h3>{editingId ? T3.editDiscountRule : T3.newDiscountRule}</h3>
+          <div className="f2" style={{ marginTop: 10 }}>
+            <div className="fld">
+              <label>{T3.nameLbl}</label>
+              <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
+            </div>
+            <div className="fld">
+              <label>{T3.appliesToProductLbl} *</label>
+              <select
+                value={editing.appliesToProductId}
+                onChange={(e) => set({ appliesToProductId: e.target.value })}
+              >
+                <option value="">انتخاب…</option>
+                {(products ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="f2">
+            <div className="fld">
+              <label>{T3.conditionTypeLbl}</label>
+              <select
+                value={editing.conditionType}
+                onChange={(e) => set({ conditionType: e.target.value })}
+              >
+                {Object.entries(CONDITION_TYPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {editing.conditionType === 'MIN_QUANTITY' && (
+              <div className="fld">
+                <label>{T3.conditionMinQuantityLbl}</label>
+                <input
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={editing.conditionMinQuantity ?? ''}
+                  onChange={(e) =>
+                    set({
+                      conditionMinQuantity: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            )}
+            {editing.conditionType === 'SIBLING_PRODUCT_PURCHASED' && (
+              <div className="fld">
+                <label>{T3.conditionSiblingProductLbl}</label>
+                <select
+                  value={editing.conditionSiblingProductId ?? ''}
+                  onChange={(e) => set({ conditionSiblingProductId: e.target.value || undefined })}
+                >
+                  <option value="">انتخاب…</option>
+                  {(products ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="f2">
+            <div className="fld">
+              <label>{T3.discountTypeLbl}</label>
+              <select value={editing.discountType} onChange={(e) => set({ discountType: e.target.value })}>
+                {Object.entries(DISCOUNT_TYPE_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {editing.discountType === 'PERCENTAGE' && (
+              <div className="fld">
+                <label>{T3.discountPercentValueLbl}</label>
+                <input
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={editing.discountPercentValue ?? ''}
+                  onChange={(e) =>
+                    set({
+                      discountPercentValue: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            )}
+            {editing.discountType === 'FIXED_AMOUNT' && (
+              <div className="fld">
+                <label>{T3.discountFixedAmountLbl}</label>
+                <input
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={editing.discountFixedAmountAfn ?? ''}
+                  onChange={(e) =>
+                    set({
+                      discountFixedAmountAfn: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="f2">
+            <div className="fld">
+              <label>{T3.statusLbl}</label>
+              <select value={editing.status ?? 'ACTIVE'} onChange={(e) => set({ status: e.target.value })}>
+                {Object.entries(CATALOG_STATUS_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="fld">
+              <label>{T3.notesLbl}</label>
+              <input value={editing.notes ?? ''} onChange={(e) => set({ notes: e.target.value })} />
+            </div>
+          </div>
+
+          {error !== null && <div className="error-banner">{error}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn"
+              disabled={busy || editing.name.trim() === '' || editing.appliesToProductId === ''}
+              onClick={save}
+            >
+              {busy ? '…' : T3.save}
+            </button>
+            <button className="btn line" onClick={() => setEditing(null)}>
+              {T3.cancel}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {rules === null && loadError === null && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[0, 1].map((i) => (
+            <div key={i} className="skeleton" style={{ height: 64 }} />
+          ))}
+        </div>
+      )}
+
+      {rules !== null && rules.length === 0 && editing === null && (
+        <div className="empty-state">{T3.noDiscountRules}</div>
+      )}
+
+      {rules?.map((r) => (
+        <div className="card card-pad anim" key={r.id} style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="deal-logo">{r.name.charAt(0)}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 750 }}>{r.name}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                {r.appliesToProduct && <span className="pill stage">{r.appliesToProduct.name}</span>}
+                {r.conditionType && (
+                  <span className="pill">{CONDITION_TYPE_LABELS[r.conditionType] ?? r.conditionType}</span>
+                )}
+                {r.discountType === 'PERCENTAGE' && r.discountPercentValue != null && (
+                  <span className="pill ok">٪{r.discountPercentValue}</span>
+                )}
+                {r.discountType === 'FIXED_AMOUNT' && (
+                  <span className="pill ok">{formatAfn(r.discountFixedAmount?.amountMicros)}</span>
+                )}
+                {r.status === 'ARCHIVED' && <span className="pill cold">{CATALOG_STATUS_LABELS.ARCHIVED}</span>}
+              </div>
+            </div>
+            <button className="btn line sm" onClick={() => startEdit(r)}>
+              {T3.edit}
+            </button>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+};
+
+export const CatalogView = () => {
+  const [tab, setTab] = useState<Tab>('products');
+
+  return (
+    <main className="page">
+      <div className="page-head anim">
+        <div>
+          <h1>{T3.catalog}</h1>
+          <div className="sub">{T3.catalogSub}</div>
+        </div>
+      </div>
+
+      <div className="seg">
+        <button className={tab === 'products' ? 'on' : ''} onClick={() => setTab('products')}>
+          {T3.productsTab}
+        </button>
+        <button className={tab === 'discountRules' ? 'on' : ''} onClick={() => setTab('discountRules')}>
+          {T3.discountRulesTab}
+        </button>
+      </div>
+
+      {tab === 'products' ? <ProductsTab /> : <DiscountRulesTab />}
+    </main>
+  );
+};

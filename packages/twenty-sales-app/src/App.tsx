@@ -15,6 +15,8 @@ import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
+import { CatalogView } from './views/CatalogView';
+import { PackageCatalogDetailView, ProductCatalogDetailView } from './views/CatalogDetailViews';
 import { CompetitorsView } from './views/CompetitorsView';
 import { CompanyView, NoteView, PersonView } from './views/EntityViews';
 import { LoginView } from './views/LoginView';
@@ -194,6 +196,14 @@ export const App = () => {
     view = <ReportsView user={user} />;
   } else if (section === 'competitors') {
     view = <CompetitorsView />;
+  } else if (section === 'catalog' && param === 'product' && sub) {
+    view = <ProductCatalogDetailView productId={sub} />;
+    bar = backButton;
+  } else if (section === 'catalog' && param === 'package' && sub) {
+    view = <PackageCatalogDetailView packageId={sub} />;
+    bar = backButton;
+  } else if (section === 'catalog') {
+    view = <CatalogView />;
   } else if (section === 'admin') {
     view = <AdminView />;
   } else {

@@ -145,7 +145,12 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
           ? fetchDoneTasksSince(start.toISOString(), user.workspaceMemberId)
           : Promise.resolve([]),
       ]);
-      return { leads, doneTasks };
+      const inPeriodIds = leads
+        .filter((l) => new Date(l.createdAt) >= start)
+        .map((l) => l.id);
+      const marketerMap =
+        scope === 'team' ? await fetchLeadsMarketers(inPeriodIds) : {};
+      return { leads, doneTasks, marketerMap };
     },
   );
 
@@ -218,19 +223,12 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
     () => groupBy(inPeriod, (l) => l.temperature, TEMP_LABELS),
     [inPeriod],
   );
-  const { data: marketerMap } = useCached(
-    `reports-marketers:${scope}:${period}`,
-    (): Promise<Record<string, string | null>> =>
-      scope === 'team'
-        ? fetchLeadsMarketers(inPeriod.map((l) => l.id))
-        : Promise.resolve({}),
-  );
-  const hasMarketerData = Object.values(marketerMap ?? {}).some(
+  const hasMarketerData = Object.values(data?.marketerMap ?? {}).some(
     (v) => v !== null && v !== undefined,
   );
   const byMarketer = useMemo(
-    () => groupBy(inPeriod, (l) => marketerMap?.[l.id] ?? null, MARKETER_LABELS),
-    [inPeriod, marketerMap],
+    () => groupBy(inPeriod, (l) => data?.marketerMap?.[l.id] ?? null, MARKETER_LABELS),
+    [inPeriod, data?.marketerMap],
   );
 
   const loading = leads === null && error === null;

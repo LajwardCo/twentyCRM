@@ -224,6 +224,15 @@ export const T2 = {
   agreedPrice: 'قیمت توافقی',
   noPricing: 'هنوز محصول یا پیشنهاد قیمتی ثبت نشده',
   total: 'مجموع',
+
+  // calendar
+  calendar: 'تقویم',
+  calendarPrevMonth: 'ماه قبل',
+  calendarNextMonth: 'ماه بعد',
+  calendarToday: 'امروز',
+  calendarMore: 'بیشتر',
+  calendarNoTasksOnDay: 'کاری در این روز نیست',
+  calendarRescheduleFailed: 'جابه‌جایی کار ناموفق بود',
 };
 
 // catalog management: Product / Package / Pricing Version / Discount Rule

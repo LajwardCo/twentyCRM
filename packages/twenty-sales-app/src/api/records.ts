@@ -459,6 +459,32 @@ export const createTaskForLead = async (input: {
   return created.createTask.id;
 };
 
+// Calendar quick-add: a standalone task with no lead/opportunity target,
+// unlike createTaskForLead which always links one.
+export const createQuickTask = async (input: {
+  title: string;
+  status: 'TODO' | 'DONE';
+  taskType?: TaskType;
+  dueAt: string | null;
+  assigneeId: string;
+}): Promise<string> => {
+  const created = await coreQuery<{ createTask: { id: string } }>(
+    `mutation CreateQuickTask($data: TaskCreateInput!) {
+      createTask(data: $data) { id }
+    }`,
+    {
+      data: {
+        title: input.title,
+        status: input.status,
+        dueAt: input.dueAt,
+        assigneeId: input.assigneeId,
+        ...(input.taskType ? { taskType: input.taskType } : {}),
+      },
+    },
+  );
+  return created.createTask.id;
+};
+
 export const createNoteForLead = async (input: {
   title: string;
   bodyMarkdown: string;

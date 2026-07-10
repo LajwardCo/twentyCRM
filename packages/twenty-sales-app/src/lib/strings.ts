@@ -189,7 +189,6 @@ export const T2 = {
   registrationsTrend: 'روند ثبت لید',
   byStage: 'به تفکیک مرحله',
   bySource: 'به تفکیک منبع',
-  byOwner: 'به تفکیک فروشنده',
   byTemperature: 'به تفکیک علاقمندی',
   count: 'تعداد',
   value: 'ارزش',

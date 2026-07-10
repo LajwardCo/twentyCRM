@@ -4,6 +4,7 @@ import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { T2 } from '../lib/strings';
 import { TASK_TYPE_ICONS } from '../views/TaskView';
+import { IconCheck } from './icons';
 
 const WEEKDAY_HEADERS = [
   'شنبه',
@@ -77,7 +78,7 @@ export const CalendarGrid = ({
             <span className="cal-day-num">{toPersianDigits(cell.jd)}</span>
             <div className="cal-pills">
               {dayTasks.slice(0, MAX_PILLS_PER_CELL).map((task) => {
-                const TypeIcon = TASK_TYPE_ICONS[task.taskType ?? 'OTHER'];
+                const TypeIcon = TASK_TYPE_ICONS[task.taskType ?? 'OTHER'] ?? IconCheck;
                 return (
                   <div
                     key={task.id}

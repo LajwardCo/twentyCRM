@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import {
-  fetchMyDoneTasksSince,
+  fetchDoneTasksSince,
   fetchMyOpenTasks,
   setTaskStatus,
   type Task,
@@ -88,7 +88,7 @@ export const TasksView = ({ user }: TasksViewProps) => {
     since.setDate(since.getDate() - 30);
     const [open, done] = await Promise.all([
       fetchMyOpenTasks(user.workspaceMemberId, { limit: 200 }),
-      fetchMyDoneTasksSince(user.workspaceMemberId, since.toISOString()),
+      fetchDoneTasksSince(since.toISOString(), user.workspaceMemberId),
     ]);
     return { open, done };
   }, [user.workspaceMemberId]);

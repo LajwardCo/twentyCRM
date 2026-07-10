@@ -881,12 +881,17 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
 };
 
 // The server-side PRE hook computes installPrice from the product's pricing
-// model, so we only send the linkage + quantity.
+// model (or the Pricing Version's tier schedule, when pricingVersionId is
+// set) and applies the Discount Rule, when discountRuleId is set -- so we
+// only send the linkage + whichever selections the seller made.
 export const addProductToLead = async (input: {
   opportunityId: string;
   productId: string;
   productName: string;
   quantity: number;
+  factorQuantities?: Record<string, number>;
+  pricingVersionId?: string;
+  discountRuleId?: string;
 }): Promise<void> => {
   await coreQuery(
     `mutation AddDealProduct($data: DealProductCreateInput!) {
@@ -898,6 +903,9 @@ export const addProductToLead = async (input: {
         opportunityId: input.opportunityId,
         productId: input.productId,
         quantity: input.quantity,
+        ...(input.factorQuantities ? { factorQuantities: input.factorQuantities } : {}),
+        ...(input.pricingVersionId ? { pricingVersionId: input.pricingVersionId } : {}),
+        ...(input.discountRuleId ? { discountRuleId: input.discountRuleId } : {}),
       },
     },
   );

@@ -2697,3 +2697,38 @@ table.leads tbody tr:hover {
     padding-bottom: calc(175px + var(--safe-bottom));
   }
 }
+
+/* ============ calendar quick-add ============ */
+
+.cal-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-add-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+.cal-add-btn:hover {
+  background: var(--lapis-100);
+  color: var(--lapis-600);
+}
+
+.cal-add-btn svg {
+  width: 12px;
+  height: 12px;
+}

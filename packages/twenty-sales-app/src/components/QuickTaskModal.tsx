@@ -88,11 +88,18 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
           assigneeId: props.assigneeId,
         });
       } else {
+        // Leaving the checkbox untouched must not silently downgrade an
+        // IN_PROGRESS task to TODO — only "mark done" is an explicit action.
+        const status = done
+          ? 'DONE'
+          : props.task.status && props.task.status !== 'DONE'
+            ? props.task.status
+            : 'TODO';
         await updateTask(props.task.id, {
           title: title.trim(),
           taskType,
           dueAt,
-          status: done ? 'DONE' : 'TODO',
+          status,
         });
       }
       invalidateCache('calendar:');

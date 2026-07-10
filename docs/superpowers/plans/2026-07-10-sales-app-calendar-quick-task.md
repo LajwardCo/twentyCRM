@@ -98,9 +98,9 @@ Change to:
   calendarAddTask: 'افزودن کار',
   quickTaskNewTitle: 'کار جدید',
   quickTaskEditTitle: 'ویرایش کار',
-  quickTaskTitleLabel: 'عنوان',
-  quickTaskTypeLabel: 'نوع کار',
-  quickTaskDueLabel: 'موعد',
+  quickTaskTitleLbl: 'عنوان',
+  quickTaskTypeLbl: 'نوع کار',
+  quickTaskDueLbl: 'موعد',
   quickTaskMarkDone: 'پایان یافته',
   quickTaskSave: 'ذخیره',
   quickTaskSaving: 'در حال ذخیره…',
@@ -262,7 +262,7 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
         </div>
 
         <div className="fld">
-          <label htmlFor="qt-title">{T2.quickTaskTitleLabel}</label>
+          <label htmlFor="qt-title">{T2.quickTaskTitleLbl}</label>
           <input
             id="qt-title"
             value={title}
@@ -273,7 +273,7 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
 
         <div className="f2">
           <div className="fld">
-            <label htmlFor="qt-type">{T2.quickTaskTypeLabel}</label>
+            <label htmlFor="qt-type">{T2.quickTaskTypeLbl}</label>
             <select
               id="qt-type"
               value={taskType}
@@ -287,7 +287,7 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
             </select>
           </div>
           <div className="fld">
-            <label htmlFor="qt-due">{T2.quickTaskDueLabel}</label>
+            <label htmlFor="qt-due">{T2.quickTaskDueLbl}</label>
             <input
               id="qt-due"
               type="datetime-local"

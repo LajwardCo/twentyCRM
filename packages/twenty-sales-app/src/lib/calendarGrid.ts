@@ -80,6 +80,7 @@ export const groupTasksByDate = <T extends { dueAt: string | null }>(
   for (const task of tasks) {
     if (!task.dueAt) continue;
     const d = new Date(task.dueAt);
+    if (Number.isNaN(d.getTime())) continue;
     const key = localDateKey(d.getFullYear(), d.getMonth() + 1, d.getDate());
     const bucket = map.get(key);
     if (bucket) bucket.push(task);

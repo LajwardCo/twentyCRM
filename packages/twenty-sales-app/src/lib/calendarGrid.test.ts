@@ -42,6 +42,32 @@ describe('buildCalendarGrid', () => {
     const cells = buildCalendarGrid(1403, 1, '2026-07-09');
     expect(cells.some((c) => c.isToday)).toBe(false);
   });
+
+  it('rolls trailing days into next year across an Esfand -> Hamal boundary (leap year)', () => {
+    // 1403 is a known leap year (حوت has 30 days)
+    const cells = buildCalendarGrid(1403, 12, '1970-01-01');
+    expect(cells.length % 7).toBe(0);
+    expect(cells.filter((c) => c.inCurrentMonth)).toHaveLength(30);
+    const last = cells[cells.length - 1];
+    if (!last.inCurrentMonth) {
+      expect(last.jy).toBe(1404);
+      expect(last.jm).toBe(1);
+    }
+    const dates = cells.map((c) => new Date(`${c.dateIso}T00:00:00`).getTime());
+    for (let i = 1; i < dates.length; i++) {
+      expect(dates[i] - dates[i - 1]).toBe(86_400_000);
+    }
+  });
+
+  it('rolls leading days back from a non-leap-year Esfand', () => {
+    // 1402 is a known non-leap year (حوت has 29 days) — this is the previous
+    // month when viewing 1403/1 (Hamal), so its leading padding must borrow
+    // 29-day boundaries correctly, not assume 30.
+    const cells = buildCalendarGrid(1403, 1, '1970-01-01');
+    const leading = cells.filter((c) => !c.inCurrentMonth && c.jm === 12);
+    expect(leading.every((c) => c.jd <= 29)).toBe(true);
+    expect(leading.every((c) => c.jy === 1402)).toBe(true);
+  });
 });
 
 describe('groupTasksByDate', () => {
@@ -58,6 +84,11 @@ describe('groupTasksByDate', () => {
 
   it('ignores tasks without a due date', () => {
     const grouped = groupTasksByDate([{ id: '1', dueAt: null }]);
+    expect(grouped.size).toBe(0);
+  });
+
+  it('ignores tasks with an unparseable due date', () => {
+    const grouped = groupTasksByDate([{ id: '1', dueAt: 'not-a-real-date' }]);
     expect(grouped.size).toBe(0);
   });
 });

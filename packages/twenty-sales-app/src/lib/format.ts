@@ -29,6 +29,12 @@ export const endOfToday = (): Date => {
   return d;
 };
 
+export const endOfTomorrow = (): Date => {
+  const d = endOfToday();
+  d.setDate(d.getDate() + 1);
+  return d;
+};
+
 // datetime-local input value (local time, minutes precision)
 export const toLocalInputValue = (date: Date): string => {
   const pad = (n: number) => String(n).padStart(2, '0');

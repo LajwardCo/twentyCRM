@@ -49,6 +49,7 @@ export const DailyReportView = ({ user }: DailyReportViewProps) => {
   const [tomorrowPlan, setTomorrowPlan] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const draftSummary = useMemo(
@@ -71,6 +72,7 @@ export const DailyReportView = ({ user }: DailyReportViewProps) => {
   const submit = async () => {
     if (!data) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       await upsertDailyReport({
         id: data.existing?.id,
@@ -85,7 +87,9 @@ export const DailyReportView = ({ user }: DailyReportViewProps) => {
       showToast(T3.reportSubmitted);
       await refresh();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : T3.reportSubmitFailed);
+      const message = err instanceof Error ? err.message : T3.reportSubmitFailed;
+      setSubmitError(message);
+      showToast(message);
     } finally {
       setSaving(false);
     }
@@ -119,6 +123,9 @@ export const DailyReportView = ({ user }: DailyReportViewProps) => {
       </div>
 
       {error !== null && <div className="error-banner">{error}</div>}
+      {submitError !== null && (
+        <div className="error-banner" style={{ marginTop: 8 }}>{submitError}</div>
+      )}
 
       {scope === 'team' ? (
         <div className="empty-state">{T3.team} — coming in Task 7</div>

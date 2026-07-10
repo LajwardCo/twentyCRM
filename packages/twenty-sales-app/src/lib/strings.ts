@@ -285,6 +285,16 @@ export const T4 = {
   cancel: 'انصراف',
   edit: 'ویرایش',
   back: 'بازگشت',
+
+  // seller-facing deal-line picker (LeadPanels.tsx PricingCard)
+  packageLbl: 'بسته',
+  noPackageOption: 'بدون بسته (قیمت پایه)',
+  noActiveVersionNote: 'این بسته نسخه قیمتی فعال ندارد.',
+  discountRuleLbl: 'قانون تخفیف',
+  noDiscountOption: 'بدون تخفیف',
+  minQuantityHint: (n: number) => `این تخفیف نیازمند حداقل ${n} عدد در همین خط است.`,
+  siblingProductHint: (name: string) =>
+    `این تخفیف نیازمند وجود محصول «${name}» در همین لید است.`,
 };
 
 export const CONDITION_TYPE_LABELS: Record<string, string> = {

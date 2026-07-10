@@ -11,18 +11,39 @@ import {
   type LeadSummary,
   type ProductOption,
 } from '../api/records';
+import {
+  fetchDiscountRules,
+  fetchPackagesForProduct,
+  fetchPricingVersionsForPackage,
+  type CatalogDiscountRule,
+} from '../api/catalog';
 import { useCached } from '../lib/cache';
 import { formatAfn, fullPhone, personName } from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import {
+  CONDITION_TYPE_LABELS,
   LINE_STATUS_LABELS,
   MARKETER_LABELS,
   PARTNER_TYPE_LABELS,
   QUOTE_STATUS_LABELS,
   SOURCE_LABELS,
   T2,
+  T4,
 } from '../lib/strings';
 import { IconBuilding, IconChevronDown, IconPackage, IconPhone } from './icons';
+
+// One line describing what a Discount Rule needs to actually apply --
+// enforcement is still server-side, this is just so the seller isn't
+// guessing why a rule got rejected on submit.
+const discountRuleHint = (rule: CatalogDiscountRule): string | null => {
+  if (rule.conditionType === 'MIN_QUANTITY' && rule.conditionMinQuantity) {
+    return T4.minQuantityHint(rule.conditionMinQuantity);
+  }
+  if (rule.conditionType === 'SIBLING_PRODUCT_PURCHASED' && rule.conditionSiblingProduct) {
+    return T4.siblingProductHint(rule.conditionSiblingProduct.name);
+  }
+  return null;
+};
 
 // ---------- company info + other contacts ----------
 
@@ -223,6 +244,9 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [packageId, setPackageId] = useState('');
+  const [factorQuantities, setFactorQuantities] = useState<Record<string, string>>({});
+  const [discountRuleId, setDiscountRuleId] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -230,6 +254,39 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     fetchLeadPricing(lead.id),
   );
   const { data: products } = useCached('products', fetchProducts);
+  const { data: packages } = useCached(`catalog:packages:${productId}`, () =>
+    productId ? fetchPackagesForProduct(productId) : Promise.resolve([]),
+  );
+  const { data: pricingVersions } = useCached(`catalog:pricingVersions:${packageId}`, () =>
+    packageId ? fetchPricingVersionsForPackage(packageId) : Promise.resolve([]),
+  );
+  const { data: discountRules } = useCached('catalog:discountRules', fetchDiscountRules);
+
+  const activePackages = (packages ?? []).filter((p) => p.status === 'ACTIVE');
+  const activeVersion = (pricingVersions ?? []).find((v) => v.isActive) ?? null;
+  const tierSchedule = activeVersion?.tierSchedule ?? [];
+  const eligibleRules = (discountRules ?? []).filter(
+    (r) => r.appliesToProductId === productId && r.status === 'ACTIVE',
+  );
+  const selectedRule = eligibleRules.find((r) => r.id === discountRuleId);
+
+  const selectProduct = (nextProductId: string) => {
+    setProductId(nextProductId);
+    setPackageId('');
+    setFactorQuantities({});
+    setDiscountRuleId('');
+  };
+
+  const selectPackage = (nextPackageId: string) => {
+    setPackageId(nextPackageId);
+    setFactorQuantities({});
+  };
+
+  const resetForm = () => {
+    setShowAdd(false);
+    selectProduct('');
+    setQuantity('1');
+  };
 
   const addProduct = async () => {
     const product = (products ?? []).find((p: ProductOption) => p.id === productId);
@@ -237,15 +294,23 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     setBusy(true);
     setError(null);
     try {
+      const numericFactorQuantities = Object.fromEntries(
+        Object.entries(factorQuantities)
+          .filter(([, v]) => v.trim() !== '')
+          .map(([k, v]) => [k, Number(v)]),
+      );
       await addProductToLead({
         opportunityId: lead.id,
         productId: product.id,
         productName: product.name,
         quantity: Math.max(1, Number(quantity) || 1),
+        ...(activeVersion && Object.keys(numericFactorQuantities).length > 0
+          ? { factorQuantities: numericFactorQuantities }
+          : {}),
+        ...(activeVersion ? { pricingVersionId: activeVersion.id } : {}),
+        ...(discountRuleId ? { discountRuleId } : {}),
       });
-      setShowAdd(false);
-      setProductId('');
-      setQuantity('1');
+      resetForm();
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در افزودن محصول');
@@ -278,7 +343,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
           <div className="f2">
             <div className="fld" style={{ marginBottom: 8 }}>
               <label>{T2.productLbl}</label>
-              <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+              <select value={productId} onChange={(e) => selectProduct(e.target.value)}>
                 <option value="">انتخاب…</option>
                 {(products ?? []).map((p: ProductOption) => (
                   <option key={p.id} value={p.id}>
@@ -300,6 +365,63 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               />
             </div>
           </div>
+
+          {productId !== '' && activePackages.length > 0 && (
+            <div className="fld" style={{ marginBottom: 8 }}>
+              <label>{T4.packageLbl}</label>
+              <select value={packageId} onChange={(e) => selectPackage(e.target.value)}>
+                <option value="">{T4.noPackageOption}</option>
+                {activePackages.map((pkg) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name}
+                  </option>
+                ))}
+              </select>
+              {packageId !== '' && !activeVersion && (
+                <div className="sub" style={{ marginTop: 4 }}>
+                  {T4.noActiveVersionNote}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tierSchedule.length > 0 && (
+            <div className="f2">
+              {tierSchedule.map((factor) => (
+                <div className="fld" style={{ marginBottom: 8 }} key={factor.factor}>
+                  <label dir="ltr">{factor.factor}</label>
+                  <input
+                    inputMode="numeric"
+                    dir="ltr"
+                    value={factorQuantities[factor.factor] ?? ''}
+                    onChange={(e) =>
+                      setFactorQuantities((prev) => ({ ...prev, [factor.factor]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {productId !== '' && eligibleRules.length > 0 && (
+            <div className="fld" style={{ marginBottom: 8 }}>
+              <label>{T4.discountRuleLbl}</label>
+              <select value={discountRuleId} onChange={(e) => setDiscountRuleId(e.target.value)}>
+                <option value="">{T4.noDiscountOption}</option>
+                {eligibleRules.map((rule) => (
+                  <option key={rule.id} value={rule.id}>
+                    {rule.name} ({CONDITION_TYPE_LABELS[rule.conditionType ?? ''] ?? rule.conditionType})
+                  </option>
+                ))}
+              </select>
+              {selectedRule && discountRuleHint(selectedRule) && (
+                <div className="sub" style={{ marginTop: 4 }}>
+                  {discountRuleHint(selectedRule)}
+                </div>
+              )}
+            </div>
+          )}
+
           {error !== null && <div className="error-banner">{error}</div>}
           <button
             className="btn sm"

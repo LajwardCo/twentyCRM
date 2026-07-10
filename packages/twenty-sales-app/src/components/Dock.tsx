@@ -3,6 +3,7 @@ import { navigate, useRoute } from '../lib/router';
 import {
   IconBuilding,
   IconPlus,
+  IconSearch,
   IconSummary,
   IconTasks,
 } from './icons';
@@ -12,6 +13,7 @@ const KIND_ICON: Record<DockKind, ({ size }: { size?: number }) => React.JSX.Ele
   task: IconTasks,
   new: IconPlus,
   page: IconSummary,
+  search: IconSearch,
 };
 
 export const Dock = () => {

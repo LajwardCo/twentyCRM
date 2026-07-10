@@ -5,18 +5,24 @@ import { loadTokens, setSessionExpiredHandler } from './api/client';
 import { CommandPalette } from './components/CommandPalette';
 import { IconBack } from './components/icons';
 import { AppShell, CmdSearch } from './components/Shell';
+import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
+import { toPersianDigits } from './lib/jalali';
 import { navigate, useRoute } from './lib/router';
 import { T } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
+import { CatalogView } from './views/CatalogView';
+import { PackageCatalogDetailView, ProductCatalogDetailView } from './views/CatalogDetailViews';
 import { CompetitorsView } from './views/CompetitorsView';
+import { CompanyView, NoteView, PersonView } from './views/EntityViews';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
 import { ReportsView } from './views/ReportsView';
+import { SearchResultsView } from './views/SearchResultsView';
 import { TasksView } from './views/TasksView';
 import { TaskView } from './views/TaskView';
 import { TodayView } from './views/TodayView';
@@ -40,6 +46,10 @@ export const App = () => {
   const [session, setSession] = useState<Session>({ status: 'loading' });
   const [search, setSearch] = useState('');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [searchToast, setSearchToast] = useState<{
+    id: string;
+    text: string;
+  } | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     resolveTheme(loadPrefs().theme),
   );
@@ -97,6 +107,26 @@ export const App = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  // notify when a background deep-search finishes
+  useEffect(() => {
+    let timer = 0;
+    const off = onSearchDone((search) => {
+      setSearchToast({
+        id: search.id,
+        text:
+          search.status === 'error'
+            ? `جستجوی «${search.query}» ناموفق بود`
+            : `جستجوی «${search.query}» آماده شد — ${toPersianDigits(search.results.length)} نتیجه`,
+      });
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setSearchToast(null), 6000);
+    });
+    return () => {
+      off();
+      window.clearTimeout(timer);
+    };
+  }, []);
+
   if (session.status === 'loading') {
     return (
       <div style={{ padding: 40, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -151,10 +181,29 @@ export const App = () => {
     view = <NewLeadView user={user} />;
   } else if (section === 'tasks') {
     view = <TasksView user={user} />;
+  } else if (section === 'note' && param) {
+    view = <NoteView noteId={param} />;
+    bar = backButton;
+  } else if (section === 'company' && param) {
+    view = <CompanyView companyId={param} />;
+    bar = backButton;
+  } else if (section === 'person' && param) {
+    view = <PersonView personId={param} />;
+    bar = backButton;
+  } else if (section === 'search' && param) {
+    view = <SearchResultsView searchId={param} />;
   } else if (section === 'reports') {
     view = <ReportsView user={user} />;
   } else if (section === 'competitors') {
     view = <CompetitorsView />;
+  } else if (section === 'catalog' && param === 'product' && sub) {
+    view = <ProductCatalogDetailView productId={sub} />;
+    bar = backButton;
+  } else if (section === 'catalog' && param === 'package' && sub) {
+    view = <PackageCatalogDetailView packageId={sub} />;
+    bar = backButton;
+  } else if (section === 'catalog') {
+    view = <CatalogView />;
   } else if (section === 'admin') {
     view = <AdminView />;
   } else {
@@ -172,6 +221,18 @@ export const App = () => {
     >
       {view}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
+      {searchToast !== null && (
+        <button
+          className="toast"
+          style={{ cursor: 'pointer', border: 0 }}
+          onClick={() => {
+            navigate(`/search/${searchToast.id}`);
+            setSearchToast(null);
+          }}
+        >
+          🔎 {searchToast.text} — باز کردن
+        </button>
+      )}
     </AppShell>
   );
 };

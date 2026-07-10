@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 // be minimized into a footer bar (like a taskbar) and restored with one click.
 // Persisted per browser so the working set survives reloads.
 
-export type DockKind = 'lead' | 'task' | 'new' | 'page';
+export type DockKind = 'lead' | 'task' | 'new' | 'page' | 'search';
 
 export type DockItem = {
   route: string; // hash route without '#', e.g. "/lead/<id>"
@@ -33,9 +33,9 @@ const persist = () => {
 };
 
 export const dockAdd = (item: DockItem) => {
-  items = [item, ...items.filter((i) => i.route !== item.route)].slice(
-    0,
-    MAX_ITEMS,
+  // append newest at the end (rightmost, like browser tabs); drop the oldest
+  items = [...items.filter((i) => i.route !== item.route), item].slice(
+    -MAX_ITEMS,
   );
   persist();
 };

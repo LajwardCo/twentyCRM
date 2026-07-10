@@ -4,7 +4,7 @@ import { type CurrentUser } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
 import { jalaliToday } from '../lib/jalali';
 import { navigate, useRoute } from '../lib/router';
-import { T, T2 } from '../lib/strings';
+import { T, T2, T3 } from '../lib/strings';
 import {
   dockAdd,
   getDockablePage,
@@ -20,6 +20,7 @@ import {
   IconLeads,
   IconLogout,
   IconMoon,
+  IconPackage,
   IconPlus,
   IconSearch,
   IconSun,
@@ -37,6 +38,7 @@ const routeDockDefaults = (
   if (section === 'reports') return { label: T2.reports, kind: 'page' };
   if (section === 'leads') return { label: T.leads, kind: 'page' };
   if (section === 'tasks') return { label: 'کارها', kind: 'page' };
+  if (section === 'catalog') return { label: T3.catalog, kind: 'page' };
   return { label: T.tabToday, kind: 'page' };
 };
 
@@ -57,6 +59,7 @@ const NAV = [
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'reports', label: T2.reports, icon: IconChart },
   { key: 'competitors', label: 'رقبا', icon: IconFlame },
+  { key: 'catalog', label: T3.catalog, icon: IconPackage },
   { key: 'admin', label: 'کاربران', icon: IconLeads },
 ] as const;
 
@@ -94,7 +97,7 @@ export const AppShell = ({
         <div className="brand">
           <img className="mark" src={logoSquare} alt="Usystems" />
           <div>
-            <b>{T.appName}</b>
+            <b>{T.brand}</b>
             <small>{T.brandSub}</small>
           </div>
         </div>

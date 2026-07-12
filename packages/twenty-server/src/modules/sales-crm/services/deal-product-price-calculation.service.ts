@@ -4,6 +4,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { type DealProductPricingVersionLookupService } from 'src/modules/sales-crm/services/deal-product-pricing-version-lookup.service';
 import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 import {
   computePriceFromTierSchedule,
@@ -113,15 +114,26 @@ export class DealProductPriceCalculationService {
   // Returns undefined if the version, its package, or its tierSchedule can't
   // be found -- callers should leave installPrice/annualPrice untouched in
   // that case (the pre-query hook's validation service is what rejects bad
-  // input; this method only computes).
+  // input; this method only computes). Takes the Pricing Version and Package
+  // already fetched by DealProductPricingVersionLookupService rather than
+  // re-querying them; only the Product fetch (needed for the currency
+  // fallback) is done here.
   async calculateFromPricingVersion({
     workspaceId,
     pricingVersionId,
     factorQuantities,
+    pricingVersion,
+    packageRecord,
   }: {
     workspaceId: string;
     pricingVersionId: string | null | undefined;
     factorQuantities: FactorQuantities | null | undefined;
+    pricingVersion: Awaited<
+      ReturnType<DealProductPricingVersionLookupService['findWithPackage']>
+    >['pricingVersion'];
+    packageRecord: Awaited<
+      ReturnType<DealProductPricingVersionLookupService['findWithPackage']>
+    >['packageRecord'];
   }): Promise<
     | {
         installPrice: CurrencyValue;
@@ -134,66 +146,29 @@ export class DealProductPriceCalculationService {
       return undefined;
     }
 
-    const authContext = buildSystemAuthContext(workspaceId);
-
-    const { pricingVersion, packageRecord, product } =
-      await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-        async () => {
-          const pricingVersionRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'pricingVersion',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const foundPricingVersion = await pricingVersionRepository.findOne({
-            where: { id: pricingVersionId },
-          });
-
-          if (!isDefined(foundPricingVersion)) {
-            return {
-              pricingVersion: undefined,
-              packageRecord: undefined,
-              product: undefined,
-            };
-          }
-
-          const packageRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'package',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const foundPackage = await packageRepository.findOne({
-            where: { id: foundPricingVersion.packageId as string },
-          });
-
-          const productRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'product',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const foundProduct = isDefined(foundPackage)
-            ? await productRepository.findOne({
-                where: { id: foundPackage.productId as string },
-              })
-            : undefined;
-
-          return {
-            pricingVersion: foundPricingVersion,
-            packageRecord: foundPackage,
-            product: foundProduct,
-          };
-        },
-        authContext,
-      );
-
     if (!isDefined(pricingVersion)) {
       return undefined;
     }
+
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    const product = isDefined(packageRecord)
+      ? await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+          async () => {
+            const productRepository =
+              await this.globalWorkspaceOrmManager.getRepository(
+                workspaceId,
+                'product',
+                { shouldBypassPermissionChecks: true },
+              );
+
+            return productRepository.findOne({
+              where: { id: packageRecord.productId as string },
+            });
+          },
+          authContext,
+        )
+      : undefined;
 
     const tierSchedule = pricingVersion.tierSchedule as
       | FactorTierSchedule[]

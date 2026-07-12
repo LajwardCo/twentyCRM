@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
 
-import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
-import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { type DealProductDiscountRuleLookupService } from 'src/modules/sales-crm/services/deal-product-discount-rule-lookup.service';
 import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 
 // Computes the discount effect of an already-validated Discount Rule --
@@ -11,49 +10,24 @@ import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.t
 // maxDiscountPercent ceiling check, run by the caller afterward); FIXED_AMOUNT
 // rules reduce the already-computed installPrice directly, floored at 0.
 // Assumes DealProductDiscountRuleValidationService.validate() already ran
-// and passed -- this service does not re-validate, only computes.
+// and passed -- this service does not re-validate, only computes. Takes the
+// Discount Rule already fetched by DealProductDiscountRuleLookupService
+// rather than re-querying it.
 @Injectable()
 export class DealProductDiscountRuleApplicationService {
-  constructor(
-    private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
-  ) {}
-
   async apply({
-    workspaceId,
-    discountRuleId,
+    discountRule,
     installPrice,
   }: {
-    workspaceId: string;
-    discountRuleId: string | null | undefined;
+    discountRule: Awaited<
+      ReturnType<DealProductDiscountRuleLookupService['findById']>
+    >;
     installPrice: CurrencyValue | null | undefined;
   }): Promise<
     | { discountPercent: number; installPrice?: never }
     | { discountPercent?: never; installPrice: CurrencyValue }
     | undefined
   > {
-    if (!isDefined(discountRuleId)) {
-      return undefined;
-    }
-
-    const authContext = buildSystemAuthContext(workspaceId);
-
-    const discountRule =
-      await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-        async () => {
-          const discountRuleRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'discountRule',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          return discountRuleRepository.findOne({
-            where: { id: discountRuleId },
-          });
-        },
-        authContext,
-      );
-
     if (!isDefined(discountRule)) {
       return undefined;
     }

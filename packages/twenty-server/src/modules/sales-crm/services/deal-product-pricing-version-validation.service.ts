@@ -7,28 +7,31 @@ import {
   CommonQueryRunnerException,
   CommonQueryRunnerExceptionCode,
 } from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
-import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
-import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { type DealProductPricingVersionLookupService } from 'src/modules/sales-crm/services/deal-product-pricing-version-lookup.service';
 
 // Enforces that a Deal Product can only reference an ACTIVE Pricing Version
 // belonging to a Package on the same Product as the line -- this is the
 // "sellers can't sell something else by mistake" guarantee for the
 // Package/Pricing Version path (mirrors the discount-ceiling hook's role for
-// the legacy PER_FACTOR path).
+// the legacy PER_FACTOR path). Takes the Pricing Version and Package already
+// fetched by DealProductPricingVersionLookupService rather than re-querying
+// them.
 @Injectable()
 export class DealProductPricingVersionValidationService {
-  constructor(
-    private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
-  ) {}
-
   async validate({
-    workspaceId,
     productId,
     pricingVersionId,
+    pricingVersion,
+    packageRecord,
   }: {
-    workspaceId: string;
     productId: string | null | undefined;
     pricingVersionId: string | null | undefined;
+    pricingVersion: Awaited<
+      ReturnType<DealProductPricingVersionLookupService['findWithPackage']>
+    >['pricingVersion'];
+    packageRecord: Awaited<
+      ReturnType<DealProductPricingVersionLookupService['findWithPackage']>
+    >['packageRecord'];
   }): Promise<void> {
     if (!isDefined(pricingVersionId)) {
       return;
@@ -43,45 +46,6 @@ export class DealProductPricingVersionValidationService {
         },
       );
     }
-
-    const authContext = buildSystemAuthContext(workspaceId);
-
-    const { pricingVersion, packageRecord } =
-      await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-        async () => {
-          const pricingVersionRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'pricingVersion',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const foundPricingVersion = await pricingVersionRepository.findOne({
-            where: { id: pricingVersionId },
-          });
-
-          if (!isDefined(foundPricingVersion)) {
-            return { pricingVersion: undefined, packageRecord: undefined };
-          }
-
-          const packageRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'package',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const foundPackage = await packageRepository.findOne({
-            where: { id: foundPricingVersion.packageId as string },
-          });
-
-          return {
-            pricingVersion: foundPricingVersion,
-            packageRecord: foundPackage,
-          };
-        },
-        authContext,
-      );
 
     if (!isDefined(pricingVersion)) {
       throw new CommonQueryRunnerException(

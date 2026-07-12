@@ -122,15 +122,15 @@ in the selected period:
 
 ## Testing
 
-- Component/unit tests for the upsert logic (create vs. update path) and for
-  the auto-draft generation (bullet-listing today's done tasks / tomorrow's
-  tasks) in `DailyReportView`.
-- Unit test for `fetchDoneTasksSince` grouping logic in `SellerLeaderboard`.
-- Manual E2E verification against local dev (per this app's existing
-  practice — no automated E2E harness for this package): submit a report as
-  one seller, confirm it appears in the team feed and in "not yet submitted"
-  disappears; confirm the marketer/seller leaderboard cards render with real
-  data.
+`twenty-sales-app` has no test runner configured (no `jest.config`/`vitest.config`,
+no `.test.` files anywhere in the package — confirmed by inspection) and is
+outside the yarn workspace, so this pass follows the package's existing,
+established practice: manual E2E verification against local dev, not new
+unit-test infrastructure. Verify: submit a report as one seller, confirm it
+appears in the team feed and that seller drops out of "not yet submitted";
+confirm the marketer/seller leaderboard cards render with real data (and that
+the marketer card gracefully no-ops on local dev, where the field doesn't
+exist).
 
 ## Deploy
 

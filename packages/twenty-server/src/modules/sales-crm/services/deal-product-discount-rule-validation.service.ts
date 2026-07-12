@@ -9,6 +9,7 @@ import {
 } from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { type DealProductDiscountRuleLookupService } from 'src/modules/sales-crm/services/deal-product-discount-rule-lookup.service';
 import {
   evaluateDiscountRuleCondition,
   type DiscountRuleConditionType,
@@ -31,12 +32,16 @@ export class DealProductDiscountRuleValidationService {
     opportunityId,
     quantity,
     discountRuleId,
+    discountRule,
   }: {
     workspaceId: string;
     productId: string | null | undefined;
     opportunityId: string | null | undefined;
     quantity: number | null | undefined;
     discountRuleId: string | null | undefined;
+    discountRule: Awaited<
+      ReturnType<DealProductDiscountRuleLookupService['findById']>
+    >;
   }): Promise<void> {
     if (!isDefined(discountRuleId)) {
       return;
@@ -52,53 +57,12 @@ export class DealProductDiscountRuleValidationService {
       );
     }
 
-    const authContext = buildSystemAuthContext(workspaceId);
-
-    const { discountRule, siblingProductIds } =
-      await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-        async () => {
-          const discountRuleRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'discountRule',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const foundDiscountRule = await discountRuleRepository.findOne({
-            where: { id: discountRuleId },
-          });
-
-          if (
-            !isDefined(foundDiscountRule) ||
-            foundDiscountRule.conditionType !== 'SIBLING_PRODUCT_PURCHASED' ||
-            !isDefined(opportunityId)
-          ) {
-            return { discountRule: foundDiscountRule, siblingProductIds: [] };
-          }
-
-          const dealProductRepository =
-            await this.globalWorkspaceOrmManager.getRepository(
-              workspaceId,
-              'dealProduct',
-              { shouldBypassPermissionChecks: true },
-            );
-
-          const siblingDealProducts = await dealProductRepository.find({
-            where: { opportunityId },
-          });
-
-          return {
-            discountRule: foundDiscountRule,
-            siblingProductIds: siblingDealProducts
-              .map(
-                (dealProduct) =>
-                  dealProduct.productId as string | null | undefined,
-              )
-              .filter((id): id is string => isDefined(id)),
-          };
-        },
-        authContext,
-      );
+    const siblingProductIds =
+      isDefined(discountRule) &&
+      discountRule.conditionType === 'SIBLING_PRODUCT_PURCHASED' &&
+      isDefined(opportunityId)
+        ? await this.findSiblingProductIds({ workspaceId, opportunityId })
+        : [];
 
     if (!isDefined(discountRule)) {
       throw new CommonQueryRunnerException(
@@ -161,5 +125,34 @@ export class DealProductDiscountRuleValidationService {
         { userFriendlyMessage },
       );
     }
+  }
+
+  private async findSiblingProductIds({
+    workspaceId,
+    opportunityId,
+  }: {
+    workspaceId: string;
+    opportunityId: string;
+  }): Promise<string[]> {
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    const siblingDealProducts =
+      await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+        async () => {
+          const dealProductRepository =
+            await this.globalWorkspaceOrmManager.getRepository(
+              workspaceId,
+              'dealProduct',
+              { shouldBypassPermissionChecks: true },
+            );
+
+          return dealProductRepository.find({ where: { opportunityId } });
+        },
+        authContext,
+      );
+
+    return siblingDealProducts
+      .map((dealProduct) => dealProduct.productId as string | null | undefined)
+      .filter((id): id is string => isDefined(id));
   }
 }

@@ -380,3 +380,95 @@ export const T3 = {
   noReportsForDate: 'برای این تاریخ گزارشی ثبت نشده',
   tasksDoneBadge: 'وظیفه',
 };
+
+// competitor detail (products, notes/updates, usage)
+export const T5 = {
+  editCompetitor: 'ویرایش رقیب',
+  websiteLbl: 'ویب‌سایت',
+  threatLevelLbl: 'سطح تهدید',
+  tierLbl: 'رده',
+  trackingStatusLbl: 'وضعیت پیگیری',
+  strengthsLbl: 'نقاط قوت',
+  weaknessesLbl: 'نقاط ضعف',
+  descriptionLbl: 'توضیحات',
+
+  productsSection: 'محصولات و قیمت‌گذاری',
+  newCompetitorProduct: 'محصول جدید',
+  editCompetitorProduct: 'ویرایش محصول',
+  categoryLbl: 'دسته',
+  pricingModelLbl: 'مدل قیمت‌گذاری',
+  demoUrlLbl: 'لینک دمو',
+  startingPriceLbl: 'قیمت شروع (؋)',
+  pricingSummaryLbl: 'خلاصه قیمت‌گذاری',
+  noCompetitorProducts: 'هنوز محصولی برای این رقیب ثبت نشده',
+
+  updatesSection: 'یادداشت‌ها و اخبار',
+  newCompetitorUpdate: 'یادداشت جدید',
+  titleLbl: 'عنوان',
+  updateTypeLbl: 'نوع',
+  dateLbl: 'تاریخ',
+  bodyLbl: 'متن',
+  sourceLbl: 'لینک منبع',
+  noCompetitorUpdates: 'هنوز یادداشتی ثبت نشده',
+
+  usageSection: 'کاربران (مشتریان ما که از این رقیب استفاده می‌کنند)',
+  noCompetitorUsages: 'هیچ موردی ثبت نشده',
+  satisfactionLbl: 'رضایت',
+  switchingSignalLbl: 'سیگنال تغییر',
+  renewalDateLbl: 'تاریخ تمدید',
+
+  competitorNotFound: 'رقیب یافت نشد',
+};
+
+export const COMPETITOR_TIER_LABELS: Record<string, string> = {
+  LEADER: 'پیشتاز',
+  CHALLENGER: 'رقیب جدی',
+  NICHE: 'تخصصی',
+  EMERGING: 'نوظهور',
+};
+export const COMPETITOR_THREAT_LABELS: Record<string, string> = {
+  HIGH: 'تهدید بالا',
+  MEDIUM: 'تهدید متوسط',
+  LOW: 'تهدید کم',
+};
+export const COMPETITOR_STATUS_LABELS: Record<string, string> = {
+  ACTIVELY_TRACKING: 'زیر نظر فعال',
+  WATCHING: 'در حال مشاهده',
+  DORMANT: 'غیرفعال',
+};
+export const COMPETITOR_PRODUCT_CATEGORY_LABELS: Record<string, string> = {
+  CORE: 'محصول اصلی',
+  ADDON: 'افزونه',
+  SERVICE: 'خدمت',
+};
+export const COMPETITOR_PRICING_MODEL_LABELS: Record<string, string> = {
+  SUBSCRIPTION: 'اشتراکی',
+  ONE_TIME: 'یک‌باره',
+  USAGE_BASED: 'بر اساس مصرف',
+  FREEMIUM: 'رایگان/ویژه',
+  CUSTOM: 'سفارشی',
+};
+export const COMPETITOR_UPDATE_TYPE_LABELS: Record<string, string> = {
+  PRODUCT_UPDATE: 'به‌روزرسانی محصول',
+  PRICING_CHANGE: 'تغییر قیمت',
+  NEWS: 'خبر',
+  WIN: 'برد',
+  LOSS: 'باخت',
+  FUNDING: 'سرمایه‌گذاری',
+};
+export const COMPETITOR_USAGE_STATUS_LABELS: Record<string, string> = {
+  CURRENT_USER: 'کاربر فعلی',
+  EVALUATING: 'در حال ارزیابی',
+  FORMER_USER: 'کاربر سابق',
+};
+export const COMPETITOR_SATISFACTION_LABELS: Record<string, string> = {
+  HAPPY: 'راضی',
+  NEUTRAL: 'خنثی',
+  UNHAPPY: 'ناراضی',
+};
+export const COMPETITOR_SWITCHING_SIGNAL_LABELS: Record<string, string> = {
+  NONE: 'بدون سیگنال',
+  INTERESTED: 'علاقه‌مند',
+  ACTIVELY_LOOKING: 'در حال بررسی',
+  COMMITTED: 'قطعی',
+};

@@ -13,6 +13,7 @@ import {
   type CompetitorUpdateEntry,
   type CompetitorUpdateInput,
 } from '../api/competitors';
+import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { useCached } from '../lib/cache';
 import { formatAfn, toLocalInputValue } from '../lib/format';
 import { formatJalaliDate, relativeDueLabel } from '../lib/jalali';
@@ -465,10 +466,9 @@ export const CompetitorDetailView = ({ competitorId }: { competitorId: string })
             </div>
             <div className="fld">
               <label>{T5.dateLbl}</label>
-              <input
-                type="datetime-local"
+              <JalaliDatePicker
                 value={toLocalInputValue(new Date(updateDraft.date ?? Date.now()))}
-                onChange={(e) => setUpdateDraft({ ...updateDraft, date: new Date(e.target.value).toISOString() })}
+                onChange={(v) => setUpdateDraft({ ...updateDraft, date: new Date(v).toISOString() })}
               />
             </div>
             <div className="fld">

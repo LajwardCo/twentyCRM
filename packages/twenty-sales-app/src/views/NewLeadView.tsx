@@ -1,14 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
-import { LEAD_SOURCES, registerLead, type NewLeadInput } from '../api/records';
+import {
+  fetchReferrers,
+  LEAD_SOURCES,
+  registerLead,
+  type NewLeadInput,
+  type Referrer,
+} from '../api/records';
+import { JalaliDatePicker } from '../components/JalaliDatePicker';
+import { MoneyInput } from '../components/MoneyInput';
 import { invalidateCache } from '../lib/cache';
-import { toLocalInputValue } from '../lib/format';
+import { type CurrencyCode, toLocalInputValue } from '../lib/format';
 import { clearDraft, loadDraft, saveDraft } from '../lib/prefs';
-import { toPersianDigits } from '../lib/jalali';
+import { formatJalaliDateTime } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
-import { SOURCE_LABELS, T, TEMP_LABELS } from '../lib/strings';
+import {
+  MARKETER_LABELS,
+  PARTNER_TYPE_LABELS,
+  SOURCE_LABELS,
+  T,
+  TEMP_LABELS,
+} from '../lib/strings';
 
 type NewLeadViewProps = {
   user: CurrentUser;
@@ -33,7 +47,10 @@ type Draft = {
   email: string;
   temperature: 'HOT' | 'WARM' | 'COLD' | null;
   leadSource: string;
+  marketer: string;
+  referrerId: string;
   estimatedValue: string;
+  currency: CurrencyCode;
   firstContactNote: string;
   followUpNote: string;
 };
@@ -54,7 +71,11 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     draft?.temperature ?? 'WARM',
   );
   const [leadSource, setLeadSource] = useState(draft?.leadSource ?? 'FIELD');
+  const [marketer, setMarketer] = useState(draft?.marketer ?? '');
+  const [referrerId, setReferrerId] = useState(draft?.referrerId ?? '');
+  const [referrers, setReferrers] = useState<Referrer[]>([]);
   const [estimatedValue, setEstimatedValue] = useState(draft?.estimatedValue ?? '');
+  const [currency, setCurrency] = useState<CurrencyCode>(draft?.currency ?? 'AFN');
   const [firstContactNote, setFirstContactNote] = useState(
     draft?.firstContactNote ?? '',
   );
@@ -80,7 +101,10 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
         email,
         temperature,
         leadSource,
+        marketer,
+        referrerId,
         estimatedValue,
+        currency,
         firstContactNote,
         followUpNote,
       } satisfies Draft);
@@ -94,10 +118,25 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     email,
     temperature,
     leadSource,
+    marketer,
+    referrerId,
     estimatedValue,
+    currency,
     firstContactNote,
     followUpNote,
   ]);
+
+  // Load selectable referrers/partners once (empty list if the object is
+  // absent on this environment).
+  useEffect(() => {
+    let active = true;
+    void fetchReferrers().then((list) => {
+      if (active) setReferrers(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     announceDockablePage(
@@ -131,12 +170,15 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
       contactEmail: email,
       temperature,
       leadSource,
+      marketer: marketer || null,
+      referrerId: referrerId || null,
       firstContactNote,
       firstContactDate: new Date(firstContactDate).toISOString(),
       followUpNote,
       followUpDate: scheduleFollowUp ? new Date(followUpDate).toISOString() : null,
-      estimatedAmountAfn:
+      estimatedAmount:
         Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null,
+      estimatedCurrency: currency,
       workspaceMemberId: user.workspaceMemberId,
     };
 
@@ -190,6 +232,8 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
               setLastName('');
               setPhone('');
               setEmail('');
+              setMarketer('');
+              setReferrerId('');
               setEstimatedValue('');
               setFirstContactNote('');
               setFollowUpNote('');
@@ -305,15 +349,51 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                   </select>
                 </div>
               </div>
-              <div className="fld" style={{ maxWidth: 260, marginBottom: 0 }}>
-                <label htmlFor="nl-value">ارزش تخمینی (؋ — اختیاری)</label>
-                <input
+              <div className="f2">
+                <div className="fld">
+                  <label htmlFor="nl-marketer">بازاریاب</label>
+                  <select
+                    id="nl-marketer"
+                    value={marketer}
+                    onChange={(e) => setMarketer(e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {Object.entries(MARKETER_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="fld">
+                  <label htmlFor="nl-referrer">معرف</label>
+                  <select
+                    id="nl-referrer"
+                    value={referrerId}
+                    onChange={(e) => setReferrerId(e.target.value)}
+                    disabled={referrers.length === 0}
+                  >
+                    <option value="">—</option>
+                    {referrers.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                        {r.partnerType
+                          ? ` (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
+                          : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="fld" style={{ maxWidth: 360, marginBottom: 0 }}>
+                <label htmlFor="nl-value">ارزش تخمینی (اختیاری)</label>
+                <MoneyInput
                   id="nl-value"
-                  inputMode="numeric"
-                  dir="ltr"
+                  amount={estimatedValue}
+                  onAmountChange={setEstimatedValue}
+                  currency={currency}
+                  onCurrencyChange={setCurrency}
                   placeholder="مثلاً 300000"
-                  value={estimatedValue}
-                  onChange={(e) => setEstimatedValue(e.target.value)}
                 />
               </div>
             </div>
@@ -331,13 +411,12 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                   onChange={(e) => setFirstContactNote(e.target.value)}
                 />
               </div>
-              <div className="fld" style={{ maxWidth: 250, marginBottom: 0 }}>
+              <div className="fld" style={{ maxWidth: 300, marginBottom: 0 }}>
                 <label htmlFor="nl-date">{T.when}</label>
-                <input
+                <JalaliDatePicker
                   id="nl-date"
-                  type="datetime-local"
                   value={firstContactDate}
-                  onChange={(e) => setFirstContactDate(e.target.value)}
+                  onChange={setFirstContactDate}
                 />
               </div>
             </div>
@@ -401,12 +480,12 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                       </button>
                     </div>
                     {followUpPreset === 'custom' && (
-                      <input
-                        type="datetime-local"
-                        style={{ marginTop: 8, maxWidth: 250 }}
-                        value={followUpDate}
-                        onChange={(e) => setFollowUpDate(e.target.value)}
-                      />
+                      <div style={{ marginTop: 8, maxWidth: 300 }}>
+                        <JalaliDatePicker
+                          value={followUpDate}
+                          onChange={setFollowUpDate}
+                        />
+                      </div>
                     )}
                   </div>
                 </>
@@ -453,7 +532,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                           ? T.inThreeDays
                           : followUpPreset === 'nextWeek'
                             ? T.nextWeek
-                            : toPersianDigits(followUpDate.replace('T', ' — '))
+                            : formatJalaliDateTime(followUpDate)
                       : '—'}
                   </b>
                 </span>

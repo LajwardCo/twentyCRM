@@ -1852,6 +1852,106 @@ table.leads tbody tr:hover {
   color: var(--cold);
 }
 
+/* amount + currency toggle */
+.money-input {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.money-input > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.money-cur {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.money-cur button {
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: all 0.13s;
+}
+
+.money-cur button.on {
+  border-color: var(--lapis-500);
+  background: var(--lapis-50);
+  color: var(--lapis-700);
+}
+
+/* task assignee picker (hero) */
+.assignee-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.assignee-pick select {
+  width: auto;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+/* click-to-edit meta rows (lead detail) */
+.meta-editable {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 0;
+  padding: 2px 5px;
+  margin: -2px -5px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: end;
+}
+
+.meta-editable svg {
+  color: var(--lapis-600);
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.12s;
+}
+
+.meta-editable:hover {
+  background: var(--lapis-50);
+}
+
+.meta-editable:hover svg {
+  opacity: 1;
+}
+
+.meta-edit {
+  width: auto;
+  max-width: 200px;
+  padding: 5px 8px;
+  border: 1px solid var(--lapis-500);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
 .summary-card {
   position: sticky;
   top: 76px;
@@ -2590,6 +2690,170 @@ table.leads tbody tr:hover {
   font-size: 10px;
   color: var(--ink-3);
   font-weight: 650;
+}
+
+/* ============ jalali date picker ============ */
+.jdp {
+  position: relative;
+  width: 100%;
+}
+
+.jdp-trigger {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13.5px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: start;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.jdp-trigger svg {
+  flex-shrink: 0;
+  color: var(--ink-3);
+}
+
+.jdp-trigger.empty span {
+  color: var(--ink-3);
+}
+
+.jdp-trigger:hover,
+.jdp-trigger:focus {
+  outline: 0;
+  border-color: var(--lapis-500);
+  box-shadow: 0 0 0 3px rgba(59, 106, 232, 0.15);
+}
+
+.jdp-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 70;
+  width: 288px;
+  max-width: calc(100vw - 32px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 12px 32px rgba(8, 23, 55, 0.18);
+  padding: 12px;
+  animation: fade-in 0.15s both;
+}
+
+.jdp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.jdp-title {
+  font-size: 13.5px;
+  font-weight: 750;
+  color: var(--ink);
+}
+
+.jdp-navbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.jdp-navbtn:hover {
+  background: var(--lapis-50);
+}
+
+.jdp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.jdp-head {
+  margin-bottom: 4px;
+}
+
+.jdp-hcell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  padding: 4px 0;
+}
+
+.jdp-cell {
+  min-height: 34px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.jdp-cell:hover {
+  background: var(--lapis-50);
+}
+
+.jdp-cell.muted {
+  color: var(--ink-3);
+  opacity: 0.45;
+}
+
+.jdp-cell.today {
+  color: var(--lapis-700);
+  font-weight: 800;
+}
+
+.jdp-cell.selected {
+  background: var(--lapis-600);
+  color: #fff;
+}
+
+.jdp-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.jdp-time span {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.jdp-time input {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 13px;
 }
 
 /* ============ workspace dock (minimized pages) ============ */

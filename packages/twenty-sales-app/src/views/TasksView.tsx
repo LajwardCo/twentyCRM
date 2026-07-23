@@ -79,6 +79,10 @@ const TYPE_FILTERS: (TaskType | 'ALL')[] = [
 export const TasksView = ({ user }: TasksViewProps) => {
   const [typeFilter, setTypeFilter] = useState<TaskType | 'ALL'>('ALL');
   const [statusTab, setStatusTab] = useState<'open' | 'done'>('open');
+  // Admins can widen the view to every seller's tasks; sellers stay scoped to
+  // their own. The server still row-filters by permission either way.
+  const [scope, setScope] = useState<'mine' | 'all'>('mine');
+  const allScope = user.isAdmin && scope === 'all';
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [doneNow, setDoneNow] = useState(0);
@@ -86,15 +90,16 @@ export const TasksView = ({ user }: TasksViewProps) => {
   const fetchAll = useCallback(async () => {
     const since = new Date();
     since.setDate(since.getDate() - 30);
+    const assigneeId = allScope ? null : user.workspaceMemberId;
     const [open, done] = await Promise.all([
-      fetchMyOpenTasks(user.workspaceMemberId, { limit: 200 }),
-      fetchDoneTasksSince(since.toISOString(), user.workspaceMemberId),
+      fetchMyOpenTasks(assigneeId, { limit: 200 }),
+      fetchDoneTasksSince(since.toISOString(), assigneeId ?? undefined),
     ]);
     return { open, done };
-  }, [user.workspaceMemberId]);
+  }, [user.workspaceMemberId, allScope]);
 
   const { data, error, refresh } = useCached(
-    `tasks:${user.workspaceMemberId}`,
+    `tasks:${allScope ? 'all' : user.workspaceMemberId}`,
     fetchAll,
   );
 
@@ -152,7 +157,7 @@ export const TasksView = ({ user }: TasksViewProps) => {
     <main className="page">
       <div className="page-head anim">
         <div>
-          <h1>کارهای من</h1>
+          <h1>{allScope ? 'همه کارها' : 'کارهای من'}</h1>
           <div className="sub">
             {data !== null &&
               `${toPersianDigits(typeCounts.ALL ?? 0)} کار باز${
@@ -166,6 +171,16 @@ export const TasksView = ({ user }: TasksViewProps) => {
       </div>
 
       <div className="toolbar anim d1">
+        {user.isAdmin && (
+          <div className="seg">
+            <button className={scope === 'mine' ? 'on' : ''} onClick={() => setScope('mine')}>
+              کارهای من
+            </button>
+            <button className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')}>
+              همه کارها
+            </button>
+          </div>
+        )}
         <div className="seg">
           <button className={statusTab === 'open' ? 'on' : ''} onClick={() => setStatusTab('open')}>
             باز {data !== null && toPersianDigits(typeCounts.ALL ?? 0)}
@@ -266,6 +281,11 @@ export const TasksView = ({ user }: TasksViewProps) => {
                         </span>
                       )}
                       {lead ? <span className="lead-chip">{lead.name}</span> : <span>{T.noLead}</span>}
+                      {allScope && task.assignee && (
+                        <span className="pill" style={{ fontSize: 10.5, padding: '1px 8px' }}>
+                          {task.assignee.name.firstName} {task.assignee.name.lastName}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className={`due ${bucket.accent === 'over' ? 'over' : bucket.accent === 'today' ? 'today' : 'later'}`}>

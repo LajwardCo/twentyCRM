@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { createQuickTask, updateTask, type Task, type TaskType } from '../api/records';
+import { JalaliDatePicker } from './JalaliDatePicker';
 import { invalidateCache } from '../lib/cache';
 import { toLocalInputValue } from '../lib/format';
 import { navigate } from '../lib/router';
@@ -157,12 +158,7 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
           </div>
           <div className="fld">
             <label htmlFor="qt-due">{T2.quickTaskDueLbl}</label>
-            <input
-              id="qt-due"
-              type="datetime-local"
-              value={dueValue}
-              onChange={(e) => setDueValue(e.target.value)}
-            />
+            <JalaliDatePicker id="qt-due" value={dueValue} onChange={setDueValue} />
           </div>
         </div>
 

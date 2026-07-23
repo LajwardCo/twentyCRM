@@ -2,8 +2,9 @@ import { useState } from 'react';
 
 import { fetchMembers } from '../api/admin';
 import { fetchTeamDailyReports, reportDateKeyFor } from '../api/dailyReports';
+import { JalaliDatePicker } from './JalaliDatePicker';
 import { useCached } from '../lib/cache';
-import { formatJalaliDate, formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
+import { formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
 import { T3 } from '../lib/strings';
 
 const fetchTeamData = async (reportDateIso: string) => {
@@ -45,13 +46,12 @@ export const TeamDailyReportsFeed = () => {
     <div>
       <div className="toolbar anim d2">
         <div className="fld" style={{ marginBottom: 0, maxWidth: 220 }}>
-          <input
-            type="date"
+          <JalaliDatePicker
+            withTime={false}
             value={localDateInputValue(selectedDate)}
-            onChange={(e) => setSelectedDate(new Date(`${e.target.value}T00:00:00`))}
+            onChange={(v) => setSelectedDate(new Date(`${v}T00:00:00`))}
           />
         </div>
-        <span className="sub">{formatJalaliDate(selectedDate.toISOString())}</span>
       </div>
 
       {error !== null && <div className="error-banner">{error}</div>}

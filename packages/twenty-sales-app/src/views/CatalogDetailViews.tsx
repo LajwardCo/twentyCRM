@@ -14,6 +14,7 @@ import {
   type CatalogPricingVersionInput,
   type CatalogProductInput,
 } from '../api/catalog';
+import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { TierScheduleEditor } from '../components/TierScheduleEditor';
 import { useCached } from '../lib/cache';
 import { formatAfn, toLocalInputValue } from '../lib/format';
@@ -545,13 +546,12 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
             <div className="f2">
               <div className="fld">
                 <label>{T4.effectiveFromLbl}</label>
-                <input
-                  type="datetime-local"
+                <JalaliDatePicker
                   value={toLocalInputValue(new Date(versionDraft.input.effectiveFrom ?? Date.now()))}
-                  onChange={(e) =>
+                  onChange={(v) =>
                     setVersionDraft({
                       ...versionDraft,
-                      input: { ...versionDraft.input, effectiveFrom: new Date(e.target.value).toISOString() },
+                      input: { ...versionDraft.input, effectiveFrom: new Date(v).toISOString() },
                     })
                   }
                 />

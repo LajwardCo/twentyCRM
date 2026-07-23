@@ -8,8 +8,11 @@ import {
   fetchLeadMarketer,
   fetchLeadPricing,
   fetchProducts,
+  LEAD_SOURCES,
+  updateLead,
   type LeadSummary,
   type ProductOption,
+  type Referrer,
 } from '../api/records';
 import {
   fetchDiscountRules,
@@ -18,7 +21,7 @@ import {
   type CatalogDiscountRule,
 } from '../api/catalog';
 import { useCached } from '../lib/cache';
-import { formatAfn, fullPhone, personName } from '../lib/format';
+import { formatAfn, formatMoney, fullPhone, personName } from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import {
   CONDITION_TYPE_LABELS,
@@ -30,7 +33,7 @@ import {
   T2,
   T4,
 } from '../lib/strings';
-import { IconBuilding, IconChevronDown, IconPackage, IconPhone } from './icons';
+import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
 
 // One line describing what a Discount Rule needs to actually apply --
 // enforcement is still server-side, this is just so the seller isn't
@@ -188,41 +191,165 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
 
 // ---------- metadata: source, referrer, marketer, created-by ----------
 
-export const MetaCard = ({ lead }: { lead: LeadSummary }) => {
-  const { data: marketer } = useCached(`marketer:${lead.id}`, () =>
-    fetchLeadMarketer(lead.id),
+type MetaOption = { value: string; label: string };
+
+// Click-to-edit row: shows a value that turns into a <select> on click. The
+// server still enforces permissions — a rejected save just reverts on reload.
+const EditableMetaRow = ({
+  label,
+  display,
+  currentValue,
+  options,
+  editable,
+  onSave,
+}: {
+  label: React.ReactNode;
+  display: React.ReactNode;
+  currentValue: string;
+  options: MetaOption[];
+  editable: boolean;
+  onSave: (value: string) => Promise<void>;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = async (value: string) => {
+    setSaving(true);
+    try {
+      await onSave(value);
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  };
+
+  return (
+    <div className="c-row">
+      <span>{label}</span>
+      {editing ? (
+        <select
+          className="meta-edit"
+          autoFocus
+          defaultValue={currentValue}
+          disabled={saving}
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={() => setEditing(false)}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      ) : editable ? (
+        <button type="button" className="meta-editable" onClick={() => setEditing(true)}>
+          {display}
+          <IconEdit size={12} />
+        </button>
+      ) : (
+        <b>{display}</b>
+      )}
+    </div>
+  );
+};
+
+type MetaCardProps = {
+  lead: LeadSummary;
+  referrers?: Referrer[];
+  editable?: boolean;
+  onSaveLead?: (patch: Record<string, unknown>) => Promise<void>;
+};
+
+export const MetaCard = ({
+  lead,
+  referrers = [],
+  editable = false,
+  onSaveLead,
+}: MetaCardProps) => {
+  const { data: marketer, refresh: refreshMarketer } = useCached(
+    `marketer:${lead.id}`,
+    () => fetchLeadMarketer(lead.id),
+  );
+
+  const canEdit = editable && !!onSaveLead;
+
+  const sourceOptions: MetaOption[] = [
+    { value: '', label: '—' },
+    ...LEAD_SOURCES.map((s) => ({
+      value: s.value,
+      label: SOURCE_LABELS[s.value] ?? s.label,
+    })),
+  ];
+
+  const referrerOptions: MetaOption[] = [
+    { value: '', label: '—' },
+    ...referrers.map((r) => ({
+      value: r.id,
+      label: r.partnerType
+        ? `${r.name} (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
+        : r.name,
+    })),
+  ];
+
+  const marketerOptions: MetaOption[] = [
+    { value: '', label: '—' },
+    ...Object.entries(MARKETER_LABELS).map(([value, label]) => ({ value, label })),
+  ];
+
+  const referrerDisplay = lead.referrer ? (
+    <>
+      {lead.referrer.name}
+      {lead.referrer.commissionPercent
+        ? ` · ${T2.commission} ${toPersianDigits(lead.referrer.commissionPercent)}٪`
+        : ''}
+    </>
+  ) : (
+    '—'
+  );
+
+  const referrerLabel = (
+    <>
+      {T2.referrerLbl}
+      {lead.referrer?.partnerType
+        ? ` (${PARTNER_TYPE_LABELS[lead.referrer.partnerType] ?? lead.referrer.partnerType})`
+        : ''}
+    </>
   );
 
   return (
     <div className="card card-pad anim">
       <h3>{T2.metaSection}</h3>
       <div className="contact-rows">
-        <div className="c-row">
-          <span>منبع لید</span>
-          <b>{SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}</b>
-        </div>
-        {lead.referrer && (
-          <div className="c-row">
-            <span>
-              {T2.referrerLbl}
-              {lead.referrer.partnerType
-                ? ` (${PARTNER_TYPE_LABELS[lead.referrer.partnerType] ?? lead.referrer.partnerType})`
-                : ''}
-            </span>
-            <b>
-              {lead.referrer.name}
-              {lead.referrer.commissionPercent
-                ? ` · ${T2.commission} ${toPersianDigits(lead.referrer.commissionPercent)}٪`
-                : ''}
-            </b>
-          </div>
-        )}
-        {marketer && (
-          <div className="c-row">
-            <span>{T2.marketerLbl}</span>
-            <b>{MARKETER_LABELS[marketer] ?? marketer}</b>
-          </div>
-        )}
+        <EditableMetaRow
+          label="منبع لید"
+          display={SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}
+          currentValue={lead.leadSource ?? ''}
+          options={sourceOptions}
+          editable={canEdit}
+          onSave={(value) => onSaveLead!({ leadSource: value || null })}
+        />
+        <EditableMetaRow
+          label={referrerLabel}
+          display={referrerDisplay}
+          currentValue={lead.referrer?.id ?? ''}
+          options={referrerOptions}
+          editable={canEdit && referrers.length > 0}
+          onSave={(value) => onSaveLead!({ referrerId: value || null })}
+        />
+        <EditableMetaRow
+          label={T2.marketerLbl}
+          display={marketer ? (MARKETER_LABELS[marketer] ?? marketer) : '—'}
+          currentValue={marketer ?? ''}
+          options={marketerOptions}
+          editable={canEdit}
+          onSave={async (value) => {
+            try {
+              await updateLead(lead.id, { marketer: value || null });
+            } finally {
+              await refreshMarketer();
+            }
+          }}
+        />
         {lead.createdBy?.name && (
           <div className="c-row">
             <span>{T2.registeredBy}</span>
@@ -473,11 +600,11 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               </div>
               <div style={{ textAlign: 'left' }}>
                 <div className="deal-val num" style={{ fontSize: 12.5 }}>
-                  {formatAfn(line.installPrice?.amountMicros)}
+                  {formatMoney(line.installPrice?.amountMicros, line.installPrice?.currencyCode)}
                 </div>
                 {(line.annualPrice?.amountMicros ?? 0) > 0 && (
                   <div className="num" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
-                    سالانه {formatAfn(line.annualPrice?.amountMicros)}
+                    سالانه {formatMoney(line.annualPrice?.amountMicros, line.annualPrice?.currencyCode)}
                   </div>
                 )}
               </div>
@@ -523,7 +650,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
                 </div>
               </div>
               <span className="deal-val num" style={{ fontSize: 12.5 }}>
-                {formatAfn(q.agreedPrice?.amountMicros)}
+                {formatMoney(q.agreedPrice?.amountMicros, q.agreedPrice?.currencyCode)}
               </span>
             </div>
           ))}

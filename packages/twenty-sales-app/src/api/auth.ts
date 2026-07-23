@@ -55,6 +55,20 @@ export type CurrentUser = {
   firstName: string;
   lastName: string;
   userEmail: string;
+  // True when the account can read the roles list — the same PERMISSIONS gate
+  // the admin section uses. Drives admin-only UI (see-all-tasks, reassign).
+  isAdmin: boolean;
+};
+
+// Best-effort admin probe: success on getRoles means the account holds the
+// PERMISSIONS setting, which is how the app defines "admin".
+const probeIsAdmin = async (): Promise<boolean> => {
+  try {
+    await metadataQuery(`query IsAdminProbe { getRoles { id } }`);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const fetchCurrentUser = async (): Promise<CurrentUser> => {
@@ -83,10 +97,13 @@ export const fetchCurrentUser = async (): Promise<CurrentUser> => {
     throw new Error('No workspace member found for this user');
   }
 
+  const isAdmin = await probeIsAdmin();
+
   return {
     workspaceMemberId: member.id,
     firstName: member.name.firstName,
     lastName: member.name.lastName,
     userEmail: data.currentUser.email,
+    isAdmin,
   };
 };

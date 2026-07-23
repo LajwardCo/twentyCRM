@@ -59,22 +59,47 @@ export const personName = (
     ? `${person.name.firstName} ${person.name.lastName}`.trim()
     : '—';
 
-// AFN money display with Persian digits: ۴۲۰ هزار ؋ / ۱٫۲م ؋
+// Money display with Persian digits: ۴۲۰هزار ؋ / ۱٫۲م ؋ (AFN) or $۴۲۰هزار (USD).
 import { toPersianDigits } from './jalali';
 
-export const formatAfn = (amountMicros: number | null | undefined): string => {
-  if (!amountMicros) return '—';
-  const afn = amountMicros / 1_000_000;
-  if (afn >= 1_000_000) {
-    const m = afn / 1_000_000;
-    return `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م ؋`;
-  }
-  if (afn >= 1_000) {
-    const k = Math.round(afn / 1_000);
-    return `${toPersianDigits(k)}هزار ؋`;
-  }
-  return `${toPersianDigits(Math.round(afn))} ؋`;
+// Currencies the sales team works in. AFN shows the ؋ suffix (Dari
+// convention); USD shows a leading $. Anything else falls back to a code
+// suffix so nothing ever renders without its unit.
+export const SUPPORTED_CURRENCIES = ['AFN', 'USD'] as const;
+export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number];
+
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  AFN: '؋',
+  USD: '$',
 };
+
+const abbreviateAmount = (value: number): string => {
+  if (value >= 1_000_000) {
+    const m = value / 1_000_000;
+    return `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م`;
+  }
+  if (value >= 1_000) {
+    const k = Math.round(value / 1_000);
+    return `${toPersianDigits(k)}هزار`;
+  }
+  return `${toPersianDigits(Math.round(value))}`;
+};
+
+export const formatMoney = (
+  amountMicros: number | null | undefined,
+  currencyCode?: string | null,
+): string => {
+  if (!amountMicros) return '—';
+  const code = currencyCode ?? 'AFN';
+  const num = abbreviateAmount(amountMicros / 1_000_000);
+  if (code === 'USD') return `$${num}`;
+  if (code === 'AFN') return `${num} ؋`;
+  return `${num} ${code}`;
+};
+
+// Back-compat wrapper: callers that only have amountMicros default to AFN.
+export const formatAfn = (amountMicros: number | null | undefined): string =>
+  formatMoney(amountMicros, 'AFN');
 
 export const sumAmountMicros = (
   leads: { amount: { amountMicros: number | null } | null }[],

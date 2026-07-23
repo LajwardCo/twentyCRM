@@ -8,16 +8,19 @@ import {
   fetchLead,
   fetchLeadNotes,
   fetchLeadTasks,
+  fetchReferrers,
   setTaskStatus,
   STAGES,
   updateLead,
   type LeadSummary,
   type Note,
+  type Referrer,
   type Task,
 } from '../api/records';
 import {
   IconAI,
   IconCheck,
+  IconEdit,
   IconMail,
   IconNote,
   IconPhone,
@@ -26,10 +29,18 @@ import {
   IconSummary,
   IconWhatsApp,
 } from '../components/icons';
+import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
+import { MoneyInput } from '../components/MoneyInput';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { useCached } from '../lib/cache';
-import { formatAfn, fullPhone, personName, toLocalInputValue } from '../lib/format';
+import {
+  type CurrencyCode,
+  formatMoney,
+  fullPhone,
+  personName,
+  toLocalInputValue,
+} from '../lib/format';
 import {
   formatJalaliDate,
   formatJalaliDateTime,
@@ -79,6 +90,21 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     return toLocalInputValue(d);
   });
   const [followUpBusy, setFollowUpBusy] = useState(false);
+
+  const [referrers, setReferrers] = useState<Referrer[]>([]);
+  const [editingAmount, setEditingAmount] = useState(false);
+  const [amountInput, setAmountInput] = useState('');
+  const [amountCurrency, setAmountCurrency] = useState<CurrencyCode>('AFN');
+
+  useEffect(() => {
+    let active = true;
+    void fetchReferrers().then((list) => {
+      if (active) setReferrers(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -150,6 +176,48 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     } catch {
       void reload();
     }
+  };
+
+  // Generic lead-field save for the click-to-edit meta rows. The server
+  // enforces access; on any outcome we reload so the UI reflects the truth
+  // (and a rejected edit simply reverts).
+  const saveLeadField = async (patch: Record<string, unknown>) => {
+    if (!lead) return;
+    try {
+      await updateLead(lead.id, patch);
+      showToast('ذخیره شد ✓');
+    } finally {
+      await reload();
+    }
+  };
+
+  const startEditAmount = () => {
+    setAmountInput(
+      lead?.amount?.amountMicros
+        ? String(lead.amount.amountMicros / 1_000_000)
+        : '',
+    );
+    setAmountCurrency((lead?.amount?.currencyCode as CurrencyCode) || 'AFN');
+    setEditingAmount(true);
+  };
+
+  const saveAmount = async () => {
+    const parsed = Number(
+      amountInput
+        .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+        .replace(/[,\s]/g, ''),
+    );
+    const patch =
+      Number.isFinite(parsed) && parsed > 0
+        ? {
+            amount: {
+              amountMicros: Math.round(parsed * 1_000_000),
+              currencyCode: amountCurrency,
+            },
+          }
+        : { amount: null };
+    setEditingAmount(false);
+    await saveLeadField(patch);
   };
 
   const addNote = async () => {
@@ -255,7 +323,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               <span>
                 ارزش:{' '}
                 <b className="num" style={{ color: 'var(--ink)' }}>
-                  {formatAfn(lead.amount?.amountMicros)}
+                  {formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}
                 </b>
               </span>
             )}
@@ -466,11 +534,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               </div>
               <div className="fld" style={{ marginBottom: 8 }}>
                 <label>{T.when}</label>
-                <input
-                  type="datetime-local"
-                  value={followUpDate}
-                  onChange={(e) => setFollowUpDate(e.target.value)}
-                />
+                <JalaliDatePicker value={followUpDate} onChange={setFollowUpDate} />
               </div>
             </div>
             <button
@@ -614,7 +678,32 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             <div className="contact-rows">
               <div className="c-row">
                 <span>ارزش تخمینی</span>
-                <b className="num">{formatAfn(lead.amount?.amountMicros)}</b>
+                {editingAmount ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    <MoneyInput
+                      amount={amountInput}
+                      onAmountChange={setAmountInput}
+                      currency={amountCurrency}
+                      onCurrencyChange={setAmountCurrency}
+                      placeholder="مثلاً 300000"
+                    />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button className="btn line sm" onClick={() => setEditingAmount(false)}>
+                        {T.close}
+                      </button>
+                      <button className="btn gold sm" onClick={saveAmount}>
+                        ذخیره
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" className="meta-editable" onClick={startEditAmount}>
+                    <b className="num">
+                      {formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}
+                    </b>
+                    <IconEdit size={12} />
+                  </button>
+                )}
               </div>
               <div className="c-row">
                 <span>{T.stage}</span>
@@ -641,7 +730,12 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           {lead.company && <CompanyCard companyId={lead.company.id} />}
 
           {/* metadata: source, referrer, marketer, created-by */}
-          <MetaCard lead={lead} />
+          <MetaCard
+            lead={lead}
+            referrers={referrers}
+            editable
+            onSaveLead={saveLeadField}
+          />
         </div>
       </div>
 

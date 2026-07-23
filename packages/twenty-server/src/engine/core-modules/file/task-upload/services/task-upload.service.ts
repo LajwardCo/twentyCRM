@@ -270,9 +270,7 @@ export class TaskUploadService {
     );
   }
 
-  private async getAttachmentFileFieldId(
-    workspaceId: string,
-  ): Promise<string> {
+  private async getAttachmentFileFieldId(workspaceId: string): Promise<string> {
     const attachmentObject = await this.objectMetadataRepository.findOne({
       select: { id: true },
       where: { nameSingular: 'attachment', workspaceId },

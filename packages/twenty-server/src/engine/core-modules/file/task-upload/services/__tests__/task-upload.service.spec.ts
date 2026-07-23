@@ -48,10 +48,13 @@ const buildService = (overrides: {
     tokenBucketThrottleOrThrow: jest.fn().mockResolvedValue(1),
   };
   const fieldMetadataRepository = {
-    findOne: overrides.fieldFindOne ?? jest.fn().mockResolvedValue({ id: 'fm-file' }),
+    findOne:
+      overrides.fieldFindOne ?? jest.fn().mockResolvedValue({ id: 'fm-file' }),
   };
   const objectMetadataRepository = {
-    findOne: overrides.objectFindOne ?? jest.fn().mockResolvedValue({ id: 'om-attachment' }),
+    findOne:
+      overrides.objectFindOne ??
+      jest.fn().mockResolvedValue({ id: 'om-attachment' }),
   };
 
   const service = new TaskUploadService(
@@ -161,9 +164,7 @@ describe('TaskUploadService.handlePublicUpload', () => {
         objectName: 'attachment',
         objectRecord: expect.objectContaining({
           targetTaskId: 'task-1',
-          file: [
-            { fileId: 'file-1', label: 'photo.jpg', extension: 'jpg' },
-          ],
+          file: [{ fileId: 'file-1', label: 'photo.jpg', extension: 'jpg' }],
         }),
       }),
     );

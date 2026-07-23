@@ -69,10 +69,7 @@ export class TaskUploadController {
       }
 
       this.logger.error(`Unexpected task-upload failure: ${error}`);
-      throw new HttpException(
-        { ok: false, message: 'Upload failed' },
-        500,
-      );
+      throw new HttpException({ ok: false, message: 'Upload failed' }, 500);
     }
   }
 }

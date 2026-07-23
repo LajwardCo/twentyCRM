@@ -10,14 +10,14 @@ import { relativeDueLabel } from '../lib/jalali';
 
 const TIER_FA: Record<string, string> = {
   LEADER: 'پیشتاز',
-  CHALLENGER: 'رقیب جدی',
+  CHALLENGER: 'چالشگر',
   NICHE: 'تخصصی',
   EMERGING: 'نوظهور',
 };
 const THREAT_FA: Record<string, string> = {
-  HIGH: 'تهدید بالا',
-  MEDIUM: 'تهدید متوسط',
-  LOW: 'تهدید کم',
+  HIGH: 'اهمیت بالا',
+  MEDIUM: 'اهمیت متوسط',
+  LOW: 'اهمیت کم',
 };
 const STATUS_FA: Record<string, string> = {
   ACTIVELY_TRACKING: 'زیر نظر فعال',
@@ -70,11 +70,11 @@ export const CompetitorsView = () => {
     <main className="page">
       <div className="page-head anim">
         <div>
-          <h1>رقبا</h1>
-          <div className="sub">دیتابیس تحقیق رقبا — ثبت و به‌روزرسانی</div>
+          <h1>بازیگران بازار</h1>
+          <div className="sub">دیتابیس تحقیق بازار — ثبت و به‌روزرسانی</div>
         </div>
         <button className="btn gold" onClick={() => startEdit()}>
-          ＋ رقیب جدید
+          ＋ بازیگر جدید
         </button>
       </div>
 
@@ -82,7 +82,7 @@ export const CompetitorsView = () => {
 
       {editing !== null && (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
-          <h3>{editingId ? 'ویرایش رقیب' : 'رقیب جدید'}</h3>
+          <h3>{editingId ? 'ویرایش بازیگر' : 'بازیگر جدید'}</h3>
           <div className="f2" style={{ marginTop: 10 }}>
             <div className="fld">
               <label>نام *</label>
@@ -99,7 +99,7 @@ export const CompetitorsView = () => {
           </div>
           <div className="f2">
             <div className="fld">
-              <label>سطح تهدید</label>
+              <label>میزان اهمیت</label>
               <select
                 value={editing.threatLevel ?? ''}
                 onChange={(e) => set({ threatLevel: e.target.value || null })}
@@ -179,7 +179,7 @@ export const CompetitorsView = () => {
       )}
 
       {competitors !== null && competitors.length === 0 && editing === null && (
-        <div className="empty-state">هنوز رقیبی ثبت نشده — اولین را اضافه کنید</div>
+        <div className="empty-state">هنوز بازیگری ثبت نشده — اولین را اضافه کنید</div>
       )}
 
       {competitors?.map((c) => (

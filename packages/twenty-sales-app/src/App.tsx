@@ -133,8 +133,9 @@ export const App = () => {
 
   // Public, login-free upload page opened by scanning a task's QR code. It must
   // render regardless of auth/session state, so it is intercepted BEFORE the
-  // loading/anonymous gates below.
-  if (route.parts[0] === 'upload') {
+  // loading/anonymous gates below. The token rides in the hash query
+  // (#/upload?t=...), so strip it before matching the route segment.
+  if ((route.parts[0] ?? '').split('?')[0] === 'upload') {
     return <PublicUploadView />;
   }
 

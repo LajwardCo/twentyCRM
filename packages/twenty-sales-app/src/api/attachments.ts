@@ -109,6 +109,62 @@ export const uploadTaskAttachment = async (input: {
   );
 };
 
+export type TaskUploadToken = {
+  token: string;
+  expiresAt: string;
+  taskLabel: string;
+};
+
+// Mints a short-lived, upload-only token scoped to this one task (server-signed
+// JWT, ~20 min). Authenticated — the seller must be logged in to generate it.
+// The token can then be embedded in a QR code for the field/mobile upload page.
+export const generateTaskUploadToken = async (
+  taskId: string,
+): Promise<TaskUploadToken> => {
+  const data = await metadataQuery<{
+    generateTaskUploadToken: TaskUploadToken;
+  }>(
+    `mutation GenerateTaskUploadToken($taskId: String!) {
+      generateTaskUploadToken(taskId: $taskId) {
+        token
+        expiresAt
+        taskLabel
+      }
+    }`,
+    { taskId },
+  );
+  return data.generateTaskUploadToken;
+};
+
+// Uploads a single file from the PUBLIC (unauthenticated) mobile page using the
+// upload token instead of a session. No Authorization header — the token in the
+// multipart body is the only credential, and it can only attach to one task for
+// the ~20-minute window.
+export const uploadViaPublicToken = async (
+  file: File,
+  token: string,
+): Promise<{ taskLabel: string }> => {
+  const form = new FormData();
+  form.append('token', token);
+  form.append('file', file, file.name);
+
+  const response = await fetch('/public/task-upload', {
+    method: 'POST',
+    body: form,
+  });
+
+  let json: { ok?: boolean; taskLabel?: string; message?: string } = {};
+  try {
+    json = (await response.json()) as typeof json;
+  } catch {
+    // non-JSON response falls through to the generic error below
+  }
+  if (!response.ok || json.ok === false) {
+    throw new Error(json.message ?? 'آپلود ناموفق بود');
+  }
+  return { taskLabel: json.taskLabel ?? '' };
+};
+
 export const fetchTaskAttachments = async (
   taskId: string,
 ): Promise<TaskAttachment[]> => {

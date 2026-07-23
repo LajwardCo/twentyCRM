@@ -336,6 +336,16 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.TOKENS_DURATION,
+    description:
+      'Duration for which a QR-to-mobile task upload token is valid (upload-only, task-scoped)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsDuration()
+  @IsOptional()
+  TASK_UPLOAD_TOKEN_EXPIRES_IN = '20m';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.TOKENS_DURATION,
     description: 'Duration for which the invitation token is valid',
     type: ConfigVariableType.STRING,
   })

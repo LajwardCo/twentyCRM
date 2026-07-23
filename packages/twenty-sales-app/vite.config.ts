@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
         '/graphql': proxyEntry,
         '/metadata': proxyEntry,
         '/rest': proxyEntry,
+        '/public': proxyEntry,
       },
     },
     build: {

@@ -10,6 +10,7 @@ import { type LoginTokenJwtPayload } from 'src/engine/core-modules/auth/types/lo
 import { type PlaygroundTokenJwtPayload } from 'src/engine/core-modules/auth/types/playground-token-jwt-payload.type';
 import { type RefreshTokenJwtPayload } from 'src/engine/core-modules/auth/types/refresh-token-jwt-payload.type';
 import { type TransientTokenJwtPayload } from 'src/engine/core-modules/auth/types/transient-token-jwt-payload.type';
+import { type UploadTokenJwtPayload } from 'src/engine/core-modules/auth/types/upload-token-jwt-payload.type';
 import { type WorkspaceAgnosticTokenJwtPayload } from 'src/engine/core-modules/auth/types/workspace-agnostic-token-jwt-payload.type';
 
 export type JwtPayload =
@@ -23,6 +24,7 @@ export type JwtPayload =
   | RefreshTokenJwtPayload
   | FileTokenJwtPayload
   | FileTokenJwtPayloadLegacy
+  | UploadTokenJwtPayload
   | AppOAuthStateJwtPayload
   | ApprovedAccessDomainJwtPayload
   | PlaygroundTokenJwtPayload;

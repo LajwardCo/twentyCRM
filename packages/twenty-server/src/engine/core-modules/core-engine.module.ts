@@ -79,6 +79,7 @@ import { WhatsappModule } from 'src/modules/sales-crm/whatsapp/whatsapp.module';
 import { ClientConfigModule } from './client-config/client-config.module';
 import { EventLogsViewerModule } from './event-logs/event-logs-viewer.module';
 import { FileModule } from './file/file.module';
+import { TaskUploadModule } from './file/task-upload/task-upload.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { FileModule } from './file/file.module';
     ClientConfigModule,
     FeatureFlagModule,
     FileModule,
+    TaskUploadModule,
     RowLevelPermissionModule,
     OpenApiModule,
     ApplicationRegistrationModule,

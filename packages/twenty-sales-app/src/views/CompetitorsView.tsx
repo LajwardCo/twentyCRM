@@ -7,13 +7,23 @@ import {
 } from '../api/admin';
 import { useCached } from '../lib/cache';
 import { relativeDueLabel } from '../lib/jalali';
-import { navigate } from '../lib/router';
-import {
-  COMPETITOR_STATUS_LABELS as STATUS_FA,
-  COMPETITOR_THREAT_LABELS as THREAT_FA,
-  COMPETITOR_TIER_LABELS as TIER_FA,
-} from '../lib/strings';
 
+const TIER_FA: Record<string, string> = {
+  LEADER: 'پیشتاز',
+  CHALLENGER: 'رقیب جدی',
+  NICHE: 'تخصصی',
+  EMERGING: 'نوظهور',
+};
+const THREAT_FA: Record<string, string> = {
+  HIGH: 'تهدید بالا',
+  MEDIUM: 'تهدید متوسط',
+  LOW: 'تهدید کم',
+};
+const STATUS_FA: Record<string, string> = {
+  ACTIVELY_TRACKING: 'زیر نظر فعال',
+  WATCHING: 'در حال مشاهده',
+  DORMANT: 'غیرفعال',
+};
 const threatClass = (t: string | null) =>
   t === 'HIGH' ? 'hot' : t === 'MEDIUM' ? 'warm' : 'cold';
 
@@ -43,11 +53,9 @@ export const CompetitorsView = () => {
     setBusy(true);
     setError(null);
     try {
-      const id = await saveCompetitor(editing, editingId);
-      const isNew = !editingId;
+      await saveCompetitor(editing, editingId);
       setEditing(null);
       await refresh();
-      if (isNew) navigate(`/competitors/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره');
     } finally {
@@ -175,12 +183,7 @@ export const CompetitorsView = () => {
       )}
 
       {competitors?.map((c) => (
-        <div
-          className="card card-pad anim"
-          key={c.id}
-          style={{ marginBottom: 10, cursor: 'pointer' }}
-          onClick={() => navigate(`/competitors/${c.id}`)}
-        >
+        <div className="card card-pad anim" key={c.id} style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span className="deal-logo">{c.name.charAt(0)}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -194,7 +197,6 @@ export const CompetitorsView = () => {
                     className="lead-chip"
                     style={{ fontSize: 11.5, marginRight: 8 }}
                     dir="ltr"
-                    onClick={(e) => e.stopPropagation()}
                   >
                     {c.website.primaryLinkUrl.replace(/^https?:\/\//, '')}
                   </a>
@@ -211,13 +213,7 @@ export const CompetitorsView = () => {
                 <span className="sub num">{relativeDueLabel(c.createdAt)}</span>
               </div>
             </div>
-            <button
-              className="btn line sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                startEdit(c);
-              }}
-            >
+            <button className="btn line sm" onClick={() => startEdit(c)}>
               ویرایش
             </button>
           </div>

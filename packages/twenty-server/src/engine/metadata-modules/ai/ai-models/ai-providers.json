@@ -28,26 +28,6 @@
         "supportsReasoning": true
       },
       {
-        "name": "gpt-5.6",
-        "label": "GPT-5.6",
-        "modelFamily": "GPT",
-        "inputCostPerMillionTokens": 5,
-        "outputCostPerMillionTokens": 30,
-        "cachedInputCostPerMillionTokens": 0.5,
-        "cacheCreationCostPerMillionTokens": 6.25,
-        "longContextCost": {
-          "inputCostPerMillionTokens": 10,
-          "outputCostPerMillionTokens": 45,
-          "thresholdTokens": 200000,
-          "cachedInputCostPerMillionTokens": 1,
-          "cacheCreationCostPerMillionTokens": 12.5
-        },
-        "contextWindowTokens": 1050000,
-        "maxOutputTokens": 128000,
-        "modalities": ["image", "pdf"],
-        "supportsReasoning": true
-      },
-      {
         "name": "gpt-5",
         "label": "GPT-5",
         "modelFamily": "GPT",
@@ -229,26 +209,6 @@
         "supportsReasoning": true
       },
       {
-        "name": "gpt-5.6-luna",
-        "label": "GPT-5.6 Luna",
-        "modelFamily": "GPT",
-        "inputCostPerMillionTokens": 1,
-        "outputCostPerMillionTokens": 6,
-        "cachedInputCostPerMillionTokens": 0.1,
-        "cacheCreationCostPerMillionTokens": 1.25,
-        "longContextCost": {
-          "inputCostPerMillionTokens": 2,
-          "outputCostPerMillionTokens": 9,
-          "thresholdTokens": 200000,
-          "cachedInputCostPerMillionTokens": 0.2,
-          "cacheCreationCostPerMillionTokens": 2.5
-        },
-        "contextWindowTokens": 1050000,
-        "maxOutputTokens": 128000,
-        "modalities": ["image", "pdf"],
-        "supportsReasoning": true
-      },
-      {
         "name": "gpt-5.1-codex-mini",
         "label": "GPT-5.1 Codex mini",
         "modelFamily": "GPT",
@@ -258,38 +218,6 @@
         "contextWindowTokens": 400000,
         "maxOutputTokens": 128000,
         "modalities": ["image"],
-        "supportsReasoning": true
-      },
-      {
-        "name": "gpt-realtime-2.1",
-        "label": "GPT-Realtime-2.1",
-        "modelFamily": "GPT",
-        "inputCostPerMillionTokens": 4,
-        "outputCostPerMillionTokens": 24,
-        "cachedInputCostPerMillionTokens": 0.4,
-        "contextWindowTokens": 128000,
-        "maxOutputTokens": 32000,
-        "modalities": ["audio", "image"],
-        "supportsReasoning": true
-      },
-      {
-        "name": "gpt-5.6-terra",
-        "label": "GPT-5.6 Terra",
-        "modelFamily": "GPT",
-        "inputCostPerMillionTokens": 2.5,
-        "outputCostPerMillionTokens": 15,
-        "cachedInputCostPerMillionTokens": 0.25,
-        "cacheCreationCostPerMillionTokens": 3.125,
-        "longContextCost": {
-          "inputCostPerMillionTokens": 5,
-          "outputCostPerMillionTokens": 22.5,
-          "thresholdTokens": 200000,
-          "cachedInputCostPerMillionTokens": 0.5,
-          "cacheCreationCostPerMillionTokens": 6.25
-        },
-        "contextWindowTokens": 1050000,
-        "maxOutputTokens": 128000,
-        "modalities": ["image", "pdf"],
         "supportsReasoning": true
       },
       {
@@ -515,26 +443,6 @@
         "modalities": ["image", "pdf"]
       },
       {
-        "name": "gpt-5.6-sol",
-        "label": "GPT-5.6 Sol",
-        "modelFamily": "GPT",
-        "inputCostPerMillionTokens": 5,
-        "outputCostPerMillionTokens": 30,
-        "cachedInputCostPerMillionTokens": 0.5,
-        "cacheCreationCostPerMillionTokens": 6.25,
-        "longContextCost": {
-          "inputCostPerMillionTokens": 10,
-          "outputCostPerMillionTokens": 45,
-          "thresholdTokens": 200000,
-          "cachedInputCostPerMillionTokens": 1,
-          "cacheCreationCostPerMillionTokens": 12.5
-        },
-        "contextWindowTokens": 1050000,
-        "maxOutputTokens": 128000,
-        "modalities": ["image", "pdf"],
-        "supportsReasoning": true
-      },
-      {
         "name": "gpt-5-codex",
         "label": "GPT-5-Codex",
         "modelFamily": "GPT",
@@ -622,6 +530,32 @@
         "supportsReasoning": true
       },
       {
+        "name": "claude-opus-4-0",
+        "label": "Claude Opus 4 (latest)",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 15,
+        "outputCostPerMillionTokens": 75,
+        "cachedInputCostPerMillionTokens": 1.5,
+        "cacheCreationCostPerMillionTokens": 18.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 32000,
+        "modalities": ["image", "pdf"],
+        "supportsReasoning": true
+      },
+      {
+        "name": "claude-3-opus-20240229",
+        "label": "Claude Opus 3",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 15,
+        "outputCostPerMillionTokens": 75,
+        "cachedInputCostPerMillionTokens": 1.5,
+        "cacheCreationCostPerMillionTokens": 18.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 4096,
+        "modalities": ["image", "pdf"],
+        "isDeprecated": true
+      },
+      {
         "name": "claude-opus-4-1-20250805",
         "label": "Claude Opus 4.1",
         "modelFamily": "CLAUDE",
@@ -632,8 +566,7 @@
         "contextWindowTokens": 200000,
         "maxOutputTokens": 32000,
         "modalities": ["image", "pdf"],
-        "supportsReasoning": true,
-        "isDeprecated": true
+        "supportsReasoning": true
       },
       {
         "name": "claude-sonnet-4-5",
@@ -643,7 +576,7 @@
         "outputCostPerMillionTokens": 15,
         "cachedInputCostPerMillionTokens": 0.3,
         "cacheCreationCostPerMillionTokens": 3.75,
-        "contextWindowTokens": 1000000,
+        "contextWindowTokens": 200000,
         "maxOutputTokens": 64000,
         "modalities": ["image", "pdf"],
         "supportsReasoning": true
@@ -656,19 +589,6 @@
         "outputCostPerMillionTokens": 25,
         "cachedInputCostPerMillionTokens": 0.5,
         "cacheCreationCostPerMillionTokens": 6.25,
-        "contextWindowTokens": 1000000,
-        "maxOutputTokens": 128000,
-        "modalities": ["image", "pdf"],
-        "supportsReasoning": true
-      },
-      {
-        "name": "claude-sonnet-5",
-        "label": "Claude Sonnet 5",
-        "modelFamily": "CLAUDE",
-        "inputCostPerMillionTokens": 2,
-        "outputCostPerMillionTokens": 10,
-        "cachedInputCostPerMillionTokens": 0.2,
-        "cacheCreationCostPerMillionTokens": 2.5,
         "contextWindowTokens": 1000000,
         "maxOutputTokens": 128000,
         "modalities": ["image", "pdf"],
@@ -688,6 +608,19 @@
         "supportsReasoning": true
       },
       {
+        "name": "claude-3-5-sonnet-20241022",
+        "label": "Claude Sonnet 3.5 v2",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 3,
+        "outputCostPerMillionTokens": 15,
+        "cachedInputCostPerMillionTokens": 0.3,
+        "cacheCreationCostPerMillionTokens": 3.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 8192,
+        "modalities": ["image", "pdf"],
+        "isDeprecated": true
+      },
+      {
         "name": "claude-opus-4-8",
         "label": "Claude Opus 4.8",
         "modelFamily": "CLAUDE",
@@ -697,6 +630,45 @@
         "cacheCreationCostPerMillionTokens": 6.25,
         "contextWindowTokens": 1000000,
         "maxOutputTokens": 128000,
+        "modalities": ["image", "pdf"],
+        "supportsReasoning": true
+      },
+      {
+        "name": "claude-opus-4-20250514",
+        "label": "Claude Opus 4",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 15,
+        "outputCostPerMillionTokens": 75,
+        "cachedInputCostPerMillionTokens": 1.5,
+        "cacheCreationCostPerMillionTokens": 18.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 32000,
+        "modalities": ["image", "pdf"],
+        "supportsReasoning": true
+      },
+      {
+        "name": "claude-3-5-sonnet-20240620",
+        "label": "Claude Sonnet 3.5",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 3,
+        "outputCostPerMillionTokens": 15,
+        "cachedInputCostPerMillionTokens": 0.3,
+        "cacheCreationCostPerMillionTokens": 3.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 8192,
+        "modalities": ["image", "pdf"],
+        "isDeprecated": true
+      },
+      {
+        "name": "claude-sonnet-4-20250514",
+        "label": "Claude Sonnet 4",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 3,
+        "outputCostPerMillionTokens": 15,
+        "cachedInputCostPerMillionTokens": 0.3,
+        "cacheCreationCostPerMillionTokens": 3.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 64000,
         "modalities": ["image", "pdf"],
         "supportsReasoning": true
       },
@@ -711,7 +683,19 @@
         "contextWindowTokens": 200000,
         "maxOutputTokens": 32000,
         "modalities": ["image", "pdf"],
-        "supportsReasoning": true,
+        "supportsReasoning": true
+      },
+      {
+        "name": "claude-3-haiku-20240307",
+        "label": "Claude Haiku 3",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 0.25,
+        "outputCostPerMillionTokens": 1.25,
+        "cachedInputCostPerMillionTokens": 0.03,
+        "cacheCreationCostPerMillionTokens": 0.3,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 4096,
+        "modalities": ["image", "pdf"],
         "isDeprecated": true
       },
       {
@@ -726,6 +710,33 @@
         "maxOutputTokens": 128000,
         "modalities": ["image", "pdf"],
         "supportsReasoning": true
+      },
+      {
+        "name": "claude-sonnet-4-0",
+        "label": "Claude Sonnet 4 (latest)",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 3,
+        "outputCostPerMillionTokens": 15,
+        "cachedInputCostPerMillionTokens": 0.3,
+        "cacheCreationCostPerMillionTokens": 3.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 64000,
+        "modalities": ["image", "pdf"],
+        "supportsReasoning": true
+      },
+      {
+        "name": "claude-3-7-sonnet-20250219",
+        "label": "Claude Sonnet 3.7",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 3,
+        "outputCostPerMillionTokens": 15,
+        "cachedInputCostPerMillionTokens": 0.3,
+        "cacheCreationCostPerMillionTokens": 3.75,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 64000,
+        "modalities": ["image", "pdf"],
+        "supportsReasoning": true,
+        "isDeprecated": true
       },
       {
         "name": "claude-haiku-4-5",
@@ -761,10 +772,23 @@
         "outputCostPerMillionTokens": 15,
         "cachedInputCostPerMillionTokens": 0.3,
         "cacheCreationCostPerMillionTokens": 3.75,
-        "contextWindowTokens": 1000000,
+        "contextWindowTokens": 200000,
         "maxOutputTokens": 64000,
         "modalities": ["image", "pdf"],
         "supportsReasoning": true
+      },
+      {
+        "name": "claude-3-sonnet-20240229",
+        "label": "Claude Sonnet 3",
+        "modelFamily": "CLAUDE",
+        "inputCostPerMillionTokens": 3,
+        "outputCostPerMillionTokens": 15,
+        "cachedInputCostPerMillionTokens": 0.3,
+        "cacheCreationCostPerMillionTokens": 0.3,
+        "contextWindowTokens": 200000,
+        "maxOutputTokens": 4096,
+        "modalities": ["image", "pdf"],
+        "isDeprecated": true
       },
       {
         "name": "claude-sonnet-4-6",
@@ -775,7 +799,7 @@
         "cachedInputCostPerMillionTokens": 0.3,
         "cacheCreationCostPerMillionTokens": 3.75,
         "contextWindowTokens": 1000000,
-        "maxOutputTokens": 128000,
+        "maxOutputTokens": 64000,
         "modalities": ["image", "pdf"],
         "supportsReasoning": true
       }
@@ -1084,12 +1108,11 @@
         "name": "mistral-medium-latest",
         "label": "Mistral Medium (latest)",
         "modelFamily": "MISTRAL",
-        "inputCostPerMillionTokens": 1.5,
-        "outputCostPerMillionTokens": 7.5,
+        "inputCostPerMillionTokens": 0.4,
+        "outputCostPerMillionTokens": 2,
         "contextWindowTokens": 262144,
         "maxOutputTokens": 262144,
-        "modalities": ["image"],
-        "supportsReasoning": true
+        "modalities": ["image"]
       },
       {
         "name": "devstral-small-2505",
@@ -1312,24 +1335,6 @@
         },
         "contextWindowTokens": 1000000,
         "maxOutputTokens": 30000,
-        "modalities": ["image", "pdf"],
-        "supportsReasoning": true
-      },
-      {
-        "name": "grok-4.5",
-        "label": "Grok 4.5",
-        "modelFamily": "GROK",
-        "inputCostPerMillionTokens": 2,
-        "outputCostPerMillionTokens": 6,
-        "cachedInputCostPerMillionTokens": 0.5,
-        "longContextCost": {
-          "inputCostPerMillionTokens": 4,
-          "outputCostPerMillionTokens": 12,
-          "thresholdTokens": 200000,
-          "cachedInputCostPerMillionTokens": 1
-        },
-        "contextWindowTokens": 500000,
-        "maxOutputTokens": 500000,
         "modalities": ["image", "pdf"],
         "supportsReasoning": true
       },

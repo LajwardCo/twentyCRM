@@ -4,7 +4,6 @@ import { type CurrentUser } from '../api/auth';
 import { fetchTasksForCalendar, updateTask, type Task } from '../api/records';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { IconCheck } from '../components/icons';
-import { QuickTaskModal } from '../components/QuickTaskModal';
 import { useCached } from '../lib/cache';
 import { buildCalendarGrid, groupTasksByDate, todayDateKey } from '../lib/calendarGrid';
 import {
@@ -46,9 +45,6 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
   const [selectedDate, setSelectedDate] = useState<string | null>(() => todayDateKey());
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [dropError, setDropError] = useState<string | null>(null);
-  const [quickTask, setQuickTask] = useState<
-    { mode: 'create'; dateIso: string } | { mode: 'edit'; task: Task } | null
-  >(null);
 
   const cells = useMemo(
     () => buildCalendarGrid(cursor.jy, cursor.jm, todayDateKey()),
@@ -167,34 +163,6 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
           selectedDate={selectedDate}
           onSelectDay={setSelectedDate}
           onDropTask={handleDropTask}
-          onQuickAdd={(dateIso) => setQuickTask({ mode: 'create', dateIso })}
-          onEditTask={(task) => setQuickTask({ mode: 'edit', task })}
-        />
-      )}
-
-      {quickTask?.mode === 'create' && (
-        <QuickTaskModal
-          key={`create-${quickTask.dateIso}`}
-          mode="create"
-          dateIso={quickTask.dateIso}
-          assigneeId={user.workspaceMemberId}
-          onClose={() => setQuickTask(null)}
-          onSaved={() => {
-            setQuickTask(null);
-            void refresh();
-          }}
-        />
-      )}
-      {quickTask?.mode === 'edit' && (
-        <QuickTaskModal
-          key={`edit-${quickTask.task.id}`}
-          mode="edit"
-          task={quickTask.task}
-          onClose={() => setQuickTask(null)}
-          onSaved={() => {
-            setQuickTask(null);
-            void refresh();
-          }}
         />
       )}
 

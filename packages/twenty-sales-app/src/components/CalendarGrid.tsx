@@ -1,9 +1,10 @@
 import { type Task } from '../api/records';
 import { type CalendarCell } from '../lib/calendarGrid';
 import { toPersianDigits } from '../lib/jalali';
+import { navigate } from '../lib/router';
 import { T2 } from '../lib/strings';
 import { TASK_TYPE_ICONS } from '../views/TaskView';
-import { IconCheck, IconPlus } from './icons';
+import { IconCheck } from './icons';
 
 const WEEKDAY_HEADERS = [
   'شنبه',
@@ -31,8 +32,6 @@ type CalendarGridProps = {
   selectedDate: string | null;
   onSelectDay: (dateIso: string) => void;
   onDropTask: (taskId: string, newDateIso: string) => void;
-  onQuickAdd: (dateIso: string) => void;
-  onEditTask: (task: Task) => void;
 };
 
 export const CalendarGrid = ({
@@ -41,8 +40,6 @@ export const CalendarGrid = ({
   selectedDate,
   onSelectDay,
   onDropTask,
-  onQuickAdd,
-  onEditTask,
 }: CalendarGridProps) => (
   <div className="card cal-card anim d1">
     <div className="cal-grid cal-header-row">
@@ -78,20 +75,7 @@ export const CalendarGrid = ({
               if (taskId) onDropTask(taskId, cell.dateIso);
             }}
           >
-            <div className="cal-cell-head">
-              <span className="cal-day-num">{toPersianDigits(cell.jd)}</span>
-              <button
-                type="button"
-                className="cal-add-btn"
-                aria-label={T2.calendarAddTask}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onQuickAdd(cell.dateIso);
-                }}
-              >
-                <IconPlus size={12} />
-              </button>
-            </div>
+            <span className="cal-day-num">{toPersianDigits(cell.jd)}</span>
             <div className="cal-pills">
               {dayTasks.slice(0, MAX_PILLS_PER_CELL).map((task) => {
                 const TypeIcon = TASK_TYPE_ICONS[task.taskType ?? 'OTHER'] ?? IconCheck;
@@ -106,7 +90,7 @@ export const CalendarGrid = ({
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onEditTask(task);
+                      navigate(`/task/${task.id}`);
                     }}
                   >
                     <TypeIcon size={11} />

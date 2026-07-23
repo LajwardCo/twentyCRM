@@ -11,11 +11,9 @@ import { WorkspaceNotFoundDefaultError } from 'src/engine/core-modules/workspace
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { DealProductDiscountRuleApplicationService } from 'src/modules/sales-crm/services/deal-product-discount-rule-application.service';
-import { DealProductDiscountRuleLookupService } from 'src/modules/sales-crm/services/deal-product-discount-rule-lookup.service';
 import { DealProductDiscountRuleValidationService } from 'src/modules/sales-crm/services/deal-product-discount-rule-validation.service';
 import { DealProductDiscountValidationService } from 'src/modules/sales-crm/services/deal-product-discount-validation.service';
 import { DealProductPriceCalculationService } from 'src/modules/sales-crm/services/deal-product-price-calculation.service';
-import { DealProductPricingVersionLookupService } from 'src/modules/sales-crm/services/deal-product-pricing-version-lookup.service';
 import { DealProductPricingVersionValidationService } from 'src/modules/sales-crm/services/deal-product-pricing-version-validation.service';
 import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 
@@ -26,10 +24,8 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
     private readonly discountValidationService: DealProductDiscountValidationService,
     private readonly priceCalculationService: DealProductPriceCalculationService,
     private readonly pricingVersionValidationService: DealProductPricingVersionValidationService,
-    private readonly pricingVersionLookupService: DealProductPricingVersionLookupService,
     private readonly discountRuleValidationService: DealProductDiscountRuleValidationService,
     private readonly discountRuleApplicationService: DealProductDiscountRuleApplicationService,
-    private readonly discountRuleLookupService: DealProductDiscountRuleLookupService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
   ) {}
 
@@ -165,17 +161,10 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       }
     }
 
-    const { pricingVersion, packageRecord } =
-      await this.pricingVersionLookupService.findWithPackage({
-        workspaceId: workspace.id,
-        pricingVersionId,
-      });
-
     await this.pricingVersionValidationService.validate({
+      workspaceId: workspace.id,
       productId,
       pricingVersionId,
-      pricingVersion,
-      packageRecord,
     });
 
     if (isDefined(pricingVersionId)) {
@@ -184,8 +173,6 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
           workspaceId: workspace.id,
           pricingVersionId,
           factorQuantities,
-          pricingVersion,
-          packageRecord,
         });
 
       if (isDefined(calculated)) {
@@ -213,22 +200,17 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       payload.data.priceSnapshot = null;
     }
 
-    const discountRule = await this.discountRuleLookupService.findById({
-      workspaceId: workspace.id,
-      discountRuleId,
-    });
-
     await this.discountRuleValidationService.validate({
       workspaceId: workspace.id,
       productId,
       opportunityId,
       quantity,
       discountRuleId,
-      discountRule,
     });
 
     const discountRuleEffect = await this.discountRuleApplicationService.apply({
-      discountRule,
+      workspaceId: workspace.id,
+      discountRuleId,
       installPrice: payload.data.installPrice as
         | CurrencyValue
         | null

@@ -93,7 +93,7 @@ export const fetchCompetitors = async (): Promise<Competitor[]> => {
 export const saveCompetitor = async (
   input: Partial<Competitor> & { name: string },
   id?: string,
-): Promise<string> => {
+): Promise<void> => {
   const payload: Record<string, unknown> = {
     name: input.name,
     description: input.description || null,
@@ -107,19 +107,18 @@ export const saveCompetitor = async (
       : {}),
   };
   if (id) {
-    const data = await coreQuery<{ updateCompetitor: { id: string } }>(
+    await coreQuery(
       `mutation UpdateCompetitor($id: UUID!, $data: CompetitorUpdateInput!) {
         updateCompetitor(id: $id, data: $data) { id }
       }`,
       { id, data: payload },
     );
-    return data.updateCompetitor.id;
+  } else {
+    await coreQuery(
+      `mutation CreateCompetitor($data: CompetitorCreateInput!) {
+        createCompetitor(data: $data) { id }
+      }`,
+      { data: payload },
+    );
   }
-  const data = await coreQuery<{ createCompetitor: { id: string } }>(
-    `mutation CreateCompetitor($data: CompetitorCreateInput!) {
-      createCompetitor(data: $data) { id }
-    }`,
-    { data: payload },
-  );
-  return data.createCompetitor.id;
 };

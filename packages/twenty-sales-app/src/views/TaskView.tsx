@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { generateText } from '../api/ai';
 import {
   fetchTaskAttachments,
-  uploadTaskAttachment,
   type TaskAttachment,
 } from '../api/attachments';
 import { type CurrentUser } from '../api/auth';
@@ -24,11 +23,12 @@ import {
   IconCheck,
   IconLeads,
   IconMapPin,
-  IconMic,
   IconPhone,
   IconPresentation,
+  IconQr,
   IconWhatsApp,
 } from '../components/icons';
+import { AttachmentUploadModal } from '../components/AttachmentUploadModal';
 import { invalidateCache, useCached } from '../lib/cache';
 import { formatAfn, fullPhone, personName, toLocalInputValue } from '../lib/format';
 import { formatJalaliDateTime, relativeDueLabel } from '../lib/jalali';
@@ -117,9 +117,9 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
   const [followUpCustom, setFollowUpCustom] = useState(
     toLocalInputValue(new Date(presetIso(1))),
   );
-  const [uploading, setUploading] = useState(false);
-  const [attachError, setAttachError] = useState<string | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [finishing, setFinishing] = useState<string | null>(null);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const [aiBrief, setAiBrief] = useState<string | null>(null);
@@ -151,28 +151,15 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
     }
   };
 
-  const onUpload = async (file: File | undefined) => {
-    if (!file || !task) return;
-    setUploading(true);
-    setAttachError(null);
-    try {
-      await uploadTaskAttachment({
-        file,
-        taskId: task.id,
-        opportunityId: lead?.id ?? null,
-      });
-      showToast('فایل آپلود شد ✓');
-      await refresh();
-    } catch (err) {
-      setAttachError(err instanceof Error ? err.message : 'آپلود ناموفق بود');
-    } finally {
-      setUploading(false);
-    }
+  const onAttachmentUploaded = async () => {
+    showToast('فایل آپلود شد ✓');
+    await refresh();
   };
 
   const finishTask = async () => {
     if (!task) return;
     setFinishing('در حال ثبت نتیجه…');
+    setFinishError(null);
     try {
       // 1. final task body: live notes + result section
       const finalBody = [
@@ -228,7 +215,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
       );
     } catch (err) {
       setFinishing(null);
-      setAttachError(err instanceof Error ? err.message : T.loadFailed);
+      setFinishError(err instanceof Error ? err.message : T.loadFailed);
     }
   };
 
@@ -327,25 +314,20 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
             <div className="fld">
               <label>فایل ثبت تماس / سند (اختیاری)</label>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <label className="btn line sm" style={{ cursor: 'pointer' }}>
-                  <IconMic size={15} />
-                  {uploading ? 'در حال آپلود…' : 'آپلود فایل'}
-                  <input
-                    type="file"
-                    style={{ display: 'none' }}
-                    onChange={(e) => onUpload(e.target.files?.[0])}
-                    disabled={uploading}
-                  />
-                </label>
+                <button
+                  type="button"
+                  className="btn line sm"
+                  onClick={() => setUploadModalOpen(true)}
+                >
+                  <IconQr size={15} />
+                  افزودن فایل
+                </button>
                 {(data?.attachments ?? []).map((a: TaskAttachment) => (
                   <span key={a.id} className="pill stage" title={formatJalaliDateTime(a.createdAt)}>
                     🎙 {a.name ?? a.file?.[0]?.label ?? 'فایل'}
                   </span>
                 ))}
               </div>
-              {attachError !== null && (
-                <div className="error-banner" style={{ marginTop: 8 }}>{attachError}</div>
-              )}
             </div>
 
             {!isDone && (
@@ -429,6 +411,11 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                 >
                   {finishing ?? 'پایان وظیفه ✓'}
                 </button>
+                {finishError !== null && (
+                  <div className="error-banner" style={{ marginTop: 8 }}>
+                    {finishError}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -543,6 +530,15 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
       </div>
 
       {toast !== null && <div className="toast">{toast}</div>}
+
+      {uploadModalOpen && task && (
+        <AttachmentUploadModal
+          taskId={task.id}
+          opportunityId={lead?.id ?? null}
+          onUploaded={onAttachmentUploaded}
+          onClose={() => setUploadModalOpen(false)}
+        />
+      )}
     </main>
   );
 };

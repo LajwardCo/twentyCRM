@@ -54,6 +54,31 @@ the scripts above.
 Any modern Node (18+) works for these — they're plain `fetch`-based scripts,
 no build step, no dependency on the twenty-server dev toolchain.
 
+### Daily Reports (added 2026-07-09)
+
+One idempotent script, independent of the others (its only relation target is
+`workspaceMember`, which always exists), so it can run any time:
+
+```bash
+node tools/sales-crm/provision-daily-report-object.mjs   # dailyReport object + fields + seller relation
+```
+
+This creates the `dailyReport` object, its fields (reportDate, summary,
+tomorrowPlan, tasksDoneCount, submittedAt) and the `seller` relation to
+workspaceMember. **The Daily Report UI ships in the sales-app bundle, but the
+object lives in the DB** — if the bundle is deployed without running this on
+prod, the "End of Day" report fails at load with
+`Unknown type "DailyReportFilterInput"` (the per-object GraphQL filter type
+only exists once the object metadata does). Run this on prod, then reload.
+
+> ⚠️ This ordered list predates several later feature waves. Other per-feature
+> provisioning scripts now live in `tools/sales-crm/` (contact-request, task
+> type, pricing/package model, dashboard, permissions, whatsapp, etc.). Each is
+> idempotent and must be run once against prod after its feature's bundle ships
+> — a code deploy alone never creates their objects/fields. When a sales-app
+> feature errors on prod with an `Unknown type "...FilterInput"` or a missing
+> field, the matching `provision-*.mjs` almost certainly hasn't been run there.
+
 ## What you need to fill in
 
 - **Real admin credentials** for the crm.hamagan.com workspace. This instance

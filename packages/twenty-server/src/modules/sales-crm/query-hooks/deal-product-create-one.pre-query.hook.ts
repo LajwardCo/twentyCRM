@@ -74,15 +74,19 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
         payload.data.priceSnapshot = calculated.priceSnapshot;
       }
     } else {
-      const calculatedInstallPrice =
+      const calculated =
         await this.priceCalculationService.calculateInstallPrice({
           workspaceId: workspace.id,
           productId,
           factorQuantities,
         });
 
-      if (isDefined(calculatedInstallPrice)) {
-        payload.data.installPrice = calculatedInstallPrice;
+      if (isDefined(calculated)) {
+        payload.data.installPrice = calculated.installPrice;
+
+        if (isDefined(calculated.annualPrice)) {
+          payload.data.annualPrice = calculated.annualPrice;
+        }
       }
     }
 
@@ -91,6 +95,7 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
       productId,
       opportunityId,
       quantity,
+      factorQuantities,
       discountRuleId,
     });
 

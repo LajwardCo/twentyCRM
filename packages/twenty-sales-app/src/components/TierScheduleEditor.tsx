@@ -1,4 +1,5 @@
 import { type FactorTierSchedule, type TierBand } from '../api/catalog';
+import { BILLING_FREQUENCY_LABELS } from '../lib/strings';
 
 // Structured builder for PricingVersion.tierSchedule -- deliberately not a
 // raw JSON textarea: this data directly drives every deal's computed price,
@@ -74,8 +75,11 @@ export const TierScheduleEditor = ({ value, onChange }: Props) => {
                   })
                 }
               >
-                <option value="MONTHLY">ماهانه</option>
-                <option value="ANNUAL">سالانه</option>
+                {Object.entries(BILLING_FREQUENCY_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

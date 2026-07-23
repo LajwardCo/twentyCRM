@@ -285,12 +285,23 @@ export const T4 = {
   newProduct: 'محصول جدید',
   editProduct: 'ویرایش محصول',
   nameLbl: 'نام *',
-  baseInstallPriceLbl: 'قیمت نصب پایه (؋)',
-  baseAnnualPriceLbl: 'قیمت سالانه پایه (؋)',
+  currencyLbl: 'واحد پول',
+  baseInstallPriceLbl: 'قیمت نصب پایه',
+  baseAnnualPriceLbl: 'قیمت سالانه پایه',
   maxDiscountPercentLbl: 'حداکثر درصد تخفیف',
   pricingModelLbl: 'مدل قیمت‌گذاری',
   pricingFactorNotesLbl: 'یادداشت عوامل قیمت‌گذاری',
   isSellableLbl: 'قابل فروش',
+  // metrics editor (PER_FACTOR products)
+  metricsSection: 'متریک‌های قیمت‌گذاری',
+  metricsHint: 'برای هر متریک، هزینه هر واحد و دوره صورتحساب را تعیین کنید',
+  metricNameLbl: 'نام متریک',
+  metricNamePlaceholder: 'مثلاً کاربر، انبار، کارمند',
+  metricUnitPriceLbl: 'هزینه هر واحد',
+  metricFrequencyLbl: 'دوره',
+  addMetric: '＋ متریک جدید',
+  removeMetric: 'حذف',
+  noMetricsYet: 'هنوز متریکی تعریف نشده',
   packagesSection: 'بسته‌ها',
   newPackage: 'بسته جدید',
   editPackage: 'ویرایش بسته',
@@ -310,10 +321,13 @@ export const T4 = {
   appliesToProductLbl: 'برای محصول',
   conditionTypeLbl: 'نوع شرط',
   conditionMinQuantityLbl: 'حداقل تعداد شرط',
+  conditionMetricLbl: 'متریک شرط',
+  conditionMetricPickProductFirst: 'ابتدا محصول را انتخاب کنید',
+  conditionMetricProductHasNoMetrics: 'این محصول متریکی تعریف نشده دارد',
   conditionSiblingProductLbl: 'محصول همراه (باندل)',
   discountTypeLbl: 'نوع تخفیف',
   discountPercentValueLbl: 'درصد تخفیف',
-  discountFixedAmountLbl: 'مبلغ تخفیف (؋)',
+  discountFixedAmountLbl: 'مبلغ تخفیف',
   noProducts: 'هنوز محصولی ثبت نشده — اولین را اضافه کنید',
   noPackages: 'هنوز بسته‌ای برای این محصول ثبت نشده',
   noPricingVersions: 'هنوز نسخه قیمتی برای این بسته ثبت نشده',
@@ -330,13 +344,16 @@ export const T4 = {
   discountRuleLbl: 'قانون تخفیف',
   noDiscountOption: 'بدون تخفیف',
   minQuantityHint: (n: number) => `این تخفیف نیازمند حداقل ${n} عدد در همین خط است.`,
+  metricQuantityHint: (n: number, metric: string) =>
+    `این تخفیف نیازمند حداقل ${n} واحد «${metric}» در همین خط است.`,
   siblingProductHint: (name: string) =>
     `این تخفیف نیازمند وجود محصول «${name}» در همین لید است.`,
 };
 
 export const CONDITION_TYPE_LABELS: Record<string, string> = {
   ALWAYS: 'همیشه',
-  MIN_QUANTITY: 'حداقل تعداد',
+  MIN_QUANTITY: 'حداقل تعداد کل خط',
+  MIN_METRIC_QUANTITY: 'حداقل تعداد یک متریک',
   SIBLING_PRODUCT_PURCHASED: 'با خرید محصول همراه (باندل)',
 };
 
@@ -347,7 +364,18 @@ export const DISCOUNT_TYPE_LABELS: Record<string, string> = {
 
 export const PRICING_MODEL_LABELS: Record<string, string> = {
   FLAT: 'ثابت',
-  PER_FACTOR: 'بر اساس عامل',
+  PER_FACTOR: 'بر اساس متریک',
+};
+
+export const CURRENCY_LABELS: Record<string, string> = {
+  AFN: 'افغانی (؋)',
+  USD: 'دالر ($)',
+};
+
+export const BILLING_FREQUENCY_LABELS: Record<string, string> = {
+  MONTHLY: 'ماهانه',
+  HOURLY: 'ساعتی',
+  ANNUAL: 'سالانه',
 };
 
 export const CATALOG_STATUS_LABELS: Record<string, string> = {

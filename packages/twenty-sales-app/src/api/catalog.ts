@@ -8,6 +8,15 @@ type CurrencyAmount = { amountMicros: number | null; currencyCode: string | null
 
 // ---------- product ----------
 
+// A single pricing metric for a PER_FACTOR product: a per-unit fee billed at a
+// chosen cadence. billingFrequency is optional for backward compatibility --
+// legacy rows without it are treated as MONTHLY by the server.
+export type PricingFactor = {
+  name: string;
+  unitPrice: number;
+  billingFrequency?: 'MONTHLY' | 'HOURLY' | 'ANNUAL';
+};
+
 export type CatalogProduct = {
   id: string;
   name: string;
@@ -15,13 +24,14 @@ export type CatalogProduct = {
   baseAnnualPrice: CurrencyAmount;
   maxDiscountPercent: number | null;
   pricingModel: string | null;
+  pricingFactors: PricingFactor[] | null;
   pricingFactorNotes: string | null;
   isSellable: boolean | null;
   createdAt: string;
 };
 
 const PRODUCT_FIELDS = `
-  id name maxDiscountPercent pricingModel pricingFactorNotes isSellable createdAt
+  id name maxDiscountPercent pricingModel pricingFactors pricingFactorNotes isSellable createdAt
   baseInstallPrice { amountMicros currencyCode }
   baseAnnualPrice { amountMicros currencyCode }
 `;
@@ -49,29 +59,58 @@ export const fetchProductById = async (id: string): Promise<CatalogProduct | und
   return data.products.edges[0]?.node;
 };
 
+export type ProductCurrencyCode = 'AFN' | 'USD';
+
 export type CatalogProductInput = {
   name: string;
-  baseInstallPriceAfn?: number | null;
-  baseAnnualPriceAfn?: number | null;
+  currencyCode?: ProductCurrencyCode | null;
+  baseInstallPriceAmount?: number | null;
+  baseAnnualPriceAmount?: number | null;
   maxDiscountPercent?: number | null;
   pricingModel?: string | null;
+  pricingFactors?: PricingFactor[] | null;
   pricingFactorNotes?: string | null;
   isSellable?: boolean | null;
 };
 
-const toAmount = (afn: number | null | undefined): { amountMicros: number; currencyCode: string } | null =>
-  afn || afn === 0 ? { amountMicros: Math.round(afn * 1_000_000), currencyCode: 'AFN' } : null;
+const toAmount = (
+  amount: number | null | undefined,
+  currencyCode: string = 'AFN',
+): { amountMicros: number; currencyCode: string } | null =>
+  amount || amount === 0
+    ? { amountMicros: Math.round(amount * 1_000_000), currencyCode }
+    : null;
+
+// Drop empty metric rows and normalize numeric/frequency fields before saving.
+const cleanPricingFactors = (
+  factors: PricingFactor[] | null | undefined,
+): PricingFactor[] | null => {
+  if (!factors) return null;
+  const cleaned = factors
+    .filter((f) => f.name.trim() !== '')
+    .map((f) => ({
+      name: f.name.trim(),
+      unitPrice: Number(f.unitPrice) || 0,
+      billingFrequency: f.billingFrequency ?? 'MONTHLY',
+    }));
+  return cleaned.length > 0 ? cleaned : null;
+};
 
 export const saveCatalogProduct = async (
   input: CatalogProductInput,
   id?: string,
 ): Promise<string> => {
+  const currencyCode = input.currencyCode ?? 'AFN';
   const payload: Record<string, unknown> = {
     name: input.name,
-    baseInstallPrice: toAmount(input.baseInstallPriceAfn),
-    baseAnnualPrice: toAmount(input.baseAnnualPriceAfn),
+    baseInstallPrice: toAmount(input.baseInstallPriceAmount, currencyCode),
+    baseAnnualPrice: toAmount(input.baseAnnualPriceAmount, currencyCode),
     maxDiscountPercent: input.maxDiscountPercent ?? null,
     pricingModel: input.pricingModel || null,
+    pricingFactors:
+      input.pricingModel === 'PER_FACTOR'
+        ? cleanPricingFactors(input.pricingFactors)
+        : null,
     pricingFactorNotes: input.pricingFactorNotes || null,
     isSellable: input.isSellable ?? true,
   };
@@ -181,7 +220,7 @@ export type TierBand = {
 
 export type FactorTierSchedule = {
   factor: string;
-  billingFrequency: 'MONTHLY' | 'ANNUAL';
+  billingFrequency: 'MONTHLY' | 'HOURLY' | 'ANNUAL';
   bands: TierBand[];
 };
 
@@ -267,6 +306,7 @@ export type CatalogDiscountRule = {
   appliesToProduct: { id: string; name: string } | null;
   conditionType: string | null;
   conditionMinQuantity: number | null;
+  conditionMetric: string | null;
   conditionSiblingProductId: string | null;
   conditionSiblingProduct: { id: string; name: string } | null;
   discountType: string | null;
@@ -277,7 +317,7 @@ export type CatalogDiscountRule = {
 };
 
 const DISCOUNT_RULE_FIELDS = `
-  id name status appliesToProductId conditionType conditionMinQuantity
+  id name status appliesToProductId conditionType conditionMinQuantity conditionMetric
   conditionSiblingProductId discountType discountPercentValue notes createdAt
   appliesToProduct { id name }
   conditionSiblingProduct { id name }
@@ -303,10 +343,14 @@ export type CatalogDiscountRuleInput = {
   appliesToProductId: string;
   conditionType: string;
   conditionMinQuantity?: number | null;
+  conditionMetric?: string | null;
   conditionSiblingProductId?: string | null;
   discountType: string;
   discountPercentValue?: number | null;
-  discountFixedAmountAfn?: number | null;
+  discountFixedAmount?: number | null;
+  // Currency the fixed-amount discount is denominated in -- inherited from the
+  // applies-to product so a rule can't drift from the price it discounts.
+  currencyCode?: ProductCurrencyCode | null;
   notes?: string | null;
 };
 
@@ -314,13 +358,21 @@ export const saveDiscountRule = async (
   input: CatalogDiscountRuleInput,
   id?: string,
 ): Promise<string> => {
+  // MIN_QUANTITY thresholds the whole line quantity; MIN_METRIC_QUANTITY
+  // thresholds a specific pricing metric's quantity -- both reuse
+  // conditionMinQuantity for the threshold value.
+  const usesMinQuantity =
+    input.conditionType === 'MIN_QUANTITY' ||
+    input.conditionType === 'MIN_METRIC_QUANTITY';
+
   const payload: Record<string, unknown> = {
     name: input.name,
     status: input.status || 'ACTIVE',
     appliesToProductId: input.appliesToProductId,
     conditionType: input.conditionType,
-    conditionMinQuantity:
-      input.conditionType === 'MIN_QUANTITY' ? (input.conditionMinQuantity ?? null) : null,
+    conditionMinQuantity: usesMinQuantity ? (input.conditionMinQuantity ?? null) : null,
+    conditionMetric:
+      input.conditionType === 'MIN_METRIC_QUANTITY' ? (input.conditionMetric || null) : null,
     conditionSiblingProductId:
       input.conditionType === 'SIBLING_PRODUCT_PURCHASED'
         ? (input.conditionSiblingProductId ?? null)
@@ -329,7 +381,9 @@ export const saveDiscountRule = async (
     discountPercentValue:
       input.discountType === 'PERCENTAGE' ? (input.discountPercentValue ?? null) : null,
     discountFixedAmount:
-      input.discountType === 'FIXED_AMOUNT' ? toAmount(input.discountFixedAmountAfn) : null,
+      input.discountType === 'FIXED_AMOUNT'
+        ? toAmount(input.discountFixedAmount, input.currencyCode ?? 'AFN')
+        : null,
     notes: input.notes || null,
   };
   if (id) {

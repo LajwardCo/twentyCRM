@@ -9,13 +9,16 @@ import {
   type CatalogProduct,
   type CatalogProductInput,
   type CatalogDiscountRuleInput,
+  type ProductCurrencyCode,
 } from '../api/catalog';
+import { ProductMetricsEditor } from '../components/ProductMetricsEditor';
 import { useCached } from '../lib/cache';
-import { formatAfn } from '../lib/format';
+import { formatMoney } from '../lib/format';
 import { navigate } from '../lib/router';
 import {
   CATALOG_STATUS_LABELS,
   CONDITION_TYPE_LABELS,
+  CURRENCY_LABELS,
   DISCOUNT_TYPE_LABELS,
   PRICING_MODEL_LABELS,
   T4,
@@ -23,7 +26,15 @@ import {
 
 type Tab = 'products' | 'discountRules';
 
-const EMPTY_PRODUCT: CatalogProductInput = { name: '', isSellable: true, pricingModel: 'FLAT' };
+const EMPTY_PRODUCT: CatalogProductInput = {
+  name: '',
+  isSellable: true,
+  pricingModel: 'FLAT',
+  currencyCode: 'AFN',
+  pricingFactors: [],
+};
+
+const CURRENCY_SYMBOLS: Record<string, string> = { AFN: '؋', USD: '$' };
 
 const ProductsTab = () => {
   const [editing, setEditing] = useState<CatalogProductInput | null>(null);
@@ -41,18 +52,21 @@ const ProductsTab = () => {
       p
         ? {
             name: p.name,
-            baseInstallPriceAfn: p.baseInstallPrice?.amountMicros
+            currencyCode:
+              (p.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN',
+            baseInstallPriceAmount: p.baseInstallPrice?.amountMicros
               ? p.baseInstallPrice.amountMicros / 1_000_000
               : null,
-            baseAnnualPriceAfn: p.baseAnnualPrice?.amountMicros
+            baseAnnualPriceAmount: p.baseAnnualPrice?.amountMicros
               ? p.baseAnnualPrice.amountMicros / 1_000_000
               : null,
             maxDiscountPercent: p.maxDiscountPercent,
             pricingModel: p.pricingModel,
+            pricingFactors: p.pricingFactors ?? [],
             pricingFactorNotes: p.pricingFactorNotes,
             isSellable: p.isSellable,
           }
-        : { ...EMPTY_PRODUCT },
+        : { ...EMPTY_PRODUCT, pricingFactors: [] },
     );
     setEditingId(p?.id);
     setError(null);
@@ -96,6 +110,21 @@ const ProductsTab = () => {
               <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
             </div>
             <div className="fld">
+              <label>{T4.currencyLbl}</label>
+              <select
+                value={editing.currencyCode ?? 'AFN'}
+                onChange={(e) => set({ currencyCode: e.target.value as ProductCurrencyCode })}
+              >
+                {Object.entries(CURRENCY_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="f2">
+            <div className="fld">
               <label>{T4.pricingModelLbl}</label>
               <select
                 value={editing.pricingModel ?? 'FLAT'}
@@ -108,32 +137,6 @@ const ProductsTab = () => {
                 ))}
               </select>
             </div>
-          </div>
-          <div className="f2">
-            <div className="fld">
-              <label>{T4.baseInstallPriceLbl}</label>
-              <input
-                inputMode="decimal"
-                dir="ltr"
-                value={editing.baseInstallPriceAfn ?? ''}
-                onChange={(e) =>
-                  set({ baseInstallPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
-                }
-              />
-            </div>
-            <div className="fld">
-              <label>{T4.baseAnnualPriceLbl}</label>
-              <input
-                inputMode="decimal"
-                dir="ltr"
-                value={editing.baseAnnualPriceAfn ?? ''}
-                onChange={(e) =>
-                  set({ baseAnnualPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
-                }
-              />
-            </div>
-          </div>
-          <div className="f2">
             <div className="fld">
               <label>{T4.maxDiscountPercentLbl}</label>
               <input
@@ -145,16 +148,57 @@ const ProductsTab = () => {
                 }
               />
             </div>
-            <div className="fld">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={editing.isSellable ?? true}
-                  onChange={(e) => set({ isSellable: e.target.checked })}
-                />
-                {T4.isSellableLbl}
-              </label>
+          </div>
+          {editing.pricingModel === 'PER_FACTOR' ? (
+            <div className="card card-pad" style={{ background: 'var(--surface-2, rgba(127,127,127,.06))', marginBottom: 4 }}>
+              <div className="sub" style={{ marginBottom: 8 }}>
+                {T4.metricsSection}
+              </div>
+              <ProductMetricsEditor
+                value={editing.pricingFactors ?? []}
+                currencyCode={editing.currencyCode ?? 'AFN'}
+                onChange={(next) => set({ pricingFactors: next })}
+              />
             </div>
+          ) : (
+            <div className="f2">
+              <div className="fld">
+                <label>
+                  {T4.baseInstallPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
+                </label>
+                <input
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={editing.baseInstallPriceAmount ?? ''}
+                  onChange={(e) =>
+                    set({ baseInstallPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div className="fld">
+                <label>
+                  {T4.baseAnnualPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
+                </label>
+                <input
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={editing.baseAnnualPriceAmount ?? ''}
+                  onChange={(e) =>
+                    set({ baseAnnualPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
+                  }
+                />
+              </div>
+            </div>
+          )}
+          <div className="fld">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={editing.isSellable ?? true}
+                onChange={(e) => set({ isSellable: e.target.checked })}
+              />
+              {T4.isSellableLbl}
+            </label>
           </div>
           <div className="fld">
             <label>{T4.pricingFactorNotesLbl}</label>
@@ -204,7 +248,9 @@ const ProductsTab = () => {
                 )}
                 {p.isSellable === false && <span className="pill cold">غیرفعال</span>}
                 {p.baseInstallPrice?.amountMicros ? (
-                  <span className="sub num">{formatAfn(p.baseInstallPrice.amountMicros)}</span>
+                  <span className="sub num">
+                    {formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}
+                  </span>
                 ) : null}
               </div>
             </div>
@@ -252,10 +298,11 @@ const DiscountRulesTab = () => {
             appliesToProductId: r.appliesToProductId ?? '',
             conditionType: r.conditionType ?? 'ALWAYS',
             conditionMinQuantity: r.conditionMinQuantity,
+            conditionMetric: r.conditionMetric ?? undefined,
             conditionSiblingProductId: r.conditionSiblingProductId ?? undefined,
             discountType: r.discountType ?? 'PERCENTAGE',
             discountPercentValue: r.discountPercentValue,
-            discountFixedAmountAfn: r.discountFixedAmount?.amountMicros
+            discountFixedAmount: r.discountFixedAmount?.amountMicros
               ? r.discountFixedAmount.amountMicros / 1_000_000
               : null,
             notes: r.notes,
@@ -269,12 +316,22 @@ const DiscountRulesTab = () => {
   const set = (patch: Partial<CatalogDiscountRuleInput>) =>
     setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
 
+  // The fixed-amount discount is denominated in the applies-to product's
+  // currency, and the metric-condition dropdown draws from that product's
+  // defined pricing metrics.
+  const selectedProduct = (products ?? []).find(
+    (p) => p.id === editing?.appliesToProductId,
+  );
+  const selectedCurrency =
+    (selectedProduct?.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN';
+  const selectedMetrics = selectedProduct?.pricingFactors ?? [];
+
   const save = async () => {
     if (!editing || editing.name.trim() === '' || editing.appliesToProductId === '') return;
     setBusy(true);
     setError(null);
     try {
-      await saveDiscountRule(editing, editingId);
+      await saveDiscountRule({ ...editing, currencyCode: selectedCurrency }, editingId);
       setEditing(null);
       await refresh();
     } catch (err) {
@@ -366,6 +423,45 @@ const DiscountRulesTab = () => {
             )}
           </div>
 
+          {editing.conditionType === 'MIN_METRIC_QUANTITY' && (
+            <div className="f2">
+              <div className="fld">
+                <label>{T4.conditionMetricLbl}</label>
+                <select
+                  value={editing.conditionMetric ?? ''}
+                  onChange={(e) => set({ conditionMetric: e.target.value || undefined })}
+                  disabled={editing.appliesToProductId === '' || selectedMetrics.length === 0}
+                >
+                  <option value="">
+                    {editing.appliesToProductId === ''
+                      ? T4.conditionMetricPickProductFirst
+                      : selectedMetrics.length === 0
+                        ? T4.conditionMetricProductHasNoMetrics
+                        : 'انتخاب…'}
+                  </option>
+                  {selectedMetrics.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="fld">
+                <label>{T4.conditionMinQuantityLbl}</label>
+                <input
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={editing.conditionMinQuantity ?? ''}
+                  onChange={(e) =>
+                    set({
+                      conditionMinQuantity: e.target.value === '' ? null : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+
           <div className="f2">
             <div className="fld">
               <label>{T4.discountTypeLbl}</label>
@@ -394,14 +490,16 @@ const DiscountRulesTab = () => {
             )}
             {editing.discountType === 'FIXED_AMOUNT' && (
               <div className="fld">
-                <label>{T4.discountFixedAmountLbl}</label>
+                <label>
+                  {T4.discountFixedAmountLbl} ({CURRENCY_SYMBOLS[selectedCurrency]})
+                </label>
                 <input
                   inputMode="decimal"
                   dir="ltr"
-                  value={editing.discountFixedAmountAfn ?? ''}
+                  value={editing.discountFixedAmount ?? ''}
                   onChange={(e) =>
                     set({
-                      discountFixedAmountAfn: e.target.value === '' ? null : Number(e.target.value),
+                      discountFixedAmount: e.target.value === '' ? null : Number(e.target.value),
                     })
                   }
                 />
@@ -469,7 +567,9 @@ const DiscountRulesTab = () => {
                   <span className="pill ok">٪{r.discountPercentValue}</span>
                 )}
                 {r.discountType === 'FIXED_AMOUNT' && (
-                  <span className="pill ok">{formatAfn(r.discountFixedAmount?.amountMicros)}</span>
+                  <span className="pill ok">
+                    {formatMoney(r.discountFixedAmount?.amountMicros, r.discountFixedAmount?.currencyCode)}
+                  </span>
                 )}
                 {r.status === 'ARCHIVED' && <span className="pill cold">{CATALOG_STATUS_LABELS.ARCHIVED}</span>}
               </div>

@@ -100,6 +100,24 @@ describe('computePriceFromTierSchedule', () => {
     expect(result.breakdown).toHaveLength(2);
   });
 
+  it('routes an HOURLY factor to its own bucket, separate from monthly/annual', () => {
+    const inventoryHourly = {
+      factor: 'inventory',
+      billingFrequency: 'HOURLY' as const,
+      bands: [{ minQty: 1, maxQty: null, mode: 'PER_UNIT' as const, amount: 5 }],
+    };
+
+    const result = computePriceFromTierSchedule(
+      [OPD_DOCTOR_SCHEDULE, inventoryHourly, PHARMACY_EMPLOYEE_SCHEDULE],
+      { doctor: 3, inventory: 10, employee: 150 },
+    );
+
+    expect(result.totalMonthly).toBe(2000);
+    expect(result.totalHourly).toBe(50);
+    expect(result.totalAnnual).toBe(105);
+    expect(result.breakdown).toHaveLength(3);
+  });
+
   it('skips a factor with no matching quantity entry, without throwing', () => {
     const result = computePriceFromTierSchedule(
       [OPD_DOCTOR_SCHEDULE, PHARMACY_EMPLOYEE_SCHEDULE],

@@ -30,12 +30,14 @@ export class DealProductDiscountRuleValidationService {
     productId,
     opportunityId,
     quantity,
+    factorQuantities,
     discountRuleId,
   }: {
     workspaceId: string;
     productId: string | null | undefined;
     opportunityId: string | null | undefined;
     quantity: number | null | undefined;
+    factorQuantities: Record<string, number> | null | undefined;
     discountRuleId: string | null | undefined;
   }): Promise<void> {
     if (!isDefined(discountRuleId)) {
@@ -137,23 +139,31 @@ export class DealProductDiscountRuleValidationService {
           | number
           | null
           | undefined,
+        conditionMetric: discountRule.conditionMetric as
+          | string
+          | null
+          | undefined,
         conditionSiblingProduct: discountRule.conditionSiblingProductId as
           | string
           | null
           | undefined,
       },
-      { quantity, siblingProductIds },
+      { quantity, factorQuantities, siblingProductIds },
     );
 
     if (!evaluation.passed) {
       const userFriendlyMessage =
         evaluation.failureReason === 'BELOW_MIN_QUANTITY'
           ? msg`This discount rule requires a higher quantity on this line.`
-          : evaluation.failureReason === 'SIBLING_PRODUCT_MISSING'
-            ? msg`This discount rule requires another line for its linked product on the same Lead.`
-            : evaluation.failureReason === 'MISSING_MIN_QUANTITY_CONFIG'
-              ? msg`This discount rule is missing its minimum quantity setting. Ask an admin to fix it.`
-              : msg`This discount rule is missing its linked product setting. Ask an admin to fix it.`;
+          : evaluation.failureReason === 'BELOW_METRIC_MIN_QUANTITY'
+            ? msg`This discount rule requires a higher quantity of its target metric on this line.`
+            : evaluation.failureReason === 'SIBLING_PRODUCT_MISSING'
+              ? msg`This discount rule requires another line for its linked product on the same Lead.`
+              : evaluation.failureReason === 'MISSING_MIN_QUANTITY_CONFIG'
+                ? msg`This discount rule is missing its minimum quantity setting. Ask an admin to fix it.`
+                : evaluation.failureReason === 'MISSING_METRIC_CONFIG'
+                  ? msg`This discount rule is missing its metric or threshold setting. Ask an admin to fix it.`
+                  : msg`This discount rule is missing its linked product setting. Ask an admin to fix it.`;
 
       throw new CommonQueryRunnerException(
         `Discount rule condition not met (${evaluation.failureReason}).`,

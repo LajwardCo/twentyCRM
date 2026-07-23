@@ -1,4 +1,4 @@
-export type BillingFrequency = 'MONTHLY' | 'ANNUAL';
+export type BillingFrequency = 'MONTHLY' | 'HOURLY' | 'ANNUAL';
 export type TierBandMode = 'FLAT' | 'PER_UNIT';
 
 export type TierBand = {
@@ -25,6 +25,7 @@ export type FactorBreakdownEntry = {
 export type TierScheduleComputation = {
   breakdown: FactorBreakdownEntry[];
   totalMonthly: number;
+  totalHourly: number;
   totalAnnual: number;
 };
 
@@ -48,6 +49,7 @@ export function computePriceFromTierSchedule(
 ): TierScheduleComputation {
   const breakdown: FactorBreakdownEntry[] = [];
   let totalMonthly = 0;
+  let totalHourly = 0;
   let totalAnnual = 0;
 
   for (const factorSchedule of tierSchedule) {
@@ -76,12 +78,17 @@ export function computePriceFromTierSchedule(
       billingFrequency: factorSchedule.billingFrequency,
     });
 
-    if (factorSchedule.billingFrequency === 'MONTHLY') {
-      totalMonthly += subtotal;
-    } else {
+    // Each cadence accumulates into its own bucket -- no cross-conversion
+    // between hours/months/years (that would hardcode a business assumption
+    // like hours-per-month). Callers decide how to surface each bucket.
+    if (factorSchedule.billingFrequency === 'HOURLY') {
+      totalHourly += subtotal;
+    } else if (factorSchedule.billingFrequency === 'ANNUAL') {
       totalAnnual += subtotal;
+    } else {
+      totalMonthly += subtotal;
     }
   }
 
-  return { breakdown, totalMonthly, totalAnnual };
+  return { breakdown, totalMonthly, totalHourly, totalAnnual };
 }

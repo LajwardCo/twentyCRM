@@ -59,22 +59,39 @@ export const personName = (
     ? `${person.name.firstName} ${person.name.lastName}`.trim()
     : '—';
 
-// AFN money display with Persian digits: ۴۲۰ هزار ؋ / ۱٫۲م ؋
+// Money display with Persian digits and abbreviated units: ۴۲۰ هزار ؋ / ۱٫۲م ؋
+// AFN renders the ؋ suffix; other currencies render their symbol as a prefix
+// (e.g. $۱٫۲م). Amounts are always denominated in whatever currencyCode the
+// underlying CURRENCY composite field carries.
 import { toPersianDigits } from './jalali';
 
-export const formatAfn = (amountMicros: number | null | undefined): string => {
+const CURRENCY_SYMBOLS: Record<string, string> = { AFN: '؋', USD: '$' };
+
+export const formatMoney = (
+  amountMicros: number | null | undefined,
+  currencyCode: string | null | undefined,
+): string => {
   if (!amountMicros) return '—';
-  const afn = amountMicros / 1_000_000;
-  if (afn >= 1_000_000) {
-    const m = afn / 1_000_000;
-    return `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م ؋`;
+  const symbol = CURRENCY_SYMBOLS[currencyCode ?? 'AFN'] ?? currencyCode ?? '';
+  const isSuffix = (currencyCode ?? 'AFN') === 'AFN';
+  const value = amountMicros / 1_000_000;
+
+  let body: string;
+  if (value >= 1_000_000) {
+    const m = value / 1_000_000;
+    body = `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م`;
+  } else if (value >= 1_000) {
+    const k = Math.round(value / 1_000);
+    body = `${toPersianDigits(k)}هزار`;
+  } else {
+    body = toPersianDigits(Math.round(value));
   }
-  if (afn >= 1_000) {
-    const k = Math.round(afn / 1_000);
-    return `${toPersianDigits(k)}هزار ؋`;
-  }
-  return `${toPersianDigits(Math.round(afn))} ؋`;
+
+  return isSuffix ? `${body} ${symbol}` : `${symbol}${body}`;
 };
+
+export const formatAfn = (amountMicros: number | null | undefined): string =>
+  formatMoney(amountMicros, 'AFN');
 
 export const sumAmountMicros = (
   leads: { amount: { amountMicros: number | null } | null }[],

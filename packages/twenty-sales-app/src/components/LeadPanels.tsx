@@ -18,7 +18,7 @@ import {
   type CatalogDiscountRule,
 } from '../api/catalog';
 import { useCached } from '../lib/cache';
-import { formatAfn, fullPhone, personName } from '../lib/format';
+import { formatAfn, formatMoney, fullPhone, personName } from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import {
   CONDITION_TYPE_LABELS,
@@ -38,6 +38,13 @@ import { IconBuilding, IconChevronDown, IconPackage, IconPhone } from './icons';
 const discountRuleHint = (rule: CatalogDiscountRule): string | null => {
   if (rule.conditionType === 'MIN_QUANTITY' && rule.conditionMinQuantity) {
     return T4.minQuantityHint(rule.conditionMinQuantity);
+  }
+  if (
+    rule.conditionType === 'MIN_METRIC_QUANTITY' &&
+    rule.conditionMinQuantity &&
+    rule.conditionMetric
+  ) {
+    return T4.metricQuantityHint(rule.conditionMinQuantity, rule.conditionMetric);
   }
   if (rule.conditionType === 'SIBLING_PRODUCT_PURCHASED' && rule.conditionSiblingProduct) {
     return T4.siblingProductHint(rule.conditionSiblingProduct.name);
@@ -349,7 +356,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
                   <option key={p.id} value={p.id}>
                     {p.name}
                     {p.baseInstallPrice?.amountMicros
-                      ? ` — ${formatAfn(p.baseInstallPrice.amountMicros)}`
+                      ? ` — ${formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}`
                       : ''}
                   </option>
                 ))}
@@ -473,11 +480,11 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               </div>
               <div style={{ textAlign: 'left' }}>
                 <div className="deal-val num" style={{ fontSize: 12.5 }}>
-                  {formatAfn(line.installPrice?.amountMicros)}
+                  {formatMoney(line.installPrice?.amountMicros, line.installPrice?.currencyCode)}
                 </div>
                 {(line.annualPrice?.amountMicros ?? 0) > 0 && (
                   <div className="num" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
-                    سالانه {formatAfn(line.annualPrice?.amountMicros)}
+                    سالانه {formatMoney(line.annualPrice?.amountMicros, line.annualPrice?.currencyCode)}
                   </div>
                 )}
               </div>
@@ -493,7 +500,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               }}
             >
               <span>{T2.total}</span>
-              <b className="num">{formatAfn(totalInstall)}</b>
+              <b className="num">{formatMoney(totalInstall, lines[0]?.installPrice?.currencyCode)}</b>
             </div>
           )}
         </div>

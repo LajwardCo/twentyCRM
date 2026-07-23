@@ -6,11 +6,16 @@ import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspac
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 import {
+  type BillingFrequency,
   computePriceFromTierSchedule,
   type FactorTierSchedule,
 } from 'src/modules/sales-crm/utils/pricing-tier-schedule.util';
 
-type PricingFactor = { name: string; unitPrice: number };
+type PricingFactor = {
+  name: string;
+  unitPrice: number;
+  billingFrequency?: BillingFrequency;
+};
 type FactorQuantities = Record<string, number>;
 
 export type PriceSnapshot = {
@@ -50,7 +55,9 @@ export class DealProductPriceCalculationService {
     workspaceId: string;
     productId: string | null | undefined;
     factorQuantities: FactorQuantities | null | undefined;
-  }): Promise<CurrencyValue | undefined> {
+  }): Promise<
+    { installPrice: CurrencyValue; annualPrice?: CurrencyValue } | undefined
+  > {
     if (!isDefined(productId) || !isDefined(factorQuantities)) {
       return undefined;
     }
@@ -82,15 +89,19 @@ export class DealProductPriceCalculationService {
       return undefined;
     }
 
-    let total = 0;
+    // Reuse the single pricing engine by treating each metric as a degenerate
+    // single-band per-unit tier schedule -- keeps FLAT-per-metric pricing and
+    // volume-tiered Package pricing on one code path. Each metric's
+    // billingFrequency routes its subtotal to the right cadence bucket;
+    // legacy rows without one default to MONTHLY.
+    const schedule: FactorTierSchedule[] = pricingFactors.map((factor) => ({
+      factor: factor.name,
+      billingFrequency: factor.billingFrequency ?? 'MONTHLY',
+      bands: [{ minQty: 1, maxQty: null, mode: 'PER_UNIT', amount: factor.unitPrice }],
+    }));
 
-    for (const factor of pricingFactors) {
-      const quantity = factorQuantities[factor.name];
-
-      if (isDefined(quantity) && typeof quantity === 'number') {
-        total += factor.unitPrice * quantity;
-      }
-    }
+    const { totalMonthly, totalHourly, totalAnnual } =
+      computePriceFromTierSchedule(schedule, factorQuantities);
 
     // installPrice/annualPrice are CURRENCY composite fields ({amountMicros,
     // currencyCode}), not plain numbers -- writing a raw number is silently
@@ -101,9 +112,21 @@ export class DealProductPriceCalculationService {
     const currencyCode =
       baseInstallPrice?.currencyCode ?? FALLBACK_CURRENCY_CODE;
 
+    // The deal line has no dedicated hourly field, so sub-annual cadences
+    // (monthly + hourly) accumulate into installPrice while annual metrics
+    // populate annualPrice -- no metric is dropped and no cadence is converted.
     return {
-      amountMicros: Math.round(total * 1_000_000),
-      currencyCode,
+      installPrice: {
+        amountMicros: Math.round((totalMonthly + totalHourly) * 1_000_000),
+        currencyCode,
+      },
+      annualPrice:
+        totalAnnual > 0
+          ? {
+              amountMicros: Math.round(totalAnnual * 1_000_000),
+              currencyCode,
+            }
+          : undefined,
     };
   }
 

@@ -13,17 +13,23 @@ import {
   type CatalogPricingVersion,
   type CatalogPricingVersionInput,
   type CatalogProductInput,
+  type ProductCurrencyCode,
 } from '../api/catalog';
+import { ProductMetricsEditor } from '../components/ProductMetricsEditor';
 import { TierScheduleEditor } from '../components/TierScheduleEditor';
 import { useCached } from '../lib/cache';
-import { formatAfn, toLocalInputValue } from '../lib/format';
+import { formatMoney, toLocalInputValue } from '../lib/format';
 import { formatJalaliDate } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import {
+  BILLING_FREQUENCY_LABELS,
   CATALOG_STATUS_LABELS,
+  CURRENCY_LABELS,
   PRICING_MODEL_LABELS,
   T4,
 } from '../lib/strings';
+
+const CURRENCY_SYMBOLS: Record<string, string> = { AFN: '؋', USD: '$' };
 
 const ViewSkeleton = () => (
   <main className="page">
@@ -66,14 +72,17 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
   const startEdit = () => {
     setEditing({
       name: product.name,
-      baseInstallPriceAfn: product.baseInstallPrice?.amountMicros
+      currencyCode:
+        (product.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN',
+      baseInstallPriceAmount: product.baseInstallPrice?.amountMicros
         ? product.baseInstallPrice.amountMicros / 1_000_000
         : null,
-      baseAnnualPriceAfn: product.baseAnnualPrice?.amountMicros
+      baseAnnualPriceAmount: product.baseAnnualPrice?.amountMicros
         ? product.baseAnnualPrice.amountMicros / 1_000_000
         : null,
       maxDiscountPercent: product.maxDiscountPercent,
       pricingModel: product.pricingModel,
+      pricingFactors: product.pricingFactors ?? [],
       pricingFactorNotes: product.pricingFactorNotes,
       isSellable: product.isSellable,
     });
@@ -134,14 +143,41 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
       {editing === null ? (
         <div className="card card-pad anim d1" style={{ marginBottom: 16 }}>
           <div className="contact-rows">
-            <div className="c-row">
-              <span>{T4.baseInstallPriceLbl}</span>
-              <b className="num">{formatAfn(product.baseInstallPrice?.amountMicros)}</b>
-            </div>
-            <div className="c-row">
-              <span>{T4.baseAnnualPriceLbl}</span>
-              <b className="num">{formatAfn(product.baseAnnualPrice?.amountMicros)}</b>
-            </div>
+            {product.pricingModel === 'PER_FACTOR' ? (
+              (product.pricingFactors ?? []).map((m) => (
+                <div className="c-row" key={m.name}>
+                  <span>
+                    {m.name}
+                    {' · '}
+                    {BILLING_FREQUENCY_LABELS[m.billingFrequency ?? 'MONTHLY']}
+                  </span>
+                  <b className="num">
+                    {formatMoney(m.unitPrice * 1_000_000, product.baseInstallPrice?.currencyCode)}
+                  </b>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="c-row">
+                  <span>{T4.baseInstallPriceLbl}</span>
+                  <b className="num">
+                    {formatMoney(
+                      product.baseInstallPrice?.amountMicros,
+                      product.baseInstallPrice?.currencyCode,
+                    )}
+                  </b>
+                </div>
+                <div className="c-row">
+                  <span>{T4.baseAnnualPriceLbl}</span>
+                  <b className="num">
+                    {formatMoney(
+                      product.baseAnnualPrice?.amountMicros,
+                      product.baseAnnualPrice?.currencyCode,
+                    )}
+                  </b>
+                </div>
+              </>
+            )}
             <div className="c-row">
               <span>{T4.maxDiscountPercentLbl}</span>
               <b className="num">{product.maxDiscountPercent ?? '—'}</b>
@@ -166,6 +202,21 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
               <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
             </div>
             <div className="fld">
+              <label>{T4.currencyLbl}</label>
+              <select
+                value={editing.currencyCode ?? 'AFN'}
+                onChange={(e) => set({ currencyCode: e.target.value as ProductCurrencyCode })}
+              >
+                {Object.entries(CURRENCY_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="f2">
+            <div className="fld">
               <label>{T4.pricingModelLbl}</label>
               <select
                 value={editing.pricingModel ?? 'FLAT'}
@@ -178,32 +229,6 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                 ))}
               </select>
             </div>
-          </div>
-          <div className="f2">
-            <div className="fld">
-              <label>{T4.baseInstallPriceLbl}</label>
-              <input
-                inputMode="decimal"
-                dir="ltr"
-                value={editing.baseInstallPriceAfn ?? ''}
-                onChange={(e) =>
-                  set({ baseInstallPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
-                }
-              />
-            </div>
-            <div className="fld">
-              <label>{T4.baseAnnualPriceLbl}</label>
-              <input
-                inputMode="decimal"
-                dir="ltr"
-                value={editing.baseAnnualPriceAfn ?? ''}
-                onChange={(e) =>
-                  set({ baseAnnualPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
-                }
-              />
-            </div>
-          </div>
-          <div className="f2">
             <div className="fld">
               <label>{T4.maxDiscountPercentLbl}</label>
               <input
@@ -215,16 +240,57 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                 }
               />
             </div>
-            <div className="fld">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={editing.isSellable ?? true}
-                  onChange={(e) => set({ isSellable: e.target.checked })}
-                />
-                {T4.isSellableLbl}
-              </label>
+          </div>
+          {editing.pricingModel === 'PER_FACTOR' ? (
+            <div className="card card-pad" style={{ background: 'var(--surface-2, rgba(127,127,127,.06))', marginBottom: 4 }}>
+              <div className="sub" style={{ marginBottom: 8 }}>
+                {T4.metricsSection}
+              </div>
+              <ProductMetricsEditor
+                value={editing.pricingFactors ?? []}
+                currencyCode={editing.currencyCode ?? 'AFN'}
+                onChange={(next) => set({ pricingFactors: next })}
+              />
             </div>
+          ) : (
+            <div className="f2">
+              <div className="fld">
+                <label>
+                  {T4.baseInstallPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
+                </label>
+                <input
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={editing.baseInstallPriceAmount ?? ''}
+                  onChange={(e) =>
+                    set({ baseInstallPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div className="fld">
+                <label>
+                  {T4.baseAnnualPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
+                </label>
+                <input
+                  inputMode="decimal"
+                  dir="ltr"
+                  value={editing.baseAnnualPriceAmount ?? ''}
+                  onChange={(e) =>
+                    set({ baseAnnualPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
+                  }
+                />
+              </div>
+            </div>
+          )}
+          <div className="fld">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={editing.isSellable ?? true}
+                onChange={(e) => set({ isSellable: e.target.checked })}
+              />
+              {T4.isSellableLbl}
+            </label>
           </div>
           <div className="fld">
             <label>{T4.pricingFactorNotesLbl}</label>

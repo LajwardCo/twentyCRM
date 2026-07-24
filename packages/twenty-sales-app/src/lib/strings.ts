@@ -237,6 +237,43 @@ export const T2 = {
   byMarketer: 'به تفکیک بازاریاب',
   wonLbl: 'برنده شده',
   winRateLbl: 'نرخ موفقیت',
+
+  // report sub-tabs
+  tabOverview: 'نمای کلی',
+  tabSellers: 'فروشندگان',
+  tabMarketers: 'بازاریابان',
+  tabProducts: 'محصولات',
+  tabActivity: 'فعالیت',
+
+  // conversion funnel + win/loss (Overview)
+  conversionFunnel: 'قیف تبدیل',
+  winRateHeadline: 'نرخ موفقیت کلی',
+  wonVsLost: 'برنده در برابر از‌دست‌رفته',
+  lostLbl: 'از دست رفته',
+  sourceConversion: 'نرخ تبدیل به تفکیک منبع',
+  conversionRate: 'نرخ تبدیل',
+
+  // marketer leaderboard
+  marketerPerformance: 'عملکرد بازاریابان',
+  leadsBrought: 'لید آورده‌شده',
+  marketerFieldMissing: 'داده بازاریاب در این محیط موجود نیست',
+
+  // products report
+  productPerformance: 'عملکرد محصولات',
+  topProductsByUnits: 'محصولات پرفروش (تعداد)',
+  topProductsByRevenue: 'محصولات پردرآمد',
+  dealLinesCount: 'خطوط معامله',
+  installRevenue: 'درآمد نصب',
+  annualRevenue: 'درآمد سالانه',
+  avgDiscount: 'میانگین تخفیف',
+  unitsLbl: 'تعداد',
+  noProductData: 'داده محصولی در این دوره نیست',
+
+  // activity report
+  activityMix: 'ترکیب فعالیت',
+  activityBySeller: 'فعالیت به تفکیک فروشنده',
+  totalTasksDone: 'مجموع انجام‌شده',
+  noActivityData: 'فعالیتی در این دوره ثبت نشده',
 };
 
 // catalog management: Product / Package / Pricing Version / Discount Rule

@@ -917,6 +917,7 @@ export type DoneTask = {
   id: string;
   title: string;
   updatedAt: string;
+  taskType: TaskType | null;
   bodyV2: { markdown: string | null } | null;
   assignee: { id: string; name: { firstName: string; lastName: string } } | null;
 };
@@ -945,6 +946,7 @@ export const fetchDoneTasksSince = async (
             id
             title
             updatedAt
+            taskType
             bodyV2 { markdown }
             assignee { id name { firstName lastName } }
           }
@@ -954,6 +956,47 @@ export const fetchDoneTasksSince = async (
     { filter: { and: filters } },
   );
   return data.tasks.edges.map((e) => e.node);
+};
+
+// Deal-product lines created in the period, across all leads -- powers the
+// Products report. Defensive try/catch (same precedent as fetchLeadPricing):
+// where the dealProduct object isn't provisioned (local dev), returns [] so
+// the Products tab degrades to an empty state instead of erroring.
+export type DealProductStat = {
+  id: string;
+  name: string;
+  quantity: number | null;
+  discountPercent: number | null;
+  installPrice: { amountMicros: number | null } | null;
+  annualPrice: { amountMicros: number | null } | null;
+  product: { id: string; name: string } | null;
+  createdAt: string;
+};
+
+export const fetchDealProductsSince = async (
+  sinceIso: string,
+): Promise<DealProductStat[]> => {
+  return coreQuery<{ dealProducts: { edges: { node: DealProductStat }[] } }>(
+    `query DealProductsSince($filter: DealProductFilterInput) {
+      dealProducts(filter: $filter, first: 200, orderBy: [{ createdAt: DescNullsLast }]) {
+        edges {
+          node {
+            id
+            name
+            quantity
+            discountPercent
+            installPrice { amountMicros }
+            annualPrice { amountMicros }
+            product { id name }
+            createdAt
+          }
+        }
+      }
+    }`,
+    { filter: { createdAt: { gte: sinceIso } } },
+  )
+    .then((d) => d.dealProducts.edges.map((e) => e.node))
+    .catch(() => [] as DealProductStat[]);
 };
 
 // ---------- comprehensive search (native tsvector full-text) ----------

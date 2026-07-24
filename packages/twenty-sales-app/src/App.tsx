@@ -220,7 +220,7 @@ export const App = () => {
   } else if (section === 'catalog') {
     view = <CatalogView />;
   } else if (section === 'admin') {
-    view = <AdminView />;
+    view = <AdminView user={user} />;
   } else {
     view = <TodayView user={user} />;
   }

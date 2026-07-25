@@ -19,6 +19,7 @@ import {
   updateTask,
   type TaskType,
 } from '../api/records';
+import { ActionBar, type ActionBarItem } from '../components/ActionBar';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import {
   IconAI,
@@ -120,6 +121,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
     toLocalInputValue(new Date(presetIso(1))),
   );
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const wrapUpRef = useRef<HTMLDivElement | null>(null);
   const [finishing, setFinishing] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -276,6 +278,41 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
     .slice(0, 2);
   const lastNote = (data?.leadNotes ?? [])[0] ?? null;
 
+  const barActions: ActionBarItem[] = [
+    {
+      key: 'call',
+      label: T.call,
+      icon: IconPhone,
+      disabled: !phone,
+      onClick: () => phone && (window.location.href = `tel:${phone}`),
+    },
+    {
+      key: 'whatsapp',
+      label: T.whatsapp,
+      icon: IconWhatsApp,
+      disabled: !phone,
+      onClick: () =>
+        phone && window.open(`https://wa.me/${phone.replace('+', '')}`, '_blank'),
+    },
+    {
+      key: 'file',
+      label: 'فایل',
+      icon: IconQr,
+      onClick: () => setUploadModalOpen(true),
+    },
+    {
+      // jumps to the wrap-up form rather than submitting: the result and
+      // follow-up fields live there and are usually still empty
+      key: 'finish',
+      label: 'پایان',
+      icon: IconCheck,
+      primary: true,
+      disabled: isDone,
+      onClick: () =>
+        wrapUpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    },
+  ];
+
   return (
     <main className="page">
       {/* hero */}
@@ -356,7 +393,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
             </div>
           </div>
 
-          <div className="card card-pad anim d2">
+          <div className="card card-pad anim d2" ref={wrapUpRef}>
             <h3>۳ · بعد از وظیفه — نتیجه و قدم بعدی</h3>
             <div className="fld" style={{ marginTop: 10 }}>
               <label>نتیجه چه شد؟</label>
@@ -519,7 +556,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                     <b>{SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}</b>
                   </div>
                 </div>
-                <div className="actions-grid" style={{ marginTop: 12, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div className="actions-grid abar-dup" style={{ marginTop: 12, gridTemplateColumns: 'repeat(2, 1fr)' }}>
                   <button
                     className="a-btn"
                     disabled={!phone}
@@ -597,6 +634,8 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
           onClose={() => setUploadModalOpen(false)}
         />
       )}
+
+      <ActionBar items={barActions} />
     </main>
   );
 };

@@ -32,6 +32,14 @@ export const IconLeads = ({ size }: IconProps) => (
   </svg>
 );
 
+export const IconMenu = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <line x1="4" y1="7" x2="20" y2="7" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+    <line x1="4" y1="17" x2="20" y2="17" />
+  </svg>
+);
+
 export const IconPlus = ({ size }: IconProps) => (
   <svg {...base(size)}>
     <line x1="12" y1="5" x2="12" y2="19" />

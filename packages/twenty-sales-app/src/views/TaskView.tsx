@@ -5,6 +5,7 @@ import {
   fetchTaskAttachments,
   type TaskAttachment,
 } from '../api/attachments';
+import { fetchMembers, type Member } from '../api/admin';
 import { type CurrentUser } from '../api/auth';
 import {
   createNoteForLead,
@@ -18,6 +19,7 @@ import {
   updateTask,
   type TaskType,
 } from '../api/records';
+import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import {
   IconAI,
   IconCheck,
@@ -30,7 +32,7 @@ import {
 } from '../components/icons';
 import { AttachmentUploadModal } from '../components/AttachmentUploadModal';
 import { invalidateCache, useCached } from '../lib/cache';
-import { formatAfn, fullPhone, personName, toLocalInputValue } from '../lib/format';
+import { formatMoney, fullPhone, personName, toLocalInputValue } from '../lib/format';
 import { formatJalaliDateTime, relativeDueLabel } from '../lib/jalali';
 import { leadContextText, SUMMARIZE_SYSTEM_PROMPT } from '../lib/leadContext';
 import { navigate } from '../lib/router';
@@ -125,7 +127,40 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
   const [aiBrief, setAiBrief] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
 
+  // Admins can reassign the task owner; load the member list for the picker.
+  const [members, setMembers] = useState<Member[]>([]);
+  const [reassigning, setReassigning] = useState(false);
+
   useEffect(() => () => window.clearTimeout(saveTimer.current), []);
+
+  useEffect(() => {
+    if (!user.isAdmin) return;
+    let active = true;
+    void fetchMembers()
+      .then((list) => {
+        if (active) setMembers(list);
+      })
+      .catch(() => {
+        // no permission / unavailable — leave picker empty
+      });
+    return () => {
+      active = false;
+    };
+  }, [user.isAdmin]);
+
+  const reassign = async (assigneeId: string) => {
+    if (!task) return;
+    setReassigning(true);
+    try {
+      await updateTask(task.id, { assigneeId: assigneeId || null });
+      await refresh();
+      showToast('مسئول وظیفه تغییر کرد ✓');
+    } catch {
+      showToast(T.loadFailed);
+    } finally {
+      setReassigning(false);
+    }
+  };
 
   const showToast = (message: string) => {
     setToast(message);
@@ -270,6 +305,29 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                 {lead.name} ←
               </button>
             )}
+            {user.isAdmin ? (
+              <label className="assignee-pick">
+                مسئول:
+                <select
+                  value={task.assignee?.id ?? ''}
+                  disabled={reassigning}
+                  onChange={(e) => reassign(e.target.value)}
+                >
+                  <option value="">بدون مسئول</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name.firstName} {m.name.lastName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              task.assignee && (
+                <span className="pill">
+                  مسئول: {task.assignee.name.firstName} {task.assignee.name.lastName}
+                </span>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -393,12 +451,12 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                       </button>
                     </div>
                     {followUpPreset === 'custom' && (
-                      <input
-                        type="datetime-local"
-                        style={{ marginTop: 8 }}
-                        value={followUpCustom}
-                        onChange={(e) => setFollowUpCustom(e.target.value)}
-                      />
+                      <div style={{ marginTop: 8 }}>
+                        <JalaliDatePicker
+                          value={followUpCustom}
+                          onChange={setFollowUpCustom}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -453,7 +511,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                   {(lead.amount?.amountMicros ?? 0) > 0 && (
                     <div className="c-row">
                       <span>ارزش</span>
-                      <b className="num">{formatAfn(lead.amount?.amountMicros)}</b>
+                      <b className="num">{formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}</b>
                     </div>
                   )}
                   <div className="c-row">

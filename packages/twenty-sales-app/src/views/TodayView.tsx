@@ -17,7 +17,7 @@ import {
   IconMoney,
   IconTasks,
 } from '../components/icons';
-import { endOfToday, formatAfn, startOfToday, sumAmountMicros } from '../lib/format';
+import { endOfToday, formatAfn, formatMoney, startOfToday, sumAmountMicros } from '../lib/format';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { STAGE_LABELS, T, TASK_TYPE_LABELS } from '../lib/strings';
@@ -436,7 +436,7 @@ export const TodayView = ({ user }: TodayViewProps) => {
                   </div>
                   {(lead.amount?.amountMicros ?? 0) > 0 && (
                     <span className="deal-val num">
-                      {formatAfn(lead.amount?.amountMicros)}
+                      {formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}
                     </span>
                   )}
                 </div>

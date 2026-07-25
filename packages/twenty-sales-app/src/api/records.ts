@@ -12,6 +12,10 @@ export type Task = {
   dueAt: string | null;
   createdAt: string;
   bodyV2: { markdown: string | null } | null;
+  assignee?: {
+    id: string;
+    name: { firstName: string; lastName: string };
+  } | null;
   taskTargets?: {
     edges: {
       node: {
@@ -258,14 +262,19 @@ export const fetchLeadNotes = async (opportunityId: string): Promise<Note[]> => 
 
 // Two windows so a pile of overdue tasks can never push upcoming ones past
 // the pagination limit.
+// assigneeId is optional: pass it to scope to one seller ("my tasks"), or omit
+// it so admins see every open task (the server still row-filters by the
+// caller's permissions).
 export const fetchMyOpenTasks = async (
-  assigneeId: string,
+  assigneeId: string | null,
   window: { dueBefore?: string; dueAfter?: string; limit?: number } = {},
 ): Promise<Task[]> => {
   const filters: Record<string, unknown>[] = [
-    { assigneeId: { eq: assigneeId } },
     { status: { in: ['TODO', 'IN_PROGRESS'] } },
   ];
+  if (assigneeId) {
+    filters.push({ assigneeId: { eq: assigneeId } });
+  }
   if (window.dueBefore) {
     filters.push({ dueAt: { lte: window.dueBefore } });
   }
@@ -287,6 +296,7 @@ export const fetchMyOpenTasks = async (
             dueAt
             createdAt
             bodyV2 { markdown }
+            assignee { id name { firstName lastName } }
             taskTargets {
               edges {
                 node {
@@ -380,6 +390,7 @@ export const fetchTask = async (taskId: string): Promise<Task> => {
         dueAt
         createdAt
         bodyV2 { markdown }
+        assignee { id name { firstName lastName } }
         taskTargets {
           edges {
             node {
@@ -531,11 +542,14 @@ export type NewLeadInput = {
   contactEmail: string;
   temperature: 'HOT' | 'WARM' | 'COLD' | null;
   leadSource: string | null;
+  marketer: string | null; // SELECT value (e.g. ALAVI) or null
+  referrerId: string | null; // partner relation id or null
   firstContactNote: string;
   firstContactDate: string; // ISO
   followUpNote: string;
   followUpDate: string | null; // ISO or null to skip
-  estimatedAmountAfn: number | null; // plain AFN, converted to micros
+  estimatedAmount: number | null; // plain amount in estimatedCurrency
+  estimatedCurrency: string; // 'AFN' | 'USD'
   workspaceMemberId: string;
 };
 
@@ -602,11 +616,12 @@ export const registerLead = async (
         ...(personId ? { pointOfContactId: personId } : {}),
         ...(input.temperature ? { temperature: input.temperature } : {}),
         ...(input.leadSource ? { leadSource: input.leadSource } : {}),
-        ...(input.estimatedAmountAfn
+        ...(input.referrerId ? { referrerId: input.referrerId } : {}),
+        ...(input.estimatedAmount
           ? {
               amount: {
-                amountMicros: Math.round(input.estimatedAmountAfn * 1_000_000),
-                currencyCode: 'AFN',
+                amountMicros: Math.round(input.estimatedAmount * 1_000_000),
+                currencyCode: input.estimatedCurrency || 'AFN',
               },
             }
           : {}),
@@ -615,6 +630,16 @@ export const registerLead = async (
   );
   const opportunityId = oppData.createOpportunity.id;
   const target = { opportunityId, companyId };
+
+  // Marketer is a production-only SELECT field; set it best-effort so a lead
+  // still registers on environments where the field doesn't exist.
+  if (input.marketer) {
+    try {
+      await updateLead(opportunityId, { marketer: input.marketer });
+    } catch {
+      // field absent on this env — ignore
+    }
+  }
 
   if (input.firstContactNote.trim() !== '') {
     onProgress('ثبت تماس اول…');
@@ -736,6 +761,33 @@ export const fetchCompanyContacts = async (
     { companyId },
   );
   return data.people.edges.map((e) => e.node);
+};
+
+// Referrers/partners a lead can be attributed to (relation target of
+// Opportunity.referrer). Defensive: the partner object may be absent on some
+// environments, so callers get an empty list rather than a hard failure.
+export type Referrer = {
+  id: string;
+  name: string;
+  partnerType: string | null;
+  commissionPercent: number | null;
+};
+
+export const fetchReferrers = async (): Promise<Referrer[]> => {
+  try {
+    const data = await coreQuery<{
+      partners: { edges: { node: Referrer }[] };
+    }>(
+      `query Partners {
+        partners(first: 200, orderBy: [{ name: AscNullsLast }]) {
+          edges { node { id name partnerType commissionPercent } }
+        }
+      }`,
+    );
+    return data.partners.edges.map((e) => e.node);
+  } catch {
+    return [];
+  }
 };
 
 // Marketer is a production-only SELECT field on Opportunity.

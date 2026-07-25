@@ -7,7 +7,7 @@ import {
 } from '../api/records';
 import { IconKanban, IconPlus, IconTable } from '../components/icons';
 import { useCached } from '../lib/cache';
-import { formatAfn, fullPhone, personName, sumAmountMicros } from '../lib/format';
+import { formatAfn, formatMoney, fullPhone, personName, sumAmountMicros } from '../lib/format';
 import { loadPrefs, savePref } from '../lib/prefs';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
@@ -222,7 +222,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
                     <td>
                       <TempDot temperature={lead.temperature} />
                     </td>
-                    <td className="num">{formatAfn(lead.amount?.amountMicros)}</td>
+                    <td className="num">{formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}</td>
                     <td>{SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}</td>
                     <td>
                       <div className="owner">
@@ -270,7 +270,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
                       <>
                         {' · '}
                         <b className="num" style={{ color: 'var(--ink)' }}>
-                          {formatAfn(lead.amount?.amountMicros)}
+                          {formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}
                         </b>
                       </>
                     )}
@@ -324,7 +324,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
               </span>
               {(lead.amount?.amountMicros ?? 0) > 0 && (
                 <span className="deal-val num">
-                  {formatAfn(lead.amount?.amountMicros)}
+                  {formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}
                 </span>
               )}
             </button>

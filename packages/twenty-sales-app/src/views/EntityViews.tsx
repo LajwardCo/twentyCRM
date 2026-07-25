@@ -17,7 +17,7 @@ import {
   IconWhatsApp,
 } from '../components/icons';
 import { useCached } from '../lib/cache';
-import { formatAfn, fullPhone, personName } from '../lib/format';
+import { formatMoney, fullPhone, personName } from '../lib/format';
 import { formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { STAGE_LABELS, T, TEMP_LABELS } from '../lib/strings';
@@ -53,7 +53,7 @@ const RelatedLeads = ({ leads }: { leads: LeadSummary[] }) => (
           </div>
         </div>
         {(lead.amount?.amountMicros ?? 0) > 0 && (
-          <span className="deal-val num">{formatAfn(lead.amount?.amountMicros)}</span>
+          <span className="deal-val num">{formatMoney(lead.amount?.amountMicros, lead.amount?.currencyCode)}</span>
         )}
       </div>
     ))}

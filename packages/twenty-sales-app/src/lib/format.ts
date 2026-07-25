@@ -59,37 +59,45 @@ export const personName = (
     ? `${person.name.firstName} ${person.name.lastName}`.trim()
     : '—';
 
-// Money display with Persian digits and abbreviated units: ۴۲۰ هزار ؋ / ۱٫۲م ؋
-// AFN renders the ؋ suffix; other currencies render their symbol as a prefix
-// (e.g. $۱٫۲م). Amounts are always denominated in whatever currencyCode the
-// underlying CURRENCY composite field carries.
+// Money display with Persian digits: ۴۲۰هزار ؋ / ۱٫۲م ؋ (AFN) or $۴۲۰هزار (USD).
 import { toPersianDigits } from './jalali';
 
-const CURRENCY_SYMBOLS: Record<string, string> = { AFN: '؋', USD: '$' };
+// Currencies the sales team works in. AFN shows the ؋ suffix (Dari
+// convention); USD shows a leading $. Anything else falls back to a code
+// suffix so nothing ever renders without its unit.
+export const SUPPORTED_CURRENCIES = ['AFN', 'USD'] as const;
+export type CurrencyCode = (typeof SUPPORTED_CURRENCIES)[number];
+
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  AFN: '؋',
+  USD: '$',
+};
+
+const abbreviateAmount = (value: number): string => {
+  if (value >= 1_000_000) {
+    const m = value / 1_000_000;
+    return `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م`;
+  }
+  if (value >= 1_000) {
+    const k = Math.round(value / 1_000);
+    return `${toPersianDigits(k)}هزار`;
+  }
+  return `${toPersianDigits(Math.round(value))}`;
+};
 
 export const formatMoney = (
   amountMicros: number | null | undefined,
-  currencyCode: string | null | undefined,
+  currencyCode?: string | null,
 ): string => {
   if (!amountMicros) return '—';
-  const symbol = CURRENCY_SYMBOLS[currencyCode ?? 'AFN'] ?? currencyCode ?? '';
-  const isSuffix = (currencyCode ?? 'AFN') === 'AFN';
-  const value = amountMicros / 1_000_000;
-
-  let body: string;
-  if (value >= 1_000_000) {
-    const m = value / 1_000_000;
-    body = `${toPersianDigits(m % 1 === 0 ? String(m) : m.toFixed(1))}م`;
-  } else if (value >= 1_000) {
-    const k = Math.round(value / 1_000);
-    body = `${toPersianDigits(k)}هزار`;
-  } else {
-    body = toPersianDigits(Math.round(value));
-  }
-
-  return isSuffix ? `${body} ${symbol}` : `${symbol}${body}`;
+  const code = currencyCode ?? 'AFN';
+  const num = abbreviateAmount(amountMicros / 1_000_000);
+  if (code === 'USD') return `$${num}`;
+  if (code === 'AFN') return `${num} ؋`;
+  return `${num} ${code}`;
 };
 
+// Back-compat wrapper: callers that only have amountMicros default to AFN.
 export const formatAfn = (amountMicros: number | null | undefined): string =>
   formatMoney(amountMicros, 'AFN');
 

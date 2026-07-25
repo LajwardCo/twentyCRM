@@ -1020,6 +1020,18 @@ textarea {
   background: var(--lapis-50);
 }
 
+/* Rows that carry a whole record (competitor product / note / usage) instead
+   of a single task line — they must grow, not clip at the 90px task height. */
+.task.expand {
+  max-height: none;
+  align-items: flex-start;
+}
+
+.task.expand .t-sub {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
 .task.leaving {
   animation: task-out 0.35s ease forwards;
 }

@@ -1,3 +1,4 @@
+import { type PricingFactor } from './catalog';
 import { coreQuery } from './client';
 
 // ---------- shared types ----------
@@ -914,6 +915,11 @@ export type ProductOption = {
   category: string | null;
   baseInstallPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   baseAnnualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
+  // A PER_FACTOR product prices off its own metric table -- for the metrics no
+  // package tiers, and for every metric when the seller picks no package. The
+  // deal-line form collects a quantity per metric.
+  pricingModel: string | null;
+  pricingFactors: PricingFactor[] | null;
 };
 
 export const fetchProducts = async (): Promise<ProductOption[]> => {
@@ -928,6 +934,8 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
             name
             brand
             category
+            pricingModel
+            pricingFactors
             baseInstallPrice { amountMicros currencyCode }
             baseAnnualPrice { amountMicros currencyCode }
           }

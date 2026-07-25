@@ -23,6 +23,7 @@ import {
 import { useCached } from '../lib/cache';
 import { formatMoney, fullPhone, personName } from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
+import { estimateProductPrice, hasPriceEstimate } from '../lib/productPricing';
 import {
   CONDITION_TYPE_LABELS,
   LINE_STATUS_LABELS,
@@ -405,6 +406,50 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   );
   const selectedRule = eligibleRules.find((r) => r.id === discountRuleId);
 
+  const selectedProduct = (products ?? []).find(
+    (p: ProductOption) => p.id === productId,
+  );
+  // Metrics are independent price lines: a Package tiers only the ones it
+  // names, and every other metric on the product is billed on top at its own
+  // rate. Without a package the product's whole metric table applies -- either
+  // way these need quantity inputs, or a PER_FACTOR product can never be
+  // priced here.
+  const productMetrics =
+    selectedProduct?.pricingModel === 'PER_FACTOR'
+      ? (selectedProduct.pricingFactors ?? []).filter(
+          (metric) => !tierSchedule.some((factor) => factor.factor === metric.name),
+        )
+      : [];
+  const metricNames = [
+    ...tierSchedule.map((factor) => factor.factor),
+    ...productMetrics.map((metric) => metric.name),
+  ];
+
+  // Only metrics this line actually prices are sent, so leftovers from a
+  // previously selected package never leak into the payload.
+  const numericFactorQuantities = Object.fromEntries(
+    Object.entries(factorQuantities)
+      .filter(([k, v]) => v.trim() !== '' && metricNames.includes(k))
+      .map(([k, v]) => [k, Number(v)]),
+  );
+
+  const currencyCode =
+    selectedProduct?.baseInstallPrice?.currencyCode ??
+    selectedProduct?.baseAnnualPrice?.currencyCode ??
+    'AFN';
+  // Estimated client-side only for the package-less path -- with a package the
+  // server prices off tier bands this component doesn't evaluate, so showing a
+  // product-only number would be wrong rather than merely incomplete.
+  const estimate =
+    activeVersion === null && selectedProduct?.pricingModel === 'PER_FACTOR'
+      ? estimateProductPrice({
+          pricingFactors: productMetrics,
+          factorQuantities: numericFactorQuantities,
+          fixedInstall: (selectedProduct?.baseInstallPrice?.amountMicros ?? 0) / 1_000_000,
+          fixedAnnual: (selectedProduct?.baseAnnualPrice?.amountMicros ?? 0) / 1_000_000,
+        })
+      : null;
+
   const selectProduct = (nextProductId: string) => {
     setProductId(nextProductId);
     setPackageId('');
@@ -412,9 +457,11 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     setDiscountRuleId('');
   };
 
+  // Quantities are keyed by metric name and the metric set overlaps between
+  // packages, so switching package keeps what the seller already typed --
+  // quantities for metrics the new schedule doesn't price are simply ignored.
   const selectPackage = (nextPackageId: string) => {
     setPackageId(nextPackageId);
-    setFactorQuantities({});
   };
 
   const resetForm = () => {
@@ -424,22 +471,19 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   };
 
   const addProduct = async () => {
-    const product = (products ?? []).find((p: ProductOption) => p.id === productId);
+    const product = selectedProduct;
     if (!product) return;
     setBusy(true);
     setError(null);
     try {
-      const numericFactorQuantities = Object.fromEntries(
-        Object.entries(factorQuantities)
-          .filter(([, v]) => v.trim() !== '')
-          .map(([k, v]) => [k, Number(v)]),
-      );
       await addProductToLead({
         opportunityId: lead.id,
         productId: product.id,
         productName: product.name,
         quantity: Math.max(1, Number(quantity) || 1),
-        ...(activeVersion && Object.keys(numericFactorQuantities).length > 0
+        // Sent for both pricing paths: the package's tier schedule when one is
+        // selected, plus whichever product metrics it doesn't tier.
+        ...(Object.keys(numericFactorQuantities).length > 0
           ? { factorQuantities: numericFactorQuantities }
           : {}),
         ...(activeVersion ? { pricingVersionId: activeVersion.id } : {}),
@@ -528,21 +572,70 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
             </div>
           )}
 
-          {tierSchedule.length > 0 && (
-            <div className="f2">
-              {tierSchedule.map((factor) => (
-                <div className="fld" style={{ marginBottom: 8 }} key={factor.factor}>
-                  <label dir="ltr">{factor.factor}</label>
-                  <input
-                    inputMode="numeric"
-                    dir="ltr"
-                    value={factorQuantities[factor.factor] ?? ''}
-                    onChange={(e) =>
-                      setFactorQuantities((prev) => ({ ...prev, [factor.factor]: e.target.value }))
-                    }
-                  />
+          {metricNames.length > 0 && (
+            <>
+              <div className="sub" style={{ marginBottom: 6 }}>
+                {T4.metricQuantitiesHint}
+              </div>
+              <div className="f2">
+                {metricNames.map((metricName) => (
+                  <div className="fld" style={{ marginBottom: 8 }} key={metricName}>
+                    <label dir="ltr">{metricName}</label>
+                    <input
+                      inputMode="numeric"
+                      dir="ltr"
+                      value={factorQuantities[metricName] ?? ''}
+                      onChange={(e) =>
+                        setFactorQuantities((prev) => ({ ...prev, [metricName]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {estimate !== null && hasPriceEstimate(estimate) && (
+            <div
+              className="card card-pad"
+              style={{ background: 'var(--surface-2, rgba(127,127,127,.06))', marginBottom: 8 }}
+            >
+              <div className="sub" style={{ marginBottom: 6 }}>
+                {T4.estimateSection}
+              </div>
+              <div className="contact-rows">
+                <div className="c-row">
+                  <span>{T4.estimateInstallLbl}</span>
+                  <b className="num">
+                    {formatMoney(estimate.installTotal * 1_000_000, currencyCode)}
+                  </b>
                 </div>
-              ))}
+                {estimate.annualTotal > 0 && (
+                  <div className="c-row">
+                    <span>{T4.estimateAnnualLbl}</span>
+                    <b className="num">
+                      {formatMoney(estimate.annualTotal * 1_000_000, currencyCode)}
+                    </b>
+                  </div>
+                )}
+              </div>
+              <div className="sub" style={{ marginTop: 6 }}>
+                {[
+                  estimate.fixedInstall > 0 &&
+                    `${T4.estimateFixedPart} ${formatMoney(estimate.fixedInstall * 1_000_000, currencyCode)}`,
+                  estimate.monthly > 0 &&
+                    `${T4.estimateMonthlyPart} ${formatMoney(estimate.monthly * 1_000_000, currencyCode)}`,
+                  estimate.hourly > 0 &&
+                    `${T4.estimateHourlyPart} ${formatMoney(estimate.hourly * 1_000_000, currencyCode)}`,
+                  estimate.annualTotal > 0 &&
+                    `${T4.estimateAnnualPart} ${formatMoney(estimate.annualTotal * 1_000_000, currencyCode)}`,
+                ]
+                  .filter(Boolean)
+                  .join(' + ')}
+              </div>
+              <div className="sub" style={{ marginTop: 4 }}>
+                {T4.estimateNote}
+              </div>
             </div>
           )}
 

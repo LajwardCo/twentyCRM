@@ -11,7 +11,7 @@ import {
   type CatalogDiscountRuleInput,
   type ProductCurrencyCode,
 } from '../api/catalog';
-import { ProductMetricsEditor } from '../components/ProductMetricsEditor';
+import { ProductPricingFields } from '../components/ProductPricingFields';
 import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { useCached } from '../lib/cache';
 import { formatMoney } from '../lib/format';
@@ -60,7 +60,9 @@ const ProductsTab = () => {
             brand: p.brand,
             category: p.category,
             currencyCode:
-              (p.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN',
+              (p.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ??
+              (p.baseAnnualPrice?.currencyCode as ProductCurrencyCode | null) ??
+              'AFN',
             baseInstallPriceAmount: p.baseInstallPrice?.amountMicros
               ? p.baseInstallPrice.amountMicros / 1_000_000
               : null,
@@ -180,47 +182,7 @@ const ProductsTab = () => {
               />
             </div>
           </div>
-          {editing.pricingModel === 'PER_FACTOR' ? (
-            <div className="card card-pad" style={{ background: 'var(--surface-2, rgba(127,127,127,.06))', marginBottom: 4 }}>
-              <div className="sub" style={{ marginBottom: 8 }}>
-                {T4.metricsSection}
-              </div>
-              <ProductMetricsEditor
-                value={editing.pricingFactors ?? []}
-                currencyCode={editing.currencyCode ?? 'AFN'}
-                onChange={(next) => set({ pricingFactors: next })}
-              />
-            </div>
-          ) : (
-            <div className="f2">
-              <div className="fld">
-                <label>
-                  {T4.baseInstallPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
-                </label>
-                <input
-                  inputMode="decimal"
-                  dir="ltr"
-                  value={editing.baseInstallPriceAmount ?? ''}
-                  onChange={(e) =>
-                    set({ baseInstallPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="fld">
-                <label>
-                  {T4.baseAnnualPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
-                </label>
-                <input
-                  inputMode="decimal"
-                  dir="ltr"
-                  value={editing.baseAnnualPriceAmount ?? ''}
-                  onChange={(e) =>
-                    set({ baseAnnualPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
-                  }
-                />
-              </div>
-            </div>
-          )}
+          <ProductPricingFields value={editing} onChange={set} />
           <div className="fld">
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input

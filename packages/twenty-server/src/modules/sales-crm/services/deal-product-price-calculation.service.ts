@@ -6,17 +6,23 @@ import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspac
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 import {
-  type BillingFrequency,
+  computeFixedPlusMetricsPrice,
+  type ProductPricingFactor,
+} from 'src/modules/sales-crm/utils/product-fixed-plus-metrics-price.util';
+import {
   computePriceFromTierSchedule,
   type FactorTierSchedule,
+  mergeProductFactorsIntoTierSchedule,
 } from 'src/modules/sales-crm/utils/pricing-tier-schedule.util';
 
-type PricingFactor = {
-  name: string;
-  unitPrice: number;
-  billingFrequency?: BillingFrequency;
-};
 type FactorQuantities = Record<string, number>;
+
+const readPricingFactors = (product: {
+  pricingFactors?: unknown;
+}): ProductPricingFactor[] =>
+  Array.isArray(product.pricingFactors)
+    ? (product.pricingFactors as ProductPricingFactor[])
+    : [];
 
 export type PriceSnapshot = {
   packageId: string | null;
@@ -26,6 +32,7 @@ export type PriceSnapshot = {
   evaluatedAt: string;
   breakdown: ReturnType<typeof computePriceFromTierSchedule>['breakdown'];
   totalMonthly: number;
+  totalHourly: number;
   totalAnnual: number;
 };
 
@@ -34,13 +41,15 @@ const FALLBACK_CURRENCY_CODE = 'USD';
 // Computes installPrice for a Deal Product line from the linked Product's
 // per-factor rate table (Product.pricingFactors) and this line's quantities
 // (DealProduct.factorQuantities) -- e.g. OPD priced per doctor + per
-// employee, accounting priced per user + per inventory item. The actual
-// rates are entered by whoever manages the Product catalog; this service has
-// no hardcoded business numbers.
+// employee, accounting priced per user + per inventory item -- plus whatever
+// fixed amounts the product carries (baseInstallPrice as a one-time fee,
+// baseAnnualPrice as a fixed annual fee). The actual rates are entered by
+// whoever manages the Product catalog; this service has no hardcoded
+// business numbers.
 //
-// Only runs when pricingModel === 'PER_FACTOR' and factorQuantities is
-// present -- FLAT-priced products are left untouched (installPrice is set
-// directly by whoever creates the Deal Product line).
+// Only runs when pricingModel === 'PER_FACTOR' -- FLAT-priced products are
+// left untouched (installPrice is set directly by whoever creates the Deal
+// Product line).
 @Injectable()
 export class DealProductPriceCalculationService {
   constructor(
@@ -58,7 +67,7 @@ export class DealProductPriceCalculationService {
   }): Promise<
     { installPrice: CurrencyValue; annualPrice?: CurrencyValue } | undefined
   > {
-    if (!isDefined(productId) || !isDefined(factorQuantities)) {
+    if (!isDefined(productId)) {
       return undefined;
     }
 
@@ -83,49 +92,46 @@ export class DealProductPriceCalculationService {
       return undefined;
     }
 
-    const pricingFactors = product.pricingFactors as PricingFactor[] | null;
-
-    if (!isDefined(pricingFactors) || !Array.isArray(pricingFactors)) {
-      return undefined;
-    }
-
-    // Reuse the single pricing engine by treating each metric as a degenerate
-    // single-band per-unit tier schedule -- keeps FLAT-per-metric pricing and
-    // volume-tiered Package pricing on one code path. Each metric's
-    // billingFrequency routes its subtotal to the right cadence bucket;
-    // legacy rows without one default to MONTHLY.
-    const schedule: FactorTierSchedule[] = pricingFactors.map((factor) => ({
-      factor: factor.name,
-      billingFrequency: factor.billingFrequency ?? 'MONTHLY',
-      bands: [{ minQty: 1, maxQty: null, mode: 'PER_UNIT', amount: factor.unitPrice }],
-    }));
-
-    const { totalMonthly, totalHourly, totalAnnual } =
-      computePriceFromTierSchedule(schedule, factorQuantities);
+    const pricingFactors = readPricingFactors(product);
 
     // installPrice/annualPrice are CURRENCY composite fields ({amountMicros,
     // currencyCode}), not plain numbers -- writing a raw number is silently
-    // dropped. Reuse whichever currency the product's own base price is
+    // dropped. Reuse whichever currency the product's own base prices are
     // already denominated in (set by whoever entered the catalog data),
-    // falling back to USD only if that's also unset.
+    // falling back to USD only if both are unset.
     const baseInstallPrice = product.baseInstallPrice as CurrencyValue | null;
+    const baseAnnualPrice = product.baseAnnualPrice as CurrencyValue | null;
     const currencyCode =
-      baseInstallPrice?.currencyCode ?? FALLBACK_CURRENCY_CODE;
+      baseInstallPrice?.currencyCode ??
+      baseAnnualPrice?.currencyCode ??
+      FALLBACK_CURRENCY_CODE;
 
-    // The deal line has no dedicated hourly field, so sub-annual cadences
-    // (monthly + hourly) accumulate into installPrice while annual metrics
-    // populate annualPrice -- no metric is dropped and no cadence is converted.
+    const baseInstallMicros = Number(baseInstallPrice?.amountMicros ?? 0);
+    const baseAnnualMicros = Number(baseAnnualPrice?.amountMicros ?? 0);
+
+    // Nothing to price off: no fixed amounts and no metric quantities on this
+    // line. Returning undefined leaves whatever installPrice the caller set
+    // untouched, rather than stamping a meaningless 0 over it.
+    const hasFixedAmount = baseInstallMicros !== 0 || baseAnnualMicros !== 0;
+    const hasFactorQuantities =
+      isDefined(factorQuantities) && Object.keys(factorQuantities).length > 0;
+
+    if (!hasFixedAmount && !hasFactorQuantities) {
+      return undefined;
+    }
+
+    const { installMicros, annualMicros } = computeFixedPlusMetricsPrice({
+      pricingFactors,
+      factorQuantities,
+      baseInstallMicros,
+      baseAnnualMicros,
+    });
+
     return {
-      installPrice: {
-        amountMicros: Math.round((totalMonthly + totalHourly) * 1_000_000),
-        currencyCode,
-      },
+      installPrice: { amountMicros: installMicros, currencyCode },
       annualPrice:
-        totalAnnual > 0
-          ? {
-              amountMicros: Math.round(totalAnnual * 1_000_000),
-              currencyCode,
-            }
+        annualMicros > 0
+          ? { amountMicros: annualMicros, currencyCode }
           : undefined,
     };
   }
@@ -226,8 +232,17 @@ export class DealProductPriceCalculationService {
       return undefined;
     }
 
-    const { breakdown, totalMonthly, totalAnnual } =
-      computePriceFromTierSchedule(tierSchedule, factorQuantities);
+    // A Package tiers only the metrics it names. Every other metric priced on
+    // the Product (e.g. OPD tiers doctors but employees stay at 70/year) is
+    // billed on top -- otherwise selecting a package would silently zero out
+    // the metrics it doesn't mention.
+    const mergedSchedule = mergeProductFactorsIntoTierSchedule(
+      tierSchedule,
+      isDefined(product) ? readPricingFactors(product) : [],
+    );
+
+    const { breakdown, totalMonthly, totalHourly, totalAnnual } =
+      computePriceFromTierSchedule(mergedSchedule, factorQuantities);
 
     const currencyCode =
       (pricingVersion.currencyCode as string | null | undefined) ??
@@ -243,12 +258,16 @@ export class DealProductPriceCalculationService {
       evaluatedAt: new Date().toISOString(),
       breakdown,
       totalMonthly,
+      totalHourly,
       totalAnnual,
     };
 
     return {
+      // Same cadence mapping as the product-only path: the deal line has no
+      // hourly field, so monthly + hourly land in installPrice and annual
+      // metrics populate annualPrice -- no metric is dropped, none converted.
       installPrice: {
-        amountMicros: Math.round(totalMonthly * 1_000_000),
+        amountMicros: Math.round((totalMonthly + totalHourly) * 1_000_000),
         currencyCode,
       },
       annualPrice: {

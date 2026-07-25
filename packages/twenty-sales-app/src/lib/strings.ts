@@ -311,6 +311,12 @@ export const T4 = {
   pricingModelLbl: 'مدل قیمت‌گذاری',
   pricingFactorNotesLbl: 'یادداشت عوامل قیمت‌گذاری',
   isSellableLbl: 'قابل فروش',
+  // fixed amounts (apply to every pricing model; added on top of metrics)
+  fixedSection: 'مبالغ ثابت',
+  fixedPlusMetricsHint:
+    'این مبالغ ثابت به قیمت متریک‌ها اضافه می‌شود. اگر محصول فقط بر اساس متریک قیمت‌گذاری می‌شود، خالی بگذارید.',
+  fixedInstallLbl: 'مبلغ ثابت یک‌باره (نصب)',
+  fixedAnnualLbl: 'مبلغ ثابت سالانه',
   // metrics editor (PER_FACTOR products)
   metricsSection: 'متریک‌های قیمت‌گذاری',
   metricsHint: 'برای هر متریک، هزینه هر واحد و دوره صورتحساب را تعیین کنید',
@@ -331,6 +337,8 @@ export const T4 = {
   newPricingVersion: 'نسخه جدید',
   activeVersionBadge: 'فعال',
   deactivatedVersionNote: 'ثبت این نسخه، نسخه فعال فعلی این بسته را غیرفعال می‌کند.',
+  untieredMetricsNote:
+    'این متریک‌ها در این بسته پله‌بندی نشده‌اند و با نرخ خودِ محصول علاوه بر بسته محاسبه می‌شوند:',
   effectiveFromLbl: 'مؤثر از',
   currencyCodeLbl: 'کد ارز',
   isActiveLbl: 'فعال',
@@ -363,6 +371,16 @@ export const T4 = {
   noActiveVersionNote: 'این بسته نسخه قیمتی فعال ندارد.',
   discountRuleLbl: 'قانون تخفیف',
   noDiscountOption: 'بدون تخفیف',
+  metricQuantitiesSection: 'تعداد متریک‌ها',
+  metricQuantitiesHint: 'تعداد هر متریک را برای این مشتری وارد کنید',
+  estimateSection: 'برآورد قیمت',
+  estimateInstallLbl: 'قیمت نصب',
+  estimateAnnualLbl: 'قیمت سالانه',
+  estimateFixedPart: 'ثابت',
+  estimateMonthlyPart: 'ماهانه',
+  estimateHourlyPart: 'ساعتی',
+  estimateAnnualPart: 'سالانه',
+  estimateNote: 'قیمت نهایی توسط سرور محاسبه و ثبت می‌شود.',
   minQuantityHint: (n: number) => `این تخفیف نیازمند حداقل ${n} عدد در همین خط است.`,
   metricQuantityHint: (n: number, metric: string) =>
     `این تخفیف نیازمند حداقل ${n} واحد «${metric}» در همین خط است.`,

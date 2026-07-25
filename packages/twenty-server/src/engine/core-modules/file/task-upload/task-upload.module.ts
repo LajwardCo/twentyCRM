@@ -10,6 +10,7 @@ import { RecordCrudModule } from 'src/engine/core-modules/record-crud/record-cru
 import { ThrottlerModule } from 'src/engine/core-modules/throttler/throttler.module';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
+import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
 
 // GlobalWorkspaceOrmManager + TwentyConfigService are provided by @Global()
 // modules, so they don't need to be imported here.
@@ -19,6 +20,7 @@ import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadat
     FilesFieldModule,
     RecordCrudModule,
     ThrottlerModule,
+    PermissionsModule,
     TypeOrmModule.forFeature([ObjectMetadataEntity, FieldMetadataEntity]),
   ],
   providers: [TaskUploadService, TaskUploadResolver],

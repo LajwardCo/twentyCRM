@@ -64,7 +64,7 @@ const NAV = [
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'reports', label: T2.reports, icon: IconChart },
   { key: 'daily-report', label: T3.dailyReport, icon: IconDailyReport },
-  { key: 'competitors', label: 'رقبا', icon: IconFlame },
+  { key: 'competitors', label: 'بازیگران بازار', icon: IconFlame },
   { key: 'catalog', label: T4.catalog, icon: IconPackage },
   { key: 'admin', label: 'کاربران', icon: IconLeads },
 ] as const;

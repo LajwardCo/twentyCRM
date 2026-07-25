@@ -449,9 +449,9 @@ export const T3 = {
 
 // --- restored (required by CompetitorDetailView.tsx) ---
 export const T5 = {
-  editCompetitor: 'ویرایش رقیب',
+  editCompetitor: 'ویرایش بازیگر',
   websiteLbl: 'ویب‌سایت',
-  threatLevelLbl: 'سطح تهدید',
+  threatLevelLbl: 'میزان اهمیت',
   tierLbl: 'رده',
   trackingStatusLbl: 'وضعیت پیگیری',
   strengthsLbl: 'نقاط قوت',
@@ -466,7 +466,7 @@ export const T5 = {
   demoUrlLbl: 'لینک دمو',
   startingPriceLbl: 'قیمت شروع (؋)',
   pricingSummaryLbl: 'خلاصه قیمت‌گذاری',
-  noCompetitorProducts: 'هنوز محصولی برای این رقیب ثبت نشده',
+  noCompetitorProducts: 'هنوز محصولی برای این بازیگر ثبت نشده',
 
   updatesSection: 'یادداشت‌ها و اخبار',
   newCompetitorUpdate: 'یادداشت جدید',
@@ -477,25 +477,25 @@ export const T5 = {
   sourceLbl: 'لینک منبع',
   noCompetitorUpdates: 'هنوز یادداشتی ثبت نشده',
 
-  usageSection: 'کاربران (مشتریان ما که از این رقیب استفاده می‌کنند)',
+  usageSection: 'کاربران (مشتریان ما که از این بازیگر استفاده می‌کنند)',
   noCompetitorUsages: 'هیچ موردی ثبت نشده',
   satisfactionLbl: 'رضایت',
   switchingSignalLbl: 'سیگنال تغییر',
   renewalDateLbl: 'تاریخ تمدید',
 
-  competitorNotFound: 'رقیب یافت نشد',
+  competitorNotFound: 'بازیگر یافت نشد',
 };
 
 export const COMPETITOR_TIER_LABELS: Record<string, string> = {
   LEADER: 'پیشتاز',
-  CHALLENGER: 'رقیب جدی',
+  CHALLENGER: 'چالشگر',
   NICHE: 'تخصصی',
   EMERGING: 'نوظهور',
 };
 export const COMPETITOR_THREAT_LABELS: Record<string, string> = {
-  HIGH: 'تهدید بالا',
-  MEDIUM: 'تهدید متوسط',
-  LOW: 'تهدید کم',
+  HIGH: 'اهمیت بالا',
+  MEDIUM: 'اهمیت متوسط',
+  LOW: 'اهمیت کم',
 };
 export const COMPETITOR_STATUS_LABELS: Record<string, string> = {
   ACTIVELY_TRACKING: 'زیر نظر فعال',

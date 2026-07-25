@@ -34,6 +34,7 @@ import {
   T2,
   T4,
 } from '../lib/strings';
+import { groupProductsByCategory } from '../lib/taxonomy';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
 
 // One line describing what a Discount Rule needs to actually apply --
@@ -523,13 +524,21 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               <label>{T2.productLbl}</label>
               <select value={productId} onChange={(e) => selectProduct(e.target.value)}>
                 <option value="">انتخاب…</option>
-                {(products ?? []).map((p: ProductOption) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                    {p.baseInstallPrice?.amountMicros
-                      ? ` — ${formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}`
-                      : ''}
-                  </option>
+                {groupProductsByCategory(products ?? []).map((group) => (
+                  <optgroup
+                    key={group.category ?? '__none__'}
+                    label={group.category ?? T4.noCategory}
+                  >
+                    {group.products.map((p: ProductOption) => (
+                      <option key={p.id} value={p.id}>
+                        {p.brand ? `${p.brand} · ` : ''}
+                        {p.name}
+                        {p.baseInstallPrice?.amountMicros
+                          ? ` — ${formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}`
+                          : ''}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

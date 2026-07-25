@@ -909,6 +909,10 @@ export const fetchLeadPricing = async (
 export type ProductOption = {
   id: string;
   name: string;
+  // Catalog taxonomy — the picker groups by category and shows the brand, so a
+  // seller can find a product in a catalog that has outgrown a flat list.
+  brand: string | null;
+  category: string | null;
   baseInstallPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   baseAnnualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   // A PER_FACTOR product prices off its own metric table -- for the metrics no
@@ -928,6 +932,8 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
           node {
             id
             name
+            brand
+            category
             pricingModel
             pricingFactors
             baseInstallPrice { amountMicros currencyCode }

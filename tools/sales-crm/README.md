@@ -50,6 +50,15 @@ metadata GraphQL API. See the design in
   server-side PRE query hook (see below) that auto-calculates `installPrice`.
   Verified end-to-end locally (create and update paths, correct math, correct
   CURRENCY composite format).
+- `provision-product-brand-category.mjs` — adds `Product.brand` (vendor /
+  product line) and `Product.category` (catalog grouping), both TEXT.
+  Deliberately not SELECTs: the taxonomy differs per workspace and grows, and a
+  SELECT would need re-provisioning for every new brand. The Sales UI keeps
+  values consistent by suggesting the ones already in use (a `<datalist>` built
+  from the catalog), filters the products list by category, and groups the
+  seller's deal-line product picker into category `<optgroup>`s. Creating a
+  field also creates its view fields, so both columns appear in the Twenty CRM
+  Products table with no extra step. Idempotent.
 - `provision-external-sync-workflow.mjs` — creates a workflow that POSTs a
   Subscription's state to `Subscription.externalSystemUrl` whenever it's
   updated. Verified the trigger fires and variables resolve correctly; full

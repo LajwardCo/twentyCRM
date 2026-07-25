@@ -13,6 +13,8 @@ import {
   type CompetitorUpdateEntry,
   type CompetitorUpdateInput,
 } from '../api/competitors';
+import { ActionBar, type ActionBarItem } from '../components/ActionBar';
+import { IconEdit, IconFlame, IconNote } from '../components/icons';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { useCached } from '../lib/cache';
 import { formatAfn, toLocalInputValue } from '../lib/format';
@@ -182,6 +184,23 @@ export const CompetitorDetailView = ({ competitorId }: { competitorId: string })
       setUpdateBusy(false);
     }
   };
+
+  const barActions: ActionBarItem[] = [
+    { key: 'edit', label: T4.edit, icon: IconEdit, onClick: startEdit },
+    {
+      key: 'product',
+      label: T5.newCompetitorProduct,
+      icon: IconFlame,
+      onClick: startNewProduct,
+    },
+    {
+      key: 'update',
+      label: T5.newCompetitorUpdate,
+      icon: IconNote,
+      primary: true,
+      onClick: startNewUpdate,
+    },
+  ];
 
   return (
     <main className="page" style={{ maxWidth: 900 }}>
@@ -584,6 +603,8 @@ export const CompetitorDetailView = ({ competitorId }: { competitorId: string })
           </div>
         ))}
       </div>
+
+      <ActionBar items={barActions} />
     </main>
   );
 };

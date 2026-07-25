@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
@@ -13,21 +13,16 @@ import {
 } from '../lib/workbench';
 import { Dock } from './Dock';
 import {
-  IconCalendar,
-  IconChart,
   IconChevronDown,
-  IconDailyReport,
-  IconDashboard,
-  IconFlame,
-  IconLeads,
   IconLogout,
   IconMoon,
-  IconPackage,
   IconPlus,
   IconSearch,
   IconSun,
-  IconTasks,
 } from './icons';
+import { MobileMenu } from './MobileMenu';
+import { MobileNav } from './MobileNav';
+import { activeNavKey, NAV } from './navItems';
 
 // fallback dock labels when a view hasn't announced one yet
 const routeDockDefaults = (
@@ -57,18 +52,6 @@ type AppShellProps = {
   onOpenPalette: () => void;
 };
 
-const NAV = [
-  { key: 'today', label: T.tabToday, icon: IconDashboard },
-  { key: 'calendar', label: T2.calendar, icon: IconCalendar },
-  { key: 'tasks', label: 'کارها', icon: IconTasks },
-  { key: 'leads', label: T.tabLeads, icon: IconLeads },
-  { key: 'reports', label: T2.reports, icon: IconChart },
-  { key: 'daily-report', label: T3.dailyReport, icon: IconDailyReport },
-  { key: 'competitors', label: 'بازیگران بازار', icon: IconFlame },
-  { key: 'catalog', label: T4.catalog, icon: IconPackage },
-  { key: 'admin', label: 'کاربران', icon: IconLeads },
-] as const;
-
 export const AppShell = ({
   user,
   onLogout,
@@ -80,8 +63,13 @@ export const AppShell = ({
 }: AppShellProps) => {
   const route = useRoute();
   const dockItems = useDock();
-  const active =
-    route.parts[0] === 'lead' ? 'leads' : (route.parts[0] ?? 'today');
+  const active = activeNavKey(route.parts);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // a back/forward navigation should never leave the sheet covering the page
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [route.path]);
 
   // pages worth minimizing: anything that isn't the dashboard itself
   const minimizable = route.parts.length > 0 && route.parts[0] !== 'today';
@@ -125,13 +113,6 @@ export const AppShell = ({
               {label}
             </button>
           ))}
-          <button
-            className="nav-item m-cta only-mobile"
-            onClick={() => navigate('/new')}
-          >
-            <IconPlus size={18} />
-            {T.tabNew}
-          </button>
         </nav>
         <div className="side-user">
           <span className="avatar">{user.firstName.charAt(0) || 'ک'}</span>
@@ -181,6 +162,18 @@ export const AppShell = ({
         {children}
         <Dock />
       </div>
+
+      <MobileNav menuOpen={menuOpen} onOpenMenu={() => setMenuOpen(true)} />
+      {menuOpen && (
+        <MobileMenu
+          user={user}
+          theme={theme}
+          onClose={() => setMenuOpen(false)}
+          onLogout={onLogout}
+          onToggleTheme={onToggleTheme}
+          onOpenPalette={onOpenPalette}
+        />
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ import {
   type Referrer,
   type Task,
 } from '../api/records';
+import { ActionBar, type ActionBarItem } from '../components/ActionBar';
 import {
   IconAI,
   IconCheck,
@@ -300,6 +301,45 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     Math.round((Date.now() - new Date(lead.createdAt).getTime()) / 86400000),
   );
 
+  const barActions: ActionBarItem[] = [
+    {
+      key: 'call',
+      label: T.call,
+      icon: IconPhone,
+      disabled: !phone,
+      onClick: () => phone && (window.location.href = `tel:${phone}`),
+    },
+    {
+      key: 'whatsapp',
+      label: T.whatsapp,
+      icon: IconWhatsApp,
+      disabled: !lead.pointOfContact,
+      onClick: () => setShowWhatsApp(true),
+    },
+    {
+      key: 'sms',
+      label: T.sms,
+      icon: IconSms,
+      disabled: !phone,
+      onClick: () => phone && (window.location.href = `sms:${phone}`),
+    },
+    {
+      key: 'email',
+      label: T.emailAction,
+      icon: IconMail,
+      disabled: !email,
+      onClick: () => email && (window.location.href = `mailto:${email}`),
+    },
+    {
+      // short label: five slots on a 360px screen leave ~60px each
+      key: 'ai',
+      label: 'دستیار',
+      icon: IconAI,
+      primary: true,
+      onClick: () => navigate(`/lead/${lead.id}/chat`),
+    },
+  ];
+
   return (
     <main className="page">
       {/* hero */}
@@ -582,7 +622,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 <b>{SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}</b>
               </div>
             </div>
-            <div className="actions-grid" style={{ marginTop: 14 }}>
+            <div className="actions-grid abar-dup" style={{ marginTop: 14 }}>
               <button
                 className="a-btn"
                 disabled={!phone}
@@ -748,6 +788,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       )}
 
       {toast !== null && <div className="toast">{toast}</div>}
+
+      <ActionBar items={barActions} />
     </main>
   );
 };

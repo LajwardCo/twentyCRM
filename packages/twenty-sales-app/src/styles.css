@@ -29,6 +29,9 @@
   --sh-2:
     0 2px 4px rgba(12, 22, 54, 0.05), 0 12px 32px -16px rgba(12, 22, 54, 0.18);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* height of the mobile bottom bar; 0 on desktop where it isn't rendered, so
+     everything anchored to the bottom can offset by it unconditionally */
+  --mnav-h: 0px;
   --font: 'Vazirmatn', 'SF Arabic', 'Segoe UI', Tahoma, sans-serif;
 }
 
@@ -2473,6 +2476,10 @@ table.leads tbody tr:hover {
 /* ============ responsive ============ */
 
 @media (max-width: 980px) {
+  :root {
+    --mnav-h: 62px;
+  }
+
   .only-mobile {
     display: flex;
   }
@@ -2481,49 +2488,9 @@ table.leads tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  /* the sidebar is desktop-only; MobileNav + MobileMenu replace it */
   .sidebar {
-    position: fixed;
-    inset: auto 0 0 0;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    padding: 0 4px;
-    z-index: 50;
-  }
-
-  .brand,
-  .side-user,
-  .nav-lbl,
-  .nav-item .count,
-  .side-cta {
     display: none;
-  }
-
-  .nav {
-    flex-direction: row;
-    flex: 1;
-    justify-content: space-around;
-    padding: 7px 4px calc(7px + var(--safe-bottom));
-  }
-
-  .nav-item {
-    flex-direction: column;
-    gap: 3px;
-    font-size: 10px;
-    padding: 6px 10px;
-    width: auto;
-    text-align: center;
-  }
-
-  .nav-item.on::before {
-    display: none;
-  }
-
-  .nav-item.m-cta {
-    background: linear-gradient(140deg, var(--lapis-500), var(--lapis-600));
-    color: #fff;
-    font-weight: 800;
-    border-radius: 12px;
   }
 
   .cmd-bar {
@@ -2535,7 +2502,7 @@ table.leads tbody tr:hover {
   }
 
   .page {
-    padding: 16px 14px calc(120px + var(--safe-bottom));
+    padding: 16px 14px calc(var(--mnav-h) + 34px + var(--safe-bottom));
   }
 
   .stats {
@@ -2587,7 +2554,7 @@ table.leads tbody tr:hover {
   }
 
   .chat-input-bar {
-    padding: 10px 14px calc(76px + var(--safe-bottom));
+    padding: 10px 14px calc(var(--mnav-h) + 14px + var(--safe-bottom));
   }
 }
 
@@ -2973,11 +2940,376 @@ table.leads tbody tr:hover {
 @media (max-width: 980px) {
   .dock {
     right: 0;
-    bottom: calc(58px + var(--safe-bottom));
+    bottom: calc(var(--mnav-h) + var(--safe-bottom));
     border-bottom: 1px solid var(--line);
   }
 
   .has-dock .page {
-    padding-bottom: calc(175px + var(--safe-bottom));
+    padding-bottom: calc(var(--mnav-h) + 90px + var(--safe-bottom));
+  }
+}
+
+/* ============ mobile bottom bar + menu sheet ============ */
+
+/* Liquid glass: a translucent blurred pane, a bright top edge that reads as a
+   refracted highlight, and a soft shadow lifting it off the page. */
+.mnav {
+  display: none;
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 60;
+  height: calc(var(--mnav-h) + var(--safe-bottom));
+  padding: 0 6px var(--safe-bottom);
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 -1px 0 rgba(12, 22, 54, 0.06),
+    0 -14px 34px -18px rgba(12, 22, 54, 0.28);
+}
+
+[data-theme='dark'] .mnav {
+  background: rgba(23, 28, 48, 0.72);
+  border-top-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 -14px 34px -18px rgba(0, 0, 0, 0.7);
+}
+
+.mnav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 50px;
+  border: 0;
+  border-radius: 13px;
+  background: none;
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.mnav-item svg {
+  flex-shrink: 0;
+}
+
+.mnav-item:active {
+  background: rgba(59, 106, 232, 0.1);
+}
+
+.mnav-item.on {
+  color: var(--lapis-600);
+  background: rgba(59, 106, 232, 0.12);
+}
+
+[data-theme='dark'] .mnav-item.on {
+  color: #9db8f5;
+  background: rgba(59, 106, 232, 0.2);
+}
+
+.msheet {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  flex-direction: column;
+  background: rgba(244, 245, 247, 0.86);
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  animation: rise-in 0.22s both;
+}
+
+[data-theme='dark'] .msheet {
+  background: rgba(14, 18, 32, 0.9);
+}
+
+.msheet-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.msheet-top .brand {
+  flex: 1;
+  padding: 0;
+}
+
+.msheet-top .brand b {
+  color: var(--ink);
+}
+
+.msheet-top .brand small {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+.msheet-x {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-2);
+  border-radius: 12px;
+  padding: 9px;
+  display: flex;
+  cursor: pointer;
+}
+
+.msheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.msheet-cta {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-600));
+  color: #fff;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px -8px rgba(36, 83, 214, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.msheet-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.msheet-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 88px;
+  padding: 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  text-align: center;
+  line-height: 1.35;
+  cursor: pointer;
+  box-shadow: var(--sh-1);
+}
+
+.msheet-tile svg {
+  color: var(--lapis-600);
+  flex-shrink: 0;
+}
+
+.msheet-tile.on {
+  border-color: var(--lapis-500);
+  background: var(--lapis-50);
+  color: var(--lapis-600);
+}
+
+.msheet-tools {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.msheet-tools button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.msheet-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px calc(14px + var(--safe-bottom));
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.msheet-user .avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  background: var(--lapis-600);
+  color: #fff;
+}
+
+.msheet-user .u-info {
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.msheet-user small {
+  display: block;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msheet-user .out {
+  margin-right: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink-2);
+  padding: 9px;
+  display: flex;
+  cursor: pointer;
+}
+
+/* ============ per-page action bar ============ */
+
+.abar {
+  display: none;
+  position: fixed;
+  bottom: calc(var(--mnav-h) + var(--safe-bottom) + 10px);
+  left: 10px;
+  right: 10px;
+  z-index: 55;
+  border-radius: 20px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 30px -10px rgba(12, 22, 54, 0.35);
+  animation: rise-in 0.25s both;
+}
+
+[data-theme='dark'] .abar {
+  background: rgba(23, 28, 48, 0.74);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 30px -10px rgba(0, 0, 0, 0.7);
+}
+
+/* stack above the workspace dock when pages are minimized */
+.has-dock .abar {
+  bottom: calc(var(--mnav-h) + var(--safe-bottom) + 54px);
+}
+
+/* .abar is itself a flex container once shown, so the row must be told to grow */
+.abar-inner {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 4px;
+}
+
+.abar-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 15px;
+  background: none;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.abar-btn svg {
+  color: var(--lapis-600);
+  flex-shrink: 0;
+}
+
+.abar-btn span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abar-btn:active {
+  background: rgba(59, 106, 232, 0.12);
+}
+
+.abar-btn.primary {
+  background: linear-gradient(140deg, var(--lapis-500), var(--lapis-600));
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(36, 83, 214, 0.8);
+}
+
+.abar-btn.primary svg {
+  color: #fff;
+}
+
+[data-theme='dark'] .abar-btn svg {
+  color: #9db8f5;
+}
+
+[data-theme='dark'] .abar-btn.primary svg {
+  color: #fff;
+}
+
+.abar-spacer {
+  display: none;
+  height: 72px;
+}
+
+@media (max-width: 980px) {
+  .mnav,
+  .abar,
+  .msheet {
+    display: flex;
+  }
+
+  .abar-spacer {
+    display: block;
+  }
+
+  /* the detail cards that duplicate the action bar are redundant on mobile */
+  .abar-dup {
+    display: none;
   }
 }

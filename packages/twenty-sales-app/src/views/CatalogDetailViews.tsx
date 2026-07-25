@@ -15,6 +15,8 @@ import {
   type CatalogProductInput,
   type ProductCurrencyCode,
 } from '../api/catalog';
+import { ActionBar, type ActionBarItem } from '../components/ActionBar';
+import { IconEdit, IconMoney, IconPackage } from '../components/icons';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { ProductPricingFields } from '../components/ProductPricingFields';
 import { TierScheduleEditor } from '../components/TierScheduleEditor';
@@ -128,6 +130,17 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
       setPackageBusy(false);
     }
   };
+
+  const barActions: ActionBarItem[] = [
+    { key: 'edit', label: T4.edit, icon: IconEdit, onClick: startEdit },
+    {
+      key: 'package',
+      label: T4.newPackage,
+      icon: IconPackage,
+      primary: true,
+      onClick: startNewPackage,
+    },
+  ];
 
   return (
     <main className="page" style={{ maxWidth: 860 }}>
@@ -371,6 +384,8 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
           </div>
         ))}
       </div>
+
+      <ActionBar items={barActions} />
     </main>
   );
 };
@@ -476,6 +491,17 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
       setVersionBusy(false);
     }
   };
+
+  const barActions: ActionBarItem[] = [
+    { key: 'edit', label: T4.edit, icon: IconEdit, onClick: startEdit },
+    {
+      key: 'version',
+      label: T4.newPricingVersion,
+      icon: IconMoney,
+      primary: true,
+      onClick: startNewVersion,
+    },
+  ];
 
   return (
     <main className="page" style={{ maxWidth: 900 }}>
@@ -667,6 +693,8 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
           </div>
         ))}
       </div>
+
+      <ActionBar items={barActions} />
     </main>
   );
 };

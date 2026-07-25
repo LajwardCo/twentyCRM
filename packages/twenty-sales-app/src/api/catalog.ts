@@ -36,33 +36,72 @@ export type CatalogProduct = {
   createdAt: string;
 };
 
-const PRODUCT_FIELDS = `
-  id name brand category maxDiscountPercent pricingModel pricingFactors pricingFactorNotes isSellable createdAt
+const PRODUCT_FIELDS_BASE = `
+  id name maxDiscountPercent pricingModel pricingFactors pricingFactorNotes isSellable createdAt
   baseInstallPrice { amountMicros currencyCode }
   baseAnnualPrice { amountMicros currencyCode }
 `;
 
-export const fetchCatalogProducts = async (): Promise<CatalogProduct[]> => {
-  const data = await coreQuery<{ products: { edges: { node: CatalogProduct }[] } }>(
-    `query CatalogProducts {
-      products(first: 200, orderBy: [{ name: AscNullsLast }]) {
-        edges { node { ${PRODUCT_FIELDS} } }
-      }
-    }`,
+const PRODUCT_FIELDS = `brand category ${PRODUCT_FIELDS_BASE}`;
+
+// An instance where provision-product-brand-category.mjs hasn't run yet doesn't
+// know brand/category, and GraphQL rejects the whole document over one unknown
+// field -- which would blank the catalog rather than just hide two values. So
+// every product call requests them, and falls back once on that exact error.
+// Same pattern as admin.ts's `link` fallback; see the sales-app schema-skew
+// note. Drop the fallback once every instance has run the script.
+const isMissingTaxonomyFieldError = (error: unknown): boolean =>
+  error instanceof Error &&
+  /(Cannot query field|is not defined by type).*"(brand|category)"|"(brand|category)".*(is not defined by type)/i.test(
+    error.message,
   );
-  return data.products.edges.map((e) => e.node);
+
+const withNullTaxonomy = (products: CatalogProduct[]): CatalogProduct[] =>
+  products.map((product) => ({
+    ...product,
+    brand: product.brand ?? null,
+    category: product.category ?? null,
+  }));
+
+export const fetchCatalogProducts = async (): Promise<CatalogProduct[]> => {
+  const run = async (fields: string) => {
+    const data = await coreQuery<{ products: { edges: { node: CatalogProduct }[] } }>(
+      `query CatalogProducts {
+        products(first: 200, orderBy: [{ name: AscNullsLast }]) {
+          edges { node { ${fields} } }
+        }
+      }`,
+    );
+    return withNullTaxonomy(data.products.edges.map((e) => e.node));
+  };
+
+  try {
+    return await run(PRODUCT_FIELDS);
+  } catch (error) {
+    if (!isMissingTaxonomyFieldError(error)) throw error;
+    return run(PRODUCT_FIELDS_BASE);
+  }
 };
 
 export const fetchProductById = async (id: string): Promise<CatalogProduct | undefined> => {
-  const data = await coreQuery<{ products: { edges: { node: CatalogProduct }[] } }>(
-    `query CatalogProductById($id: UUID!) {
-      products(filter: { id: { eq: $id } }, first: 1) {
-        edges { node { ${PRODUCT_FIELDS} } }
-      }
-    }`,
-    { id },
-  );
-  return data.products.edges[0]?.node;
+  const run = async (fields: string) => {
+    const data = await coreQuery<{ products: { edges: { node: CatalogProduct }[] } }>(
+      `query CatalogProductById($id: UUID!) {
+        products(filter: { id: { eq: $id } }, first: 1) {
+          edges { node { ${fields} } }
+        }
+      }`,
+      { id },
+    );
+    return withNullTaxonomy(data.products.edges.map((e) => e.node))[0];
+  };
+
+  try {
+    return await run(PRODUCT_FIELDS);
+  } catch (error) {
+    if (!isMissingTaxonomyFieldError(error)) throw error;
+    return run(PRODUCT_FIELDS_BASE);
+  }
 };
 
 export type ProductCurrencyCode = 'AFN' | 'USD';
@@ -127,22 +166,34 @@ export const saveCatalogProduct = async (
     pricingFactorNotes: input.pricingFactorNotes || null,
     isSellable: input.isSellable ?? true,
   };
-  if (id) {
-    const data = await coreQuery<{ updateProduct: { id: string } }>(
-      `mutation UpdateCatalogProduct($id: UUID!, $data: ProductUpdateInput!) {
-        updateProduct(id: $id, data: $data) { id }
+  const run = async (data: Record<string, unknown>) => {
+    if (id) {
+      const updated = await coreQuery<{ updateProduct: { id: string } }>(
+        `mutation UpdateCatalogProduct($id: UUID!, $data: ProductUpdateInput!) {
+          updateProduct(id: $id, data: $data) { id }
+        }`,
+        { id, data },
+      );
+      return updated.updateProduct.id;
+    }
+    const created = await coreQuery<{ createProduct: { id: string } }>(
+      `mutation CreateCatalogProduct($data: ProductCreateInput!) {
+        createProduct(data: $data) { id }
       }`,
-      { id, data: payload },
+      { data },
     );
-    return data.updateProduct.id;
+    return created.createProduct.id;
+  };
+
+  try {
+    return await run(payload);
+  } catch (error) {
+    if (!isMissingTaxonomyFieldError(error)) throw error;
+    // Save the rest rather than lose the edit; the taxonomy sticks once the
+    // provisioning script has run on this instance.
+    const { brand: _brand, category: _category, ...withoutTaxonomy } = payload;
+    return run(withoutTaxonomy);
   }
-  const data = await coreQuery<{ createProduct: { id: string } }>(
-    `mutation CreateCatalogProduct($data: ProductCreateInput!) {
-      createProduct(data: $data) { id }
-    }`,
-    { data: payload },
-  );
-  return data.createProduct.id;
 };
 
 // ---------- package ----------

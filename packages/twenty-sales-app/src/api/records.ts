@@ -922,28 +922,48 @@ export type ProductOption = {
   pricingFactors: PricingFactor[] | null;
 };
 
+// brand/category only exist once provision-product-brand-category.mjs has run
+// on the instance; one unknown field fails the whole document, so fall back to
+// the picker without them rather than lose the pricing panel. Same pattern as
+// catalog.ts and admin.ts's `link`.
+const isMissingTaxonomyFieldError = (error: unknown): boolean =>
+  error instanceof Error &&
+  /(Cannot query field|is not defined by type).*"(brand|category)"/i.test(error.message);
+
 export const fetchProducts = async (): Promise<ProductOption[]> => {
-  const data = await coreQuery<{
-    products: { edges: { node: ProductOption }[] };
-  }>(
-    `query Products {
-      products(first: 100, orderBy: [{ name: AscNullsLast }]) {
-        edges {
-          node {
-            id
-            name
-            brand
-            category
-            pricingModel
-            pricingFactors
-            baseInstallPrice { amountMicros currencyCode }
-            baseAnnualPrice { amountMicros currencyCode }
+  const run = async (taxonomyFields: string) => {
+    const data = await coreQuery<{
+      products: { edges: { node: ProductOption }[] };
+    }>(
+      `query Products {
+        products(first: 100, orderBy: [{ name: AscNullsLast }]) {
+          edges {
+            node {
+              id
+              name
+              ${taxonomyFields}
+              pricingModel
+              pricingFactors
+              baseInstallPrice { amountMicros currencyCode }
+              baseAnnualPrice { amountMicros currencyCode }
+            }
           }
         }
-      }
-    }`,
-  );
-  return data.products.edges.map((e) => e.node);
+      }`,
+    );
+    return data.products.edges.map((e) => ({
+      ...e.node,
+      brand: e.node.brand ?? null,
+      category: e.node.category ?? null,
+    }));
+  };
+
+  try {
+    return await run('brand\n              category');
+  } catch (error) {
+    if (!isMissingTaxonomyFieldError(error)) throw error;
+    return run('');
+  }
 };
 
 // The server-side PRE hook computes installPrice from the product's pricing

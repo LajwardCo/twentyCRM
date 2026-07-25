@@ -73,15 +73,21 @@ only exists once the object metadata does). Run this on prod, then reload.
 
 ### Product brand / category (added 2026-07-25)
 
-One idempotent script, no dependencies beyond the `product` object itself:
+One idempotent script, no dependencies beyond the `product` object itself.
+Against prod, authenticate with an **API key** (Settings > APIs & Webhooks)
+rather than putting an admin password in your shell history:
 
 ```bash
-node tools/sales-crm/provision-product-brand-category.mjs   # product.brand + product.category (TEXT)
+TWENTY_META=https://crm.hamagan.com/metadata TWENTY_ORIGIN=https://crm.hamagan.com TWENTY_TOKEN='<api key>' node tools/sales-crm/provision-product-brand-category.mjs
 ```
 
-Run it on prod before (or right after) the sales-app bundle ships. Without it
-the catalog views fail on load with `Cannot query field "brand" on type
-"Product"` — the two columns are part of the product query's selection set.
+Until it runs, the SPA degrades instead of breaking: `catalog.ts` and
+`records.ts` request `brand`/`category` and retry without them on the
+`Cannot query field "brand"` validation error (mapping both to null), so the
+catalog, product detail and deal-line picker keep working — they just show no
+taxonomy, and edits to those two fields are dropped. Once the script has run,
+the values appear with no redeploy. Remove those fallbacks when every instance
+has been provisioned.
 
 > ⚠️ This ordered list predates several later feature waves. Other per-feature
 > provisioning scripts now live in `tools/sales-crm/` (contact-request, task

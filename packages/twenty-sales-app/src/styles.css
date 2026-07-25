@@ -155,6 +155,21 @@ textarea {
   }
 }
 
+/* rise-in for elements centred with `left: 50%; transform: translateX(-50%)`.
+   Plain rise-in animates transform, so it would clobber the centring for the
+   whole animation (and forever, under a forwards fill). Both keyframes here
+   carry the -50% themselves, so the element stays centred throughout. */
+@keyframes toast-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -810,7 +825,7 @@ textarea {
   padding: 10px 13px;
   margin-bottom: 12px;
   font-size: 13px;
-  animation: rise-in 0.3s both;
+  animation: rise-in 0.3s backwards;
 }
 
 .empty-state {
@@ -1527,7 +1542,7 @@ table.leads tbody tr:hover {
   gap: 13px;
   padding: 14px 18px;
   position: relative;
-  animation: rise-in 0.35s both;
+  animation: rise-in 0.35s backwards;
 }
 
 .tl-item::before {
@@ -1760,7 +1775,7 @@ table.leads tbody tr:hover {
   margin-top: 12px;
   position: relative;
   z-index: 1;
-  animation: rise-in 0.35s both;
+  animation: rise-in 0.35s backwards;
 }
 
 /* ============ forms ============ */
@@ -2104,7 +2119,7 @@ table.leads tbody tr:hover {
 .login-box {
   width: 100%;
   max-width: 360px;
-  animation: rise-in 0.45s both;
+  animation: rise-in 0.45s backwards;
 }
 
 .login-box h2 {
@@ -2150,7 +2165,7 @@ table.leads tbody tr:hover {
   overflow-wrap: break-word;
   font-size: 13.5px;
   line-height: 1.75;
-  animation: rise-in 0.3s both;
+  animation: rise-in 0.3s backwards;
 }
 
 .chat-msg.user {
@@ -2231,7 +2246,7 @@ table.leads tbody tr:hover {
   border-radius: 16px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
   overflow: hidden;
-  animation: rise-in 0.2s both;
+  animation: rise-in 0.2s backwards;
 }
 
 .cp-input {
@@ -2467,7 +2482,7 @@ table.leads tbody tr:hover {
   font-weight: 600;
   z-index: 90;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
-  animation: rise-in 0.3s both;
+  animation: toast-rise 0.3s backwards;
 }
 
 .only-mobile {
@@ -2862,7 +2877,7 @@ table.leads tbody tr:hover {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-top: 1px solid var(--line);
-  animation: rise-in 0.25s both;
+  animation: rise-in 0.25s backwards;
 }
 
 [data-theme='dark'] .dock {
@@ -2891,7 +2906,7 @@ table.leads tbody tr:hover {
   flex-shrink: 0;
   overflow: hidden;
   transition: border-color 0.15s;
-  animation: rise-in 0.2s both;
+  animation: rise-in 0.2s backwards;
 }
 
 .dock-chip.on {
@@ -3034,7 +3049,7 @@ table.leads tbody tr:hover {
   background: rgba(244, 245, 247, 0.86);
   backdrop-filter: blur(26px) saturate(180%);
   -webkit-backdrop-filter: blur(26px) saturate(180%);
-  animation: rise-in 0.22s both;
+  animation: rise-in 0.22s backwards;
 }
 
 [data-theme='dark'] .msheet {
@@ -3220,7 +3235,7 @@ table.leads tbody tr:hover {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     0 10px 30px -10px rgba(12, 22, 54, 0.35);
-  animation: rise-in 0.25s both;
+  animation: rise-in 0.25s backwards;
 }
 
 [data-theme='dark'] .abar {

@@ -75,11 +75,18 @@ async function main() {
     console.log('created role:', roleId);
   }
 
-  const readWrite = ['opportunity', 'person', 'company', 'task', 'note', 'dealProduct', 'quotation', 'subscription'];
+  // dailyReport: sellers create + edit their own end-of-day report (read+update,
+  // no delete). Without this grant the Seller role (canReadAllObjectRecords=false)
+  // gets permission-denied on the End-of-Day report even once the object exists.
+  const readWrite = ['opportunity', 'person', 'company', 'task', 'note', 'dealProduct', 'quotation', 'subscription', 'dailyReport'];
   const readOnly = ['product', 'partner'];
+  // Skip (with a warning) any object not present in this workspace instead of
+  // crashing on objs[n].id — lets the script run cleanly even if a later object
+  // (e.g. dailyReport) hasn't been provisioned in the target environment yet.
+  const present = (n) => { if (!objs[n]) { console.warn(`  skip: object '${n}' not found in this workspace`); return false; } return true; };
   const objectPermissions = [
-    ...readWrite.map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: true, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
-    ...readOnly.map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: false, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
+    ...readWrite.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: true, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
+    ...readOnly.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: false, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
   ];
   await gql(`mutation($upsertObjectPermissionsInput: UpsertObjectPermissionsInput!){ upsertObjectPermissions(upsertObjectPermissionsInput:$upsertObjectPermissionsInput){ objectMetadataId canReadObjectRecords canUpdateObjectRecords } }`, {
     upsertObjectPermissionsInput: { roleId, objectPermissions },

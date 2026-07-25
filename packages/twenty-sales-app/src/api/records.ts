@@ -908,6 +908,13 @@ export const fetchLeadPricing = async (
 export type ProductOption = {
   id: string;
   name: string;
+  pricingModel: string | null;
+  // Per-unit metric rates entered on the product (doctor 500/month, employee
+  // 70/year...). Needed here so the seller gets a quantity box per metric even
+  // when the line has no Package -- and for metrics a Package doesn't tier.
+  pricingFactors:
+    | { name: string; unitPrice: number; billingFrequency?: string | null }[]
+    | null;
   baseInstallPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   baseAnnualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
 };
@@ -922,6 +929,8 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
           node {
             id
             name
+            pricingModel
+            pricingFactors
             baseInstallPrice { amountMicros currencyCode }
             baseAnnualPrice { amountMicros currencyCode }
           }

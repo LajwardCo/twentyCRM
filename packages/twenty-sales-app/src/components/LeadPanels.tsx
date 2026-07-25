@@ -399,6 +399,18 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   const activePackages = (packages ?? []).filter((p) => p.status === 'ACTIVE');
   const activeVersion = (pricingVersions ?? []).find((v) => v.isActive) ?? null;
   const tierSchedule = activeVersion?.tierSchedule ?? [];
+  const selectedProduct = (products ?? []).find((p: ProductOption) => p.id === productId);
+
+  // Metrics are independent price lines: a Package tiers only the ones it
+  // names, and everything else on the product is billed on top at its own
+  // rate. So the seller must be able to enter a quantity for the union --
+  // including when there is no Package at all (plain per-metric product).
+  const metricNames = [
+    ...tierSchedule.map((factor) => factor.factor),
+    ...(selectedProduct?.pricingFactors ?? [])
+      .map((metric) => metric.name)
+      .filter((name) => !tierSchedule.some((factor) => factor.factor === name)),
+  ];
   const eligibleRules = (discountRules ?? []).filter(
     (r) => r.appliesToProductId === productId && r.status === 'ACTIVE',
   );
@@ -411,9 +423,11 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     setDiscountRuleId('');
   };
 
+  // Quantities are keyed by metric name and the metric set overlaps between
+  // packages, so switching package keeps what the seller already typed --
+  // quantities for metrics the new schedule doesn't price are simply ignored.
   const selectPackage = (nextPackageId: string) => {
     setPackageId(nextPackageId);
-    setFactorQuantities({});
   };
 
   const resetForm = () => {
@@ -423,14 +437,16 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   };
 
   const addProduct = async () => {
-    const product = (products ?? []).find((p: ProductOption) => p.id === productId);
+    const product = selectedProduct;
     if (!product) return;
     setBusy(true);
     setError(null);
     try {
+      // Only metrics this line actually prices are sent, so leftovers from a
+      // previously selected package never leak into the payload.
       const numericFactorQuantities = Object.fromEntries(
         Object.entries(factorQuantities)
-          .filter(([, v]) => v.trim() !== '')
+          .filter(([k, v]) => v.trim() !== '' && metricNames.includes(k))
           .map(([k, v]) => [k, Number(v)]),
       );
       await addProductToLead({
@@ -438,7 +454,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
         productId: product.id,
         productName: product.name,
         quantity: Math.max(1, Number(quantity) || 1),
-        ...(activeVersion && Object.keys(numericFactorQuantities).length > 0
+        ...(Object.keys(numericFactorQuantities).length > 0
           ? { factorQuantities: numericFactorQuantities }
           : {}),
         ...(activeVersion ? { pricingVersionId: activeVersion.id } : {}),
@@ -519,17 +535,17 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
             </div>
           )}
 
-          {tierSchedule.length > 0 && (
+          {metricNames.length > 0 && (
             <div className="f2">
-              {tierSchedule.map((factor) => (
-                <div className="fld" style={{ marginBottom: 8 }} key={factor.factor}>
-                  <label dir="ltr">{factor.factor}</label>
+              {metricNames.map((metricName) => (
+                <div className="fld" style={{ marginBottom: 8 }} key={metricName}>
+                  <label dir="ltr">{metricName}</label>
                   <input
                     inputMode="numeric"
                     dir="ltr"
-                    value={factorQuantities[factor.factor] ?? ''}
+                    value={factorQuantities[metricName] ?? ''}
                     onChange={(e) =>
-                      setFactorQuantities((prev) => ({ ...prev, [factor.factor]: e.target.value }))
+                      setFactorQuantities((prev) => ({ ...prev, [metricName]: e.target.value }))
                     }
                   />
                 </div>

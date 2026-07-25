@@ -13,6 +13,7 @@ import {
   type CatalogPricingVersion,
   type CatalogPricingVersionInput,
   type CatalogProductInput,
+  type PricingFactor,
   type ProductCurrencyCode,
 } from '../api/catalog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
@@ -408,12 +409,29 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
 
 // ---------- package detail: fields + its pricing versions ----------
 
-const EMPTY_VERSION_DRAFT = (packageId: string): CatalogPricingVersionInput => ({
+// A new version starts from the parent product's own metrics -- one tier row
+// per metric, seeded with its unit price -- so building "1-4 doctors flat,
+// 5-9 per doctor..." is editing real rows instead of retyping factor names
+// that have to match the product exactly.
+const NEW_VERSION_DRAFT = (
+  packageId: string,
+  currencyCode: string,
+  metrics: PricingFactor[],
+): CatalogPricingVersionInput => ({
   packageId,
   isActive: true,
   effectiveFrom: new Date().toISOString(),
-  currencyCode: 'AFN',
-  tierSchedule: [{ factor: '', billingFrequency: 'MONTHLY', bands: [{ minQty: 1, maxQty: null, mode: 'FLAT', amount: 0 }] }],
+  currencyCode,
+  tierSchedule:
+    metrics.length > 0
+      ? metrics.map((metric) => ({
+          factor: metric.name,
+          billingFrequency: metric.billingFrequency ?? 'MONTHLY',
+          bands: [
+            { minQty: 1, maxQty: null, mode: 'PER_UNIT' as const, amount: metric.unitPrice },
+          ],
+        }))
+      : [{ factor: '', billingFrequency: 'MONTHLY', bands: [{ minQty: 1, maxQty: null, mode: 'FLAT', amount: 0 }] }],
 });
 
 export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) => {
@@ -435,6 +453,9 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
     error: versionsError,
     refresh: refreshVersions,
   } = useCached(`catalog:pricingVersions:${packageId}`, () => fetchPricingVersionsForPackage(packageId));
+  const { data: parentProduct } = useCached(`catalog:product:${pkg?.productId ?? ''}`, () =>
+    pkg?.productId ? fetchProductById(pkg.productId) : Promise.resolve(undefined),
+  );
 
   if (pkg === null && loadError === null) return <ViewSkeleton />;
   if (!pkg) {
@@ -474,8 +495,25 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
     }
   };
 
+  // A version priced in a different currency than its product would silently
+  // reprice the whole line -- default to the product's own currency.
+  const productCurrencyCode = parentProduct?.baseInstallPrice?.currencyCode ?? 'AFN';
+  const productMetrics = parentProduct?.pricingFactors ?? [];
+  const productMetricNames = productMetrics.map((metric) => metric.name);
+  // Metrics this version doesn't tier stay at the product's own unit price and
+  // are billed on top of the package -- spelling that out here is what stops
+  // someone assuming the package replaced the whole price list.
+  const untieredMetrics = productMetrics.filter(
+    (metric) =>
+      !(versionDraft?.input.tierSchedule ?? []).some(
+        (factor) => factor.factor === metric.name,
+      ),
+  );
+
   const startNewVersion = () => {
-    setVersionDraft({ input: EMPTY_VERSION_DRAFT(packageId) });
+    setVersionDraft({
+      input: NEW_VERSION_DRAFT(packageId, productCurrencyCode, productMetrics),
+    });
     setVersionError(null);
   };
 
@@ -624,13 +662,18 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
               </div>
               <div className="fld">
                 <label>{T4.currencyCodeLbl}</label>
-                <input
-                  dir="ltr"
-                  value={versionDraft.input.currencyCode ?? 'AFN'}
+                <select
+                  value={versionDraft.input.currencyCode ?? productCurrencyCode}
                   onChange={(e) =>
                     setVersionDraft({ ...versionDraft, input: { ...versionDraft.input, currencyCode: e.target.value } })
                   }
-                />
+                >
+                  {Object.entries(CURRENCY_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="fld">
@@ -651,10 +694,24 @@ export const PackageCatalogDetailView = ({ packageId }: { packageId: string }) =
             </div>
             <TierScheduleEditor
               value={versionDraft.input.tierSchedule}
+              metricOptions={productMetricNames}
               onChange={(next) =>
                 setVersionDraft({ ...versionDraft, input: { ...versionDraft.input, tierSchedule: next } })
               }
             />
+            {untieredMetrics.length > 0 && (
+              <div className="sub" style={{ marginTop: 8 }}>
+                {T4.untieredMetricsNote}{' '}
+                <span dir="ltr">
+                  {untieredMetrics
+                    .map(
+                      (metric) =>
+                        `${metric.name} ${metric.unitPrice} ${BILLING_FREQUENCY_LABELS[metric.billingFrequency ?? 'MONTHLY']}`,
+                    )
+                    .join(' · ')}
+                </span>
+              </div>
+            )}
 
             {versionError !== null && <div className="error-banner" style={{ marginTop: 10 }}>{versionError}</div>}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

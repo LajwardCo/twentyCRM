@@ -15,10 +15,14 @@ const EMPTY_FACTOR: FactorTierSchedule = {
 
 type Props = {
   value: FactorTierSchedule[];
+  // Metric names defined on the parent product -- a tier only overrides a
+  // metric when the names match exactly, so these are offered as suggestions
+  // instead of leaving the seller to retype "doctor" from memory.
+  metricOptions?: string[];
   onChange: (next: FactorTierSchedule[]) => void;
 };
 
-export const TierScheduleEditor = ({ value, onChange }: Props) => {
+export const TierScheduleEditor = ({ value, metricOptions = [], onChange }: Props) => {
   const updateFactor = (index: number, patch: Partial<FactorTierSchedule>) => {
     onChange(value.map((f, i) => (i === index ? { ...f, ...patch } : f)));
   };
@@ -49,6 +53,11 @@ export const TierScheduleEditor = ({ value, onChange }: Props) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <datalist id="tier-metric-options">
+        {metricOptions.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
       {value.map((factor, fi) => (
         <div
           key={fi}
@@ -59,8 +68,9 @@ export const TierScheduleEditor = ({ value, onChange }: Props) => {
             <div className="fld">
               <label>نام عامل قیمت‌گذاری *</label>
               <input
-                placeholder="مثلاً doctor"
+                placeholder={metricOptions[0] ? `مثلاً ${metricOptions[0]}` : 'مثلاً doctor'}
                 dir="ltr"
+                list="tier-metric-options"
                 value={factor.factor}
                 onChange={(e) => updateFactor(fi, { factor: e.target.value })}
               />

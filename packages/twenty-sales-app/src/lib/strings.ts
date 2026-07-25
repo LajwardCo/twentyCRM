@@ -509,6 +509,37 @@ export const T5 = {
   renewalDateLbl: 'تاریخ تمدید',
 
   competitorNotFound: 'بازیگر یافت نشد',
+
+  // --- detail page ---
+  detailsAction: 'جزئیات',
+  competitorsBack: 'بازیگران بازار',
+  overviewSection: 'نمای کلی',
+  kpiProducts: 'محصولات',
+  kpiUpdates: 'یادداشت‌ها',
+  kpiUsers: 'کاربران فعال',
+  kpiSwitching: 'آمادهٔ تغییر',
+  priceRangeLbl: 'بازهٔ قیمت',
+  registeredOnLbl: 'ثبت شده',
+  lastUpdateLbl: 'آخرین یادداشت',
+  noValue: '—',
+  allFilter: 'همه',
+  relatedProductLbl: 'محصول مرتبط',
+  linkedLeadLbl: 'معاملهٔ مرتبط',
+  customerNameLbl: 'نام مشتری',
+  usageStatusLbl: 'وضعیت',
+  notesLbl: 'یادداشت',
+  newCompetitorUsage: 'کاربر جدید',
+  usageNeedsIdentity: 'نام مشتری یا معاملهٔ مرتبط را وارد کنید',
+  editCompetitorUsage: 'ویرایش کاربر',
+  editCompetitorUpdate: 'ویرایش یادداشت',
+  deleteAction: 'حذف',
+  confirmDelete: 'حذف شود؟ این عمل قابل بازگشت نیست.',
+  openLead: 'باز کردن معامله',
+  sourceLink: 'منبع',
+  demoLink: 'دمو',
+  noProductsYet: 'بدون محصول',
+  productUsageCount: 'کاربر',
+  productUpdateCount: 'یادداشت',
 };
 
 export const COMPETITOR_TIER_LABELS: Record<string, string> = {

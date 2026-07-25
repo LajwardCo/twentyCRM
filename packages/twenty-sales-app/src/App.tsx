@@ -10,7 +10,7 @@ import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
 import { toPersianDigits } from './lib/jalali';
 import { navigate, useRoute } from './lib/router';
-import { T } from './lib/strings';
+import { T, T5 } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { LeadsView } from './views/LeadsView';
@@ -18,6 +18,7 @@ import { AdminView } from './views/AdminView';
 import { CalendarView } from './views/CalendarView';
 import { CatalogView } from './views/CatalogView';
 import { PackageCatalogDetailView, ProductCatalogDetailView } from './views/CatalogDetailViews';
+import { CompetitorDetailView } from './views/CompetitorDetailView';
 import { CompetitorsView } from './views/CompetitorsView';
 import { DailyReportView } from './views/DailyReportView';
 import { CompanyView, NoteView, PersonView } from './views/EntityViews';
@@ -209,6 +210,14 @@ export const App = () => {
     view = <ReportsView user={user} />;
   } else if (section === 'daily-report') {
     view = <DailyReportView user={user} />;
+  } else if (section === 'competitor' && param) {
+    view = <CompetitorDetailView competitorId={param} />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/competitors')}>
+        <IconBack size={15} />
+        {T5.competitorsBack}
+      </button>
+    );
   } else if (section === 'competitors') {
     view = <CompetitorsView />;
   } else if (section === 'catalog' && param === 'product' && sub) {

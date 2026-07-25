@@ -154,6 +154,7 @@ export type CompetitorUpdateInput = {
   date?: string | null;
   body?: string | null;
   source?: string | null;
+  productId?: string | null;
 };
 
 export const saveCompetitorUpdate = async (
@@ -167,6 +168,7 @@ export const saveCompetitorUpdate = async (
     date: input.date ?? new Date().toISOString(),
     body: input.body || null,
     source: input.source ? { primaryLinkUrl: input.source } : null,
+    productId: input.productId || null,
   };
   if (id) {
     const data = await coreQuery<{ updateCompetitorUpdate: { id: string } }>(
@@ -227,3 +229,66 @@ export const fetchCompetitorUsages = async (
   );
   return data.competitorUsages.edges.map((e) => e.node);
 };
+
+export type CompetitorUsageInput = {
+  competitorId: string;
+  name?: string | null;
+  status?: string | null;
+  satisfaction?: string | null;
+  switchingSignal?: string | null;
+  renewalDate?: string | null;
+  notes?: string | null;
+  productId?: string | null;
+  opportunityId?: string | null;
+};
+
+export const saveCompetitorUsage = async (
+  input: CompetitorUsageInput,
+  id?: string,
+): Promise<string> => {
+  const payload: Record<string, unknown> = {
+    competitorId: input.competitorId,
+    name: input.name || null,
+    status: input.status || null,
+    satisfaction: input.satisfaction || null,
+    switchingSignal: input.switchingSignal || null,
+    renewalDate: input.renewalDate || null,
+    notes: input.notes || null,
+    productId: input.productId || null,
+    opportunityId: input.opportunityId || null,
+  };
+  if (id) {
+    const data = await coreQuery<{ updateCompetitorUsage: { id: string } }>(
+      `mutation UpdateCompetitorUsage($id: UUID!, $data: CompetitorUsageUpdateInput!) {
+        updateCompetitorUsage(id: $id, data: $data) { id }
+      }`,
+      { id, data: payload },
+    );
+    return data.updateCompetitorUsage.id;
+  }
+  const data = await coreQuery<{ createCompetitorUsage: { id: string } }>(
+    `mutation CreateCompetitorUsage($data: CompetitorUsageCreateInput!) {
+      createCompetitorUsage(data: $data) { id }
+    }`,
+    { data: payload },
+  );
+  return data.createCompetitorUsage.id;
+};
+
+// ---------- deletes (soft delete — same as the CRM record menu) ----------
+
+const deleteRecord = async (mutationField: string, id: string): Promise<void> => {
+  await coreQuery(
+    `mutation Delete($id: UUID!) { ${mutationField}(id: $id) { id } }`,
+    { id },
+  );
+};
+
+export const deleteCompetitorProduct = (id: string) =>
+  deleteRecord('deleteCompetitorProduct', id);
+
+export const deleteCompetitorUpdate = (id: string) =>
+  deleteRecord('deleteCompetitorUpdate', id);
+
+export const deleteCompetitorUsage = (id: string) =>
+  deleteRecord('deleteCompetitorUsage', id);

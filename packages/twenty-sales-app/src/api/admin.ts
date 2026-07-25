@@ -70,7 +70,7 @@ export const inviteMember = async (
   email: string,
   roleId?: string,
 ): Promise<{ result: Invitation[]; errors: string[] }> => {
-  const data = await coreQuery<{
+  const data = await metadataQuery<{
     sendInvitations: {
       success: boolean;
       errors: string[];
@@ -93,7 +93,7 @@ export const inviteMember = async (
 };
 
 export const fetchInvitations = async (): Promise<Invitation[]> => {
-  const data = await coreQuery<{ findWorkspaceInvitations: Invitation[] }>(
+  const data = await metadataQuery<{ findWorkspaceInvitations: Invitation[] }>(
     `query FindWorkspaceInvitations {
       findWorkspaceInvitations { id email roleId expiresAt link }
     }`,
@@ -102,7 +102,7 @@ export const fetchInvitations = async (): Promise<Invitation[]> => {
 };
 
 export const resendInvitation = async (appTokenId: string): Promise<void> => {
-  await coreQuery(
+  await metadataQuery(
     `mutation ResendInvite($appTokenId: String!) {
       resendWorkspaceInvitation(appTokenId: $appTokenId) { success }
     }`,
@@ -111,7 +111,7 @@ export const resendInvitation = async (appTokenId: string): Promise<void> => {
 };
 
 export const deleteInvitation = async (appTokenId: string): Promise<void> => {
-  await coreQuery(
+  await metadataQuery(
     `mutation DeleteInvite($appTokenId: String!) {
       deleteWorkspaceInvitation(appTokenId: $appTokenId)
     }`,
@@ -124,7 +124,7 @@ export const updateMemberName = async (
   firstName: string,
   lastName: string,
 ): Promise<void> => {
-  await coreQuery(
+  await metadataQuery(
     `mutation UpdateMemberName($input: UpdateWorkspaceMemberSettingsInput!) {
       updateWorkspaceMemberSettings(input: $input)
     }`,
@@ -140,7 +140,7 @@ export const updateMemberName = async (
 export const deleteMember = async (
   workspaceMemberId: string,
 ): Promise<void> => {
-  await coreQuery(
+  await metadataQuery(
     `mutation DeleteMember($id: String!) {
       deleteUserFromWorkspace(workspaceMemberIdToDelete: $id) { id }
     }`,

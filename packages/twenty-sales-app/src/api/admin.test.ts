@@ -5,7 +5,7 @@ vi.mock('./client', () => ({
   metadataQuery: vi.fn(),
 }));
 
-import { coreQuery } from './client';
+import { metadataQuery } from './client';
 import {
   deleteInvitation,
   deleteMember,
@@ -15,7 +15,7 @@ import {
   updateMemberName,
 } from './admin';
 
-const mockedCoreQuery = vi.mocked(coreQuery);
+const mockedMetadataQuery = vi.mocked(metadataQuery);
 
 describe('member management api', () => {
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe('member management api', () => {
   });
 
   it('inviteMember sends the email + role and returns result with link', async () => {
-    mockedCoreQuery.mockResolvedValue({
+    mockedMetadataQuery.mockResolvedValue({
       sendInvitations: {
         success: true,
         errors: [],
@@ -41,7 +41,7 @@ describe('member management api', () => {
 
     const out = await inviteMember('a@b.dev', 'r1');
 
-    expect(mockedCoreQuery).toHaveBeenCalledWith(
+    expect(mockedMetadataQuery).toHaveBeenCalledWith(
       expect.stringContaining('sendInvitations'),
       { emails: ['a@b.dev'], roleId: 'r1' },
     );
@@ -50,7 +50,7 @@ describe('member management api', () => {
   });
 
   it('inviteMember surfaces server errors', async () => {
-    mockedCoreQuery.mockResolvedValue({
+    mockedMetadataQuery.mockResolvedValue({
       sendInvitations: { success: false, errors: ['already invited'], result: [] },
     });
 
@@ -60,7 +60,7 @@ describe('member management api', () => {
   });
 
   it('fetchInvitations reads pending invitations', async () => {
-    mockedCoreQuery.mockResolvedValue({
+    mockedMetadataQuery.mockResolvedValue({
       findWorkspaceInvitations: [
         {
           id: 'i1',
@@ -74,29 +74,29 @@ describe('member management api', () => {
 
     const out = await fetchInvitations();
 
-    expect(mockedCoreQuery).toHaveBeenCalledWith(
+    expect(mockedMetadataQuery).toHaveBeenCalledWith(
       expect.stringContaining('findWorkspaceInvitations'),
     );
     expect(out).toHaveLength(1);
   });
 
   it('deleteMember calls deleteUserFromWorkspace with the member id', async () => {
-    mockedCoreQuery.mockResolvedValue({ deleteUserFromWorkspace: { id: 'm1' } });
+    mockedMetadataQuery.mockResolvedValue({ deleteUserFromWorkspace: { id: 'm1' } });
 
     await deleteMember('m1');
 
-    expect(mockedCoreQuery).toHaveBeenCalledWith(
+    expect(mockedMetadataQuery).toHaveBeenCalledWith(
       expect.stringContaining('deleteUserFromWorkspace'),
       { id: 'm1' },
     );
   });
 
   it('updateMemberName updates workspace member settings', async () => {
-    mockedCoreQuery.mockResolvedValue({ updateWorkspaceMemberSettings: true });
+    mockedMetadataQuery.mockResolvedValue({ updateWorkspaceMemberSettings: true });
 
     await updateMemberName('m1', 'Ada', 'Lovelace');
 
-    expect(mockedCoreQuery).toHaveBeenCalledWith(
+    expect(mockedMetadataQuery).toHaveBeenCalledWith(
       expect.stringContaining('updateWorkspaceMemberSettings'),
       {
         input: {
@@ -108,17 +108,17 @@ describe('member management api', () => {
   });
 
   it('resendInvitation and deleteInvitation pass the appTokenId', async () => {
-    mockedCoreQuery.mockResolvedValue({});
+    mockedMetadataQuery.mockResolvedValue({});
 
     await resendInvitation('t1');
     await deleteInvitation('t1');
 
-    expect(mockedCoreQuery).toHaveBeenNthCalledWith(
+    expect(mockedMetadataQuery).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('resendWorkspaceInvitation'),
       { appTokenId: 't1' },
     );
-    expect(mockedCoreQuery).toHaveBeenNthCalledWith(
+    expect(mockedMetadataQuery).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining('deleteWorkspaceInvitation'),
       { appTokenId: 't1' },

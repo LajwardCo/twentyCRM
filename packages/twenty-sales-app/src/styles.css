@@ -207,8 +207,15 @@ textarea {
   }
 }
 
+/* Fill mode must stay `backwards`, never `both`. A forwards fill keeps
+   rise-in's `to` keyframe applied forever, and an animated transform
+   resolves to matrix(1,0,0,1,0,0) instead of the `none` keyword — an
+   identity matrix that still makes the element a stacking context, which
+   permanently traps popovers like .jdp-pop under sibling cards whatever
+   their z-index. `backwards` fills only the delay, so the element falls
+   back to transform: none when the animation ends: same visuals, no trap. */
 .anim {
-  animation: rise-in 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation: rise-in 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
 }
 
 .anim.d1 {

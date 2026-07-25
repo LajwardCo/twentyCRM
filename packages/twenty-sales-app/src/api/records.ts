@@ -909,10 +909,15 @@ export const fetchLeadPricing = async (
 export type ProductOption = {
   id: string;
   name: string;
+  // Catalog taxonomy — the picker groups by category and shows the brand, so a
+  // seller can find a product in a catalog that has outgrown a flat list.
+  brand: string | null;
+  category: string | null;
   baseInstallPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   baseAnnualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
-  // PER_FACTOR products price off their own metric table when the seller
-  // picks no package -- the deal-line form collects a quantity per metric.
+  // A PER_FACTOR product prices off its own metric table -- for the metrics no
+  // package tiers, and for every metric when the seller picks no package. The
+  // deal-line form collects a quantity per metric.
   pricingModel: string | null;
   pricingFactors: PricingFactor[] | null;
 };
@@ -927,6 +932,8 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
           node {
             id
             name
+            brand
+            category
             pricingModel
             pricingFactors
             baseInstallPrice { amountMicros currencyCode }

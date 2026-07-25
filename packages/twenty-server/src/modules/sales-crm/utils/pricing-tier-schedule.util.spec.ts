@@ -1,6 +1,7 @@
 import {
   computePriceFromTierSchedule,
   matchTierBand,
+  mergeProductFactorsIntoTierSchedule,
 } from 'src/modules/sales-crm/utils/pricing-tier-schedule.util';
 
 const OPD_DOCTOR_SCHEDULE = {
@@ -135,5 +136,64 @@ describe('computePriceFromTierSchedule', () => {
 
     expect(result.breakdown).toHaveLength(0);
     expect(result.totalMonthly).toBe(0);
+  });
+});
+
+describe('mergeProductFactorsIntoTierSchedule', () => {
+  // The real MedUniversal OPD catalog: the product prices doctor 500/month and
+  // employee 70/year; the package only tiers doctors, so employees must still
+  // be billed on top at the product rate.
+  const OPD_PRODUCT_FACTORS = [
+    { name: 'doctor', unitPrice: 500, billingFrequency: 'MONTHLY' as const },
+    { name: 'employee', unitPrice: 70, billingFrequency: 'ANNUAL' as const },
+  ];
+
+  it('adds product metrics the package does not tier', () => {
+    const merged = mergeProductFactorsIntoTierSchedule(
+      [OPD_DOCTOR_SCHEDULE],
+      OPD_PRODUCT_FACTORS,
+    );
+
+    expect(merged.map((entry) => entry.factor)).toEqual(['doctor', 'employee']);
+    expect(merged[1].billingFrequency).toBe('ANNUAL');
+    expect(merged[1].bands).toEqual([
+      { minQty: 1, maxQty: null, mode: 'PER_UNIT', amount: 70 },
+    ]);
+  });
+
+  it('lets the package bands win over the product rate for the same metric', () => {
+    const merged = mergeProductFactorsIntoTierSchedule(
+      [OPD_DOCTOR_SCHEDULE],
+      OPD_PRODUCT_FACTORS,
+    );
+
+    expect(merged[0]).toBe(OPD_DOCTOR_SCHEDULE);
+    expect(merged.filter((entry) => entry.factor === 'doctor')).toHaveLength(1);
+  });
+
+  it('prices a tiered package plus an untiered metric in one pass', () => {
+    const merged = mergeProductFactorsIntoTierSchedule(
+      [OPD_DOCTOR_SCHEDULE],
+      OPD_PRODUCT_FACTORS,
+    );
+
+    const result = computePriceFromTierSchedule(merged, {
+      doctor: 12,
+      employee: 40,
+    });
+
+    // 12 doctors falls in the 10-20 band: 12 * 300 monthly.
+    expect(result.totalMonthly).toBe(3600);
+    // 40 employees at the product's own annual rate, untouched by the package.
+    expect(result.totalAnnual).toBe(2800);
+  });
+
+  it('treats a product metric with no billingFrequency as monthly', () => {
+    const merged = mergeProductFactorsIntoTierSchedule(
+      [],
+      [{ name: 'employee', unitPrice: 70 }],
+    );
+
+    expect(merged[0].billingFrequency).toBe('MONTHLY');
   });
 });

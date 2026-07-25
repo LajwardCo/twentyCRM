@@ -20,6 +20,12 @@ export type PricingFactor = {
 export type CatalogProduct = {
   id: string;
   name: string;
+  // Free-text catalog taxonomy: brand is the vendor/product line, category the
+  // grouping. Deliberately not SELECTs -- each workspace defines its own
+  // taxonomy, and the editor suggests existing values instead (same reasoning
+  // as discountRule.conditionMetric).
+  brand: string | null;
+  category: string | null;
   baseInstallPrice: CurrencyAmount;
   baseAnnualPrice: CurrencyAmount;
   maxDiscountPercent: number | null;
@@ -31,7 +37,7 @@ export type CatalogProduct = {
 };
 
 const PRODUCT_FIELDS = `
-  id name maxDiscountPercent pricingModel pricingFactors pricingFactorNotes isSellable createdAt
+  id name brand category maxDiscountPercent pricingModel pricingFactors pricingFactorNotes isSellable createdAt
   baseInstallPrice { amountMicros currencyCode }
   baseAnnualPrice { amountMicros currencyCode }
 `;
@@ -63,6 +69,8 @@ export type ProductCurrencyCode = 'AFN' | 'USD';
 
 export type CatalogProductInput = {
   name: string;
+  brand?: string | null;
+  category?: string | null;
   currencyCode?: ProductCurrencyCode | null;
   baseInstallPriceAmount?: number | null;
   baseAnnualPriceAmount?: number | null;
@@ -80,6 +88,9 @@ const toAmount = (
   amount || amount === 0
     ? { amountMicros: Math.round(amount * 1_000_000), currencyCode }
     : null;
+
+const trimToNull = (value: string | null | undefined): string | null =>
+  value && value.trim() !== '' ? value.trim() : null;
 
 // Drop empty metric rows and normalize numeric/frequency fields before saving.
 const cleanPricingFactors = (
@@ -103,6 +114,8 @@ export const saveCatalogProduct = async (
   const currencyCode = input.currencyCode ?? 'AFN';
   const payload: Record<string, unknown> = {
     name: input.name,
+    brand: trimToNull(input.brand),
+    category: trimToNull(input.category),
     baseInstallPrice: toAmount(input.baseInstallPriceAmount, currencyCode),
     baseAnnualPrice: toAmount(input.baseAnnualPriceAmount, currencyCode),
     maxDiscountPercent: input.maxDiscountPercent ?? null,

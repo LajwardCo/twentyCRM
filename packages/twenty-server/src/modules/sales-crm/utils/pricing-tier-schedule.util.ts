@@ -29,6 +29,46 @@ export type TierScheduleComputation = {
   totalAnnual: number;
 };
 
+// A per-unit rate entered on the Product itself (Product.pricingFactors).
+export type ProductPricingFactor = {
+  name: string;
+  unitPrice: number;
+  billingFrequency?: BillingFrequency;
+};
+
+// Turns a flat per-unit product metric into a degenerate single-band schedule
+// so both pricing sources run through one engine.
+export function productFactorToTierSchedule(
+  factor: ProductPricingFactor,
+): FactorTierSchedule {
+  return {
+    factor: factor.name,
+    billingFrequency: factor.billingFrequency ?? 'MONTHLY',
+    bands: [
+      { minQty: 1, maxQty: null, mode: 'PER_UNIT', amount: factor.unitPrice },
+    ],
+  };
+}
+
+// Metrics are independent price lines, and a Package only tiers the ones it
+// names. So a Package that tiers "doctor" must NOT silently drop the
+// product's "employee" rate -- every metric the package doesn't override is
+// billed on top at its product-level unit price and its own cadence. Package
+// bands win for the factors they define (that's the point of the package).
+export function mergeProductFactorsIntoTierSchedule(
+  tierSchedule: FactorTierSchedule[],
+  productFactors: ProductPricingFactor[],
+): FactorTierSchedule[] {
+  const tieredFactorNames = new Set(tierSchedule.map((entry) => entry.factor));
+
+  return [
+    ...tierSchedule,
+    ...productFactors
+      .filter((factor) => !tieredFactorNames.has(factor.name))
+      .map(productFactorToTierSchedule),
+  ];
+}
+
 // Volume/threshold tiering: the matched band's rate applies to the ENTIRE
 // quantity, not a graduated/marginal split across bands (see design spec
 // "Tiering model" section for why).

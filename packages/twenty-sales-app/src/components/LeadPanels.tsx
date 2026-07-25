@@ -34,6 +34,7 @@ import {
   T2,
   T4,
 } from '../lib/strings';
+import { groupProductsByCategory } from '../lib/taxonomy';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
 
 // One line describing what a Discount Rule needs to actually apply --
@@ -408,21 +409,27 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   const selectedProduct = (products ?? []).find(
     (p: ProductOption) => p.id === productId,
   );
-  // Without an active package version the line prices off the product's own
-  // metric table (plus its fixed amounts) -- so those metrics need quantity
-  // inputs too, otherwise a PER_FACTOR product can never be priced here.
+  // Metrics are independent price lines: a Package tiers only the ones it
+  // names, and every other metric on the product is billed on top at its own
+  // rate. Without a package the product's whole metric table applies -- either
+  // way these need quantity inputs, or a PER_FACTOR product can never be
+  // priced here.
   const productMetrics =
-    activeVersion === null && selectedProduct?.pricingModel === 'PER_FACTOR'
-      ? (selectedProduct.pricingFactors ?? [])
+    selectedProduct?.pricingModel === 'PER_FACTOR'
+      ? (selectedProduct.pricingFactors ?? []).filter(
+          (metric) => !tierSchedule.some((factor) => factor.factor === metric.name),
+        )
       : [];
-  const metricNames =
-    tierSchedule.length > 0
-      ? tierSchedule.map((factor) => factor.factor)
-      : productMetrics.map((metric) => metric.name);
+  const metricNames = [
+    ...tierSchedule.map((factor) => factor.factor),
+    ...productMetrics.map((metric) => metric.name),
+  ];
 
+  // Only metrics this line actually prices are sent, so leftovers from a
+  // previously selected package never leak into the payload.
   const numericFactorQuantities = Object.fromEntries(
     Object.entries(factorQuantities)
-      .filter(([, v]) => v.trim() !== '')
+      .filter(([k, v]) => v.trim() !== '' && metricNames.includes(k))
       .map(([k, v]) => [k, Number(v)]),
   );
 
@@ -430,8 +437,11 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     selectedProduct?.baseInstallPrice?.currencyCode ??
     selectedProduct?.baseAnnualPrice?.currencyCode ??
     'AFN';
+  // Estimated client-side only for the package-less path -- with a package the
+  // server prices off tier bands this component doesn't evaluate, so showing a
+  // product-only number would be wrong rather than merely incomplete.
   const estimate =
-    productMetrics.length > 0 || selectedProduct?.pricingModel === 'PER_FACTOR'
+    activeVersion === null && selectedProduct?.pricingModel === 'PER_FACTOR'
       ? estimateProductPrice({
           pricingFactors: productMetrics,
           factorQuantities: numericFactorQuantities,
@@ -447,9 +457,11 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     setDiscountRuleId('');
   };
 
+  // Quantities are keyed by metric name and the metric set overlaps between
+  // packages, so switching package keeps what the seller already typed --
+  // quantities for metrics the new schedule doesn't price are simply ignored.
   const selectPackage = (nextPackageId: string) => {
     setPackageId(nextPackageId);
-    setFactorQuantities({});
   };
 
   const resetForm = () => {
@@ -459,7 +471,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   };
 
   const addProduct = async () => {
-    const product = (products ?? []).find((p: ProductOption) => p.id === productId);
+    const product = selectedProduct;
     if (!product) return;
     setBusy(true);
     setError(null);
@@ -470,7 +482,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
         productName: product.name,
         quantity: Math.max(1, Number(quantity) || 1),
         // Sent for both pricing paths: the package's tier schedule when one is
-        // selected, the product's own metric table otherwise.
+        // selected, plus whichever product metrics it doesn't tier.
         ...(Object.keys(numericFactorQuantities).length > 0
           ? { factorQuantities: numericFactorQuantities }
           : {}),
@@ -512,13 +524,21 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               <label>{T2.productLbl}</label>
               <select value={productId} onChange={(e) => selectProduct(e.target.value)}>
                 <option value="">انتخاب…</option>
-                {(products ?? []).map((p: ProductOption) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                    {p.baseInstallPrice?.amountMicros
-                      ? ` — ${formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}`
-                      : ''}
-                  </option>
+                {groupProductsByCategory(products ?? []).map((group) => (
+                  <optgroup
+                    key={group.category ?? '__none__'}
+                    label={group.category ?? T4.noCategory}
+                  >
+                    {group.products.map((p: ProductOption) => (
+                      <option key={p.id} value={p.id}>
+                        {p.brand ? `${p.brand} · ` : ''}
+                        {p.name}
+                        {p.baseInstallPrice?.amountMicros
+                          ? ` — ${formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}`
+                          : ''}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

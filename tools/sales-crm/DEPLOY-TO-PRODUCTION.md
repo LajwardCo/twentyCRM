@@ -71,6 +71,18 @@ prod, the "End of Day" report fails at load with
 `Unknown type "DailyReportFilterInput"` (the per-object GraphQL filter type
 only exists once the object metadata does). Run this on prod, then reload.
 
+### Product brand / category (added 2026-07-25)
+
+One idempotent script, no dependencies beyond the `product` object itself:
+
+```bash
+node tools/sales-crm/provision-product-brand-category.mjs   # product.brand + product.category (TEXT)
+```
+
+Run it on prod before (or right after) the sales-app bundle ships. Without it
+the catalog views fail on load with `Cannot query field "brand" on type
+"Product"` — the two columns are part of the product query's selection set.
+
 > ⚠️ This ordered list predates several later feature waves. Other per-feature
 > provisioning scripts now live in `tools/sales-crm/` (contact-request, task
 > type, pricing/package model, dashboard, permissions, whatsapp, etc.). Each is

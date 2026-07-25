@@ -89,6 +89,23 @@ taxonomy, and edits to those two fields are dropped. Once the script has run,
 the values appear with no redeploy. Remove those fallbacks when every instance
 has been provisioned.
 
+### Deal-line rates + multi-currency prices (added 2026-07-25)
+
+One idempotent script, no dependencies beyond the `product` and `dealProduct`
+objects. Adds `product.priceBook` (fixed install/annual amounts per currency)
+and `dealProduct.priceOverrides` (the currency, fixed amounts and per-metric
+rates a seller restated on one line):
+
+```bash
+TWENTY_META=https://crm.hamagan.com/metadata TWENTY_ORIGIN=https://crm.hamagan.com TWENTY_TOKEN='<api key>' node tools/sales-crm/provision-line-pricing-multicurrency.mjs
+```
+
+Until it runs, the SPA degrades the same way the taxonomy does: it drops both
+fields from its queries on the `Cannot query field` error and prices every line
+from the catalog, so the second currency column is simply empty and a
+negotiated rate typed into the deal-line form is not applied. Nothing breaks,
+and no redeploy is needed once the script has run.
+
 > ⚠️ This ordered list predates several later feature waves. Other per-feature
 > provisioning scripts now live in `tools/sales-crm/` (contact-request, task
 > type, pricing/package model, dashboard, permissions, whatsapp, etc.). Each is

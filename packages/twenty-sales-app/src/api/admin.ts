@@ -66,39 +66,73 @@ export type Invitation = {
   link: string | null;
 };
 
+// `link` only exists on WorkspaceInvitation for servers that carry the
+// invite-link change. This app is deployed independently of the server, so a
+// version-skewed deployment must degrade to a link-less screen instead of
+// failing the whole admin view on a GraphQL validation error.
+const INVITATION_FIELDS = 'id email roleId expiresAt';
+const INVITATION_FIELDS_WITH_LINK = `${INVITATION_FIELDS} link`;
+
+const isMissingLinkFieldError = (error: unknown): boolean =>
+  error instanceof Error && /Cannot query field "link"/i.test(error.message);
+
+const withNullLinks = (invitations: Invitation[]): Invitation[] =>
+  invitations.map((invitation) => ({
+    ...invitation,
+    link: invitation.link ?? null,
+  }));
+
 export const inviteMember = async (
   email: string,
   roleId?: string,
 ): Promise<{ result: Invitation[]; errors: string[] }> => {
-  const data = await metadataQuery<{
-    sendInvitations: {
-      success: boolean;
-      errors: string[];
-      result: Invitation[];
+  const send = async (fields: string) => {
+    const data = await metadataQuery<{
+      sendInvitations: {
+        success: boolean;
+        errors: string[];
+        result: Invitation[];
+      };
+    }>(
+      `mutation SendInvitations($emails: [String!]!, $roleId: UUID) {
+        sendInvitations(emails: $emails, roleId: $roleId) {
+          success
+          errors
+          result { ${fields} }
+        }
+      }`,
+      { emails: [email], roleId: roleId ?? null },
+    );
+    return {
+      result: withNullLinks(data.sendInvitations.result),
+      errors: data.sendInvitations.errors,
     };
-  }>(
-    `mutation SendInvitations($emails: [String!]!, $roleId: UUID) {
-      sendInvitations(emails: $emails, roleId: $roleId) {
-        success
-        errors
-        result { id email roleId expiresAt link }
-      }
-    }`,
-    { emails: [email], roleId: roleId ?? null },
-  );
-  return {
-    result: data.sendInvitations.result,
-    errors: data.sendInvitations.errors,
   };
+
+  try {
+    return await send(INVITATION_FIELDS_WITH_LINK);
+  } catch (error) {
+    if (!isMissingLinkFieldError(error)) throw error;
+    return send(INVITATION_FIELDS);
+  }
 };
 
 export const fetchInvitations = async (): Promise<Invitation[]> => {
-  const data = await metadataQuery<{ findWorkspaceInvitations: Invitation[] }>(
-    `query FindWorkspaceInvitations {
-      findWorkspaceInvitations { id email roleId expiresAt link }
-    }`,
-  );
-  return data.findWorkspaceInvitations;
+  const find = async (fields: string) => {
+    const data = await metadataQuery<{ findWorkspaceInvitations: Invitation[] }>(
+      `query FindWorkspaceInvitations {
+        findWorkspaceInvitations { ${fields} }
+      }`,
+    );
+    return withNullLinks(data.findWorkspaceInvitations);
+  };
+
+  try {
+    return await find(INVITATION_FIELDS_WITH_LINK);
+  } catch (error) {
+    if (!isMissingLinkFieldError(error)) throw error;
+    return find(INVITATION_FIELDS);
+  }
 };
 
 export const resendInvitation = async (appTokenId: string): Promise<void> => {

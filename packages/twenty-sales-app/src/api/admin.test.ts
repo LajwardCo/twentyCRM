@@ -19,7 +19,9 @@ const mockedMetadataQuery = vi.mocked(metadataQuery);
 
 describe('member management api', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // resetAllMocks (not clearAllMocks) so queued mock*Once implementations
+    // never leak into the next test.
+    vi.resetAllMocks();
   });
 
   it('inviteMember sends the email + role and returns result with link', async () => {
@@ -78,6 +80,57 @@ describe('member management api', () => {
       expect.stringContaining('findWorkspaceInvitations'),
     );
     expect(out).toHaveLength(1);
+  });
+
+  // The Sales UI ships independently of the server, so it has to survive a
+  // server that predates the invite-link field instead of failing the screen.
+  it('fetchInvitations retries without link when the server lacks the field', async () => {
+    mockedMetadataQuery
+      .mockRejectedValueOnce(
+        new Error('Cannot query field "link" on type "WorkspaceInvitation".'),
+      )
+      .mockResolvedValueOnce({
+        findWorkspaceInvitations: [
+          { id: 'i1', email: 'a@b.dev', roleId: null, expiresAt: 'x' },
+        ],
+      });
+
+    const out = await fetchInvitations();
+
+    expect(mockedMetadataQuery).toHaveBeenCalledTimes(2);
+    expect(mockedMetadataQuery.mock.calls[0][0]).toContain('link');
+    expect(mockedMetadataQuery.mock.calls[1][0]).not.toContain('link');
+    expect(out).toEqual([
+      { id: 'i1', email: 'a@b.dev', roleId: null, expiresAt: 'x', link: null },
+    ]);
+  });
+
+  it('inviteMember retries without link when the server lacks the field', async () => {
+    mockedMetadataQuery
+      .mockRejectedValueOnce(
+        new Error('Cannot query field "link" on type "WorkspaceInvitation".'),
+      )
+      .mockResolvedValueOnce({
+        sendInvitations: {
+          success: true,
+          errors: [],
+          result: [{ id: 'i1', email: 'a@b.dev', roleId: 'r1', expiresAt: 'x' }],
+        },
+      });
+
+    const out = await inviteMember('a@b.dev', 'r1');
+
+    expect(mockedMetadataQuery).toHaveBeenCalledTimes(2);
+    expect(mockedMetadataQuery.mock.calls[1][0]).not.toContain('link');
+    expect(out.result[0].link).toBeNull();
+    expect(out.errors).toEqual([]);
+  });
+
+  it('fetchInvitations does not retry on unrelated errors', async () => {
+    mockedMetadataQuery.mockRejectedValue(new Error('Forbidden resource'));
+
+    await expect(fetchInvitations()).rejects.toThrow('Forbidden resource');
+    expect(mockedMetadataQuery).toHaveBeenCalledTimes(1);
   });
 
   it('deleteMember calls deleteUserFromWorkspace with the member id', async () => {

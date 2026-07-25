@@ -16,7 +16,7 @@ import {
   type ProductCurrencyCode,
 } from '../api/catalog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
-import { ProductMetricsEditor } from '../components/ProductMetricsEditor';
+import { ProductPricingFields } from '../components/ProductPricingFields';
 import { TierScheduleEditor } from '../components/TierScheduleEditor';
 import { useCached } from '../lib/cache';
 import { formatMoney, toLocalInputValue } from '../lib/format';
@@ -30,7 +30,6 @@ import {
   T4,
 } from '../lib/strings';
 
-const CURRENCY_SYMBOLS: Record<string, string> = { AFN: '؋', USD: '$' };
 
 const ViewSkeleton = () => (
   <main className="page">
@@ -74,7 +73,9 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
     setEditing({
       name: product.name,
       currencyCode:
-        (product.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN',
+        (product.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ??
+        (product.baseAnnualPrice?.currencyCode as ProductCurrencyCode | null) ??
+        'AFN',
       baseInstallPriceAmount: product.baseInstallPrice?.amountMicros
         ? product.baseInstallPrice.amountMicros / 1_000_000
         : null,
@@ -144,7 +145,33 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
       {editing === null ? (
         <div className="card card-pad anim d1" style={{ marginBottom: 16 }}>
           <div className="contact-rows">
-            {product.pricingModel === 'PER_FACTOR' ? (
+            <div className="c-row">
+              <span>
+                {product.pricingModel === 'PER_FACTOR'
+                  ? T4.fixedInstallLbl
+                  : T4.baseInstallPriceLbl}
+              </span>
+              <b className="num">
+                {formatMoney(
+                  product.baseInstallPrice?.amountMicros,
+                  product.baseInstallPrice?.currencyCode,
+                )}
+              </b>
+            </div>
+            <div className="c-row">
+              <span>
+                {product.pricingModel === 'PER_FACTOR'
+                  ? T4.fixedAnnualLbl
+                  : T4.baseAnnualPriceLbl}
+              </span>
+              <b className="num">
+                {formatMoney(
+                  product.baseAnnualPrice?.amountMicros,
+                  product.baseAnnualPrice?.currencyCode,
+                )}
+              </b>
+            </div>
+            {product.pricingModel === 'PER_FACTOR' &&
               (product.pricingFactors ?? []).map((m) => (
                 <div className="c-row" key={m.name}>
                   <span>
@@ -153,32 +180,14 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                     {BILLING_FREQUENCY_LABELS[m.billingFrequency ?? 'MONTHLY']}
                   </span>
                   <b className="num">
-                    {formatMoney(m.unitPrice * 1_000_000, product.baseInstallPrice?.currencyCode)}
-                  </b>
-                </div>
-              ))
-            ) : (
-              <>
-                <div className="c-row">
-                  <span>{T4.baseInstallPriceLbl}</span>
-                  <b className="num">
                     {formatMoney(
-                      product.baseInstallPrice?.amountMicros,
-                      product.baseInstallPrice?.currencyCode,
+                      m.unitPrice * 1_000_000,
+                      product.baseInstallPrice?.currencyCode ??
+                        product.baseAnnualPrice?.currencyCode,
                     )}
                   </b>
                 </div>
-                <div className="c-row">
-                  <span>{T4.baseAnnualPriceLbl}</span>
-                  <b className="num">
-                    {formatMoney(
-                      product.baseAnnualPrice?.amountMicros,
-                      product.baseAnnualPrice?.currencyCode,
-                    )}
-                  </b>
-                </div>
-              </>
-            )}
+              ))}
             <div className="c-row">
               <span>{T4.maxDiscountPercentLbl}</span>
               <b className="num">{product.maxDiscountPercent ?? '—'}</b>
@@ -242,47 +251,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
               />
             </div>
           </div>
-          {editing.pricingModel === 'PER_FACTOR' ? (
-            <div className="card card-pad" style={{ background: 'var(--surface-2, rgba(127,127,127,.06))', marginBottom: 4 }}>
-              <div className="sub" style={{ marginBottom: 8 }}>
-                {T4.metricsSection}
-              </div>
-              <ProductMetricsEditor
-                value={editing.pricingFactors ?? []}
-                currencyCode={editing.currencyCode ?? 'AFN'}
-                onChange={(next) => set({ pricingFactors: next })}
-              />
-            </div>
-          ) : (
-            <div className="f2">
-              <div className="fld">
-                <label>
-                  {T4.baseInstallPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
-                </label>
-                <input
-                  inputMode="decimal"
-                  dir="ltr"
-                  value={editing.baseInstallPriceAmount ?? ''}
-                  onChange={(e) =>
-                    set({ baseInstallPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="fld">
-                <label>
-                  {T4.baseAnnualPriceLbl} ({CURRENCY_SYMBOLS[editing.currencyCode ?? 'AFN']})
-                </label>
-                <input
-                  inputMode="decimal"
-                  dir="ltr"
-                  value={editing.baseAnnualPriceAmount ?? ''}
-                  onChange={(e) =>
-                    set({ baseAnnualPriceAmount: e.target.value === '' ? null : Number(e.target.value) })
-                  }
-                />
-              </div>
-            </div>
-          )}
+          <ProductPricingFields value={editing} onChange={set} />
           <div className="fld">
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input

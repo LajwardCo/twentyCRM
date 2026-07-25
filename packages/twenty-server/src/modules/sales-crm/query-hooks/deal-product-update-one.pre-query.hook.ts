@@ -56,6 +56,11 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       | undefined;
     let quantity = payload.data.quantity as number | null | undefined;
     let opportunityId = payload.data.opportunityId as string | null | undefined;
+    // Editing the negotiated rates alone must reprice the line; an explicit
+    // null clears them back to catalog pricing.
+    const priceOverridesInPayload = payload.data.priceOverrides;
+    const clearsPriceOverrides = priceOverridesInPayload === null;
+    let priceOverrides = priceOverridesInPayload;
 
     // Neither pricing- nor discount-related field changed -- an unrelated
     // field edit (e.g. lineStatus) shouldn't require any Product/Package/
@@ -68,7 +73,9 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       !isDefined(pricingVersionId) &&
       payload.data.pricingVersionId !== null &&
       !isDefined(discountRuleId) &&
-      payload.data.discountRuleId !== null
+      payload.data.discountRuleId !== null &&
+      !isDefined(priceOverridesInPayload) &&
+      !clearsPriceOverrides
     ) {
       return payload;
     }
@@ -87,7 +94,12 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
         (!isDefined(quantity) || !isDefined(opportunityId))) ||
       (payload.data.discountRuleId === null &&
         !isDefined(pricingVersionId) &&
-        !isDefined(factorQuantities))
+        !isDefined(factorQuantities)) ||
+      // Any reprice needs the rates the line already carries: recomputing
+      // from the catalog while the stored overrides sit untouched in the
+      // record would silently undo a negotiated price.
+      !isDefined(priceOverridesInPayload) ||
+      !isDefined(factorQuantities)
     ) {
       const authContextForLookup = buildSystemAuthContext(workspace.id);
 
@@ -110,6 +122,35 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
 
       if (!isDefined(productId)) {
         productId = existing?.productId as string | null | undefined;
+      }
+
+      // Unsent overrides are unchanged overrides -- unless this payload
+      // explicitly cleared them, in which case the line goes back to catalog
+      // rates.
+      if (!isDefined(priceOverridesInPayload) && !clearsPriceOverrides) {
+        priceOverrides = existing?.priceOverrides;
+      }
+
+      if (isDefined(priceOverridesInPayload) && !isDefined(factorQuantities)) {
+        factorQuantities = existing?.factorQuantities as
+          | Record<string, number>
+          | null
+          | undefined;
+      }
+
+      if (
+        (isDefined(priceOverridesInPayload) || clearsPriceOverrides) &&
+        !isDefined(pricingVersionId) &&
+        payload.data.pricingVersionId !== null
+      ) {
+        pricingVersionId = existing?.pricingVersionId as
+          | string
+          | null
+          | undefined;
+      }
+
+      if (!isDefined(quantity)) {
+        quantity = existing?.quantity as number | null | undefined;
       }
 
       if (isDefined(pricingVersionId) && !isDefined(factorQuantities)) {
@@ -167,35 +208,54 @@ export class DealProductUpdateOnePreQueryHook implements WorkspacePreQueryHookIn
       pricingVersionId,
     });
 
+    const repricesFromOverrides =
+      isDefined(priceOverridesInPayload) || clearsPriceOverrides;
+    let overrideDiscountPercent = 0;
+
     if (isDefined(pricingVersionId)) {
       const calculated =
         await this.priceCalculationService.calculateFromPricingVersion({
           workspaceId: workspace.id,
           pricingVersionId,
           factorQuantities,
+          priceOverrides: clearsPriceOverrides ? null : priceOverrides,
         });
 
       if (isDefined(calculated)) {
         payload.data.installPrice = calculated.installPrice;
         payload.data.annualPrice = calculated.annualPrice;
         payload.data.priceSnapshot = calculated.priceSnapshot;
+        overrideDiscountPercent = calculated.overrideDiscountPercent;
       }
-    } else if (isDefined(factorQuantities)) {
+    } else if (isDefined(factorQuantities) || repricesFromOverrides) {
       const calculated =
         await this.priceCalculationService.calculateInstallPrice({
           workspaceId: workspace.id,
           productId,
           factorQuantities,
+          priceOverrides: clearsPriceOverrides ? null : priceOverrides,
+          quantity,
+          // A flat-priced line is only repriced when the seller changed the
+          // rates or the currency. Any other update leaves the stored price
+          // alone -- it may have been set by hand in the CRM.
+          hasExplicitInstallPrice: !repricesFromOverrides,
         });
 
       if (isDefined(calculated)) {
         payload.data.installPrice = calculated.installPrice;
+        overrideDiscountPercent = calculated.overrideDiscountPercent;
 
         if (isDefined(calculated.annualPrice)) {
           payload.data.annualPrice = calculated.annualPrice;
         }
       }
     }
+
+    await this.discountValidationService.validate({
+      workspaceId: workspace.id,
+      productId,
+      discountPercent: overrideDiscountPercent,
+    });
 
     // An explicit `pricingVersionId: null` detaches the line from its
     // Pricing Version -- the old priceSnapshot no longer reflects reality

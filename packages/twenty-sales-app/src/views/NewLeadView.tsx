@@ -2,15 +2,29 @@ import { useEffect, useRef, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import {
+  addProductToLead,
+  fetchProducts,
   fetchReferrers,
   LEAD_SOURCES,
   registerLead,
   type NewLeadInput,
+  type ProductOption,
   type Referrer,
 } from '../api/records';
+import {
+  DealLinePricingEditor,
+  lineMetricNames,
+} from '../components/DealLinePricingEditor';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { MoneyInput } from '../components/MoneyInput';
 import { invalidateCache } from '../lib/cache';
+import {
+  buildFactorQuantities,
+  buildPriceOverrides,
+  type DealLineDraft,
+  emptyDealLineDraft,
+  productPrimaryCurrency,
+} from '../lib/dealLinePricing';
 import { type CurrencyCode, toLocalInputValue } from '../lib/format';
 import { clearDraft, loadDraft, saveDraft } from '../lib/prefs';
 import { formatJalaliDateTime } from '../lib/jalali';
@@ -53,6 +67,9 @@ type Draft = {
   currency: CurrencyCode;
   firstContactNote: string;
   followUpNote: string;
+  // The product the seller is quoting, if any. Older drafts predate this and
+  // restore without it.
+  dealLine?: DealLineDraft;
 };
 
 export const NewLeadView = ({ user }: NewLeadViewProps) => {
@@ -86,8 +103,39 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
   const [followUpDate, setFollowUpDate] = useState(
     toLocalInputValue(presetDate('tomorrow')),
   );
+  const [dealLine, setDealLine] = useState<DealLineDraft>(
+    draft?.dealLine ?? emptyDealLineDraft(),
+  );
+  const [products, setProducts] = useState<ProductOption[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedOpportunityId, setSavedOpportunityId] = useState<string | null>(null);
+
+  const selectedProduct = products.find((p) => p.id === dealLine.productId);
+
+  // Same reset rules as the lead-detail editor: a new product means new
+  // metrics, a new currency means the typed rates no longer apply.
+  const changeDealLine = (patch: Partial<DealLineDraft>) =>
+    setDealLine((prev) => {
+      const next = { ...prev, ...patch };
+
+      if (patch.productId !== undefined && patch.productId !== prev.productId) {
+        return {
+          ...emptyDealLineDraft(),
+          productId: patch.productId,
+          quantity: prev.quantity,
+          currencyCode: productPrimaryCurrency(
+            products.find((p) => p.id === patch.productId),
+          ),
+        };
+      }
+
+      if (patch.currencyCode !== undefined && patch.currencyCode !== prev.currencyCode) {
+        return { ...next, fixedInstall: '', fixedAnnual: '', metricRates: {} };
+      }
+
+      return next;
+    });
 
   const saveTimer = useRef<number>(0);
   useEffect(() => {
@@ -107,10 +155,12 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
         currency,
         firstContactNote,
         followUpNote,
+        dealLine,
       } satisfies Draft);
     }, 400);
     return () => window.clearTimeout(saveTimer.current);
   }, [
+    dealLine,
     companyName,
     firstName,
     lastName,
@@ -133,6 +183,13 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     void fetchReferrers().then((list) => {
       if (active) setReferrers(list);
     });
+    // The catalog is optional here -- a seller registering a lead with no
+    // product in mind shouldn't be blocked by a catalog that failed to load.
+    void fetchProducts()
+      .then((list) => {
+        if (active) setProducts(list);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -184,6 +241,47 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
 
     try {
       const result = await registerLead(input, setBusy);
+
+      // The lead exists from here on. A product line that fails to attach is
+      // reported without discarding the registration -- the seller can add it
+      // from the lead page instead of retyping everything.
+      if (selectedProduct) {
+        setBusy(T.savingProduct);
+        const metricNames = lineMetricNames(selectedProduct, []);
+        const factorQuantities = buildFactorQuantities(dealLine, metricNames);
+        const priceOverrides = buildPriceOverrides(
+          selectedProduct,
+          dealLine,
+          metricNames,
+        );
+
+        try {
+          await addProductToLead({
+            opportunityId: result.opportunityId,
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            quantity: Math.max(1, Number(dealLine.quantity) || 1),
+            ...(Object.keys(factorQuantities).length > 0 ? { factorQuantities } : {}),
+            ...(dealLine.discountRuleId
+              ? { discountRuleId: dealLine.discountRuleId }
+              : {}),
+            ...(priceOverrides ? { priceOverrides } : {}),
+          });
+        } catch (productError) {
+          clearDraft();
+          invalidateCache('leads:');
+          invalidateCache('today:');
+          // Resubmitting from here would create a second lead, so the form
+          // closes itself and points at the one that was saved.
+          setSavedOpportunityId(result.opportunityId);
+          setError(
+            `${T.leadSavedProductFailed}: ${productError instanceof Error ? productError.message : ''}`,
+          );
+          setBusy(null);
+          return;
+        }
+      }
+
       clearDraft();
       invalidateCache('leads:');
       invalidateCache('today:');
@@ -491,6 +589,24 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                 </>
               )}
             </div>
+
+            {products.length > 0 && (
+              <div className="card card-pad fieldset anim d5">
+                <legend>
+                  <i>۶</i> {T.productSection}
+                </legend>
+                <div className="sub" style={{ marginBottom: 10 }}>
+                  {T.productSectionHint}
+                </div>
+                <DealLinePricingEditor
+                  draft={dealLine}
+                  onChange={changeDealLine}
+                  products={products}
+                  showPackages={false}
+                  showDiscountRules={false}
+                />
+              </div>
+            )}
           </div>
 
           <div className="card card-pad summary-card anim d2">
@@ -521,6 +637,12 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                 <span>گزارش تماس اول + یادداشت</span>
               </li>
               <li>
+                <span className={`st ${selectedProduct ? '' : 'off'}`}>✓</span>
+                <span>
+                  {T.productSection}: <b>{selectedProduct?.name ?? '—'}</b>
+                </span>
+              </li>
+              <li>
                 <span className={`st ${scheduleFollowUp ? '' : 'off'}`}>✓</span>
                 <span>
                   وظیفه پیگیری:{' '}
@@ -539,14 +661,25 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
               </li>
             </ul>
             {error !== null && <div className="error-banner">{error}</div>}
-            <button
-              className="btn gold block"
-              type="submit"
-              disabled={busy !== null}
-              style={{ padding: 12 }}
-            >
-              {busy ?? `${T.registerLead} ✓`}
-            </button>
+            {savedOpportunityId !== null ? (
+              <button
+                className="btn gold block"
+                type="button"
+                style={{ padding: 12 }}
+                onClick={() => navigate(`/lead/${savedOpportunityId}`)}
+              >
+                {T.openSavedLead}
+              </button>
+            ) : (
+              <button
+                className="btn gold block"
+                type="submit"
+                disabled={busy !== null}
+                style={{ padding: 12 }}
+              >
+                {busy ?? `${T.registerLead} ✓`}
+              </button>
+            )}
             <div className="sub" style={{ textAlign: 'center', marginTop: 8 }}>
               ثبت کامل در کمتر از ۳۰ ثانیه
             </div>

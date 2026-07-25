@@ -76,7 +76,15 @@ export const T = {
   creatingLead: 'ایجاد لید…',
   savingFirstContact: 'ثبت تماس اول…',
   schedulingFollowUp: 'ثبت پیگیری…',
+  savingProduct: 'ثبت محصول و قیمت…',
   stepFailed: 'ناموفق بود',
+
+  // optional product + pricing step of the registration form
+  productSection: 'محصول و قیمت',
+  productSectionHint:
+    'اختیاری — اگر محصول مشخصی پیشنهاد شده، همین‌جا ثبت کنید تا خط معامله همراه لید ساخته شود.',
+  leadSavedProductFailed: 'لید ثبت شد، اما ثبت محصول ناموفق بود',
+  openSavedLead: 'باز کردن لید ثبت‌شده',
 
   // quick follow-up chips
   tomorrowMorning: 'فردا صبح',
@@ -386,6 +394,33 @@ export const T4 = {
     `این تخفیف نیازمند حداقل ${n} واحد «${metric}» در همین خط است.`,
   siblingProductHint: (name: string) =>
     `این تخفیف نیازمند وجود محصول «${name}» در همین لید است.`,
+
+  // per-line pricing: currency, suggested amounts and negotiated rates
+  lineCurrencyLbl: 'واحد پول این معامله',
+  currencyNotInCatalog: 'قیمت در کاتالوگ ثبت نشده',
+  lineFixedSection: 'مبالغ ثابت این معامله',
+  lineMetricsSection: 'متریک‌ها و نرخ‌ها',
+  noCatalogPrice: 'بدون قیمت پیشنهادی',
+  metricQuantityPlaceholder: 'تعداد',
+  tieredByPackage: 'نرخ پله‌ای بسته',
+  suggestedPriceHint:
+    'اعداد نمایش‌داده‌شده پیشنهاد کاتالوگ است — اگر با مشتری قیمت دیگری توافق شده، همین‌جا بنویسید.',
+  metricRateHint:
+    'خالی گذاشتن هر نرخ یعنی همان نرخ کاتالوگ. نرخ واردشده فقط برای همین معامله اعمال می‌شود.',
+  metricRateOverridesTiersHint:
+    'نرخ واردشده جای نرخ پله‌ای بسته را برای همین معامله می‌گیرد.',
+  overrideBelowCeilingError:
+    'قیمت واردشده از حداکثر تخفیف مجاز این محصول پایین‌تر است.',
+
+  // product editor: fixed prices per currency
+  priceBookSection: 'قیمت‌های ثابت در هر واحد پول',
+  priceBookHint:
+    'برای هر واحد پول قیمت جداگانه وارد کنید — تبدیل نرخ ارز انجام نمی‌شود.',
+  primaryCurrencyLbl: 'واحد پول اصلی',
+  primaryCurrencyHint:
+    'نرخ متریک‌ها به همین واحد پول ثبت می‌شود؛ قیمت ثابت سایر واحدها در جدول بالا وارد می‌شود.',
+  installPriceColumn: 'نصب (یک‌باره)',
+  annualPriceColumn: 'سالانه',
 };
 
 export const CONDITION_TYPE_LABELS: Record<string, string> = {

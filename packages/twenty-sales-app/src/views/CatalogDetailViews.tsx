@@ -88,6 +88,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
       baseAnnualPriceAmount: product.baseAnnualPrice?.amountMicros
         ? product.baseAnnualPrice.amountMicros / 1_000_000
         : null,
+      priceBook: product.priceBook,
       maxDiscountPercent: product.maxDiscountPercent,
       pricingModel: product.pricingModel,
       pricingFactors: product.pricingFactors ?? [],
@@ -201,6 +202,41 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
                 )}
               </b>
             </div>
+            {/* Prices in every other currency the product is sold in. The
+                primary currency already has its own two rows above. */}
+            {Object.entries(product.priceBook ?? {})
+              .filter(
+                ([currencyCode]) =>
+                  currencyCode !==
+                  (product.baseInstallPrice?.currencyCode ??
+                    product.baseAnnualPrice?.currencyCode ??
+                    'AFN'),
+              )
+              .flatMap(([currencyCode, entry]) =>
+                [
+                  entry.install !== undefined && {
+                    key: `${currencyCode}-install`,
+                    label: T4.installPriceColumn,
+                    amount: entry.install,
+                  },
+                  entry.annual !== undefined && {
+                    key: `${currencyCode}-annual`,
+                    label: T4.annualPriceColumn,
+                    amount: entry.annual,
+                  },
+                ]
+                  .filter((row) => row !== false)
+                  .map((row) => (
+                    <div className="c-row" key={row.key}>
+                      <span>
+                        {row.label} · <span dir="ltr">{currencyCode}</span>
+                      </span>
+                      <b className="num">
+                        {formatMoney(row.amount * 1_000_000, currencyCode)}
+                      </b>
+                    </div>
+                  )),
+              )}
             {product.pricingModel === 'PER_FACTOR' &&
               (product.pricingFactors ?? []).map((m) => (
                 <div className="c-row" key={m.name}>
@@ -236,24 +272,12 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
       ) : (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
           <h3>{T4.editProduct}</h3>
-          <div className="f2" style={{ marginTop: 10 }}>
-            <div className="fld">
-              <label>{T4.nameLbl}</label>
-              <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
-            </div>
-            <div className="fld">
-              <label>{T4.currencyLbl}</label>
-              <select
-                value={editing.currencyCode ?? 'AFN'}
-                onChange={(e) => set({ currencyCode: e.target.value as ProductCurrencyCode })}
-              >
-                {Object.entries(CURRENCY_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Currency lives with the prices it denominates, in the pricing
+              section below, so a product priced in two currencies isn't set up
+              from two places. */}
+          <div className="fld" style={{ marginTop: 10 }}>
+            <label>{T4.nameLbl}</label>
+            <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
           <ProductTaxonomyFields
             brand={editing.brand}

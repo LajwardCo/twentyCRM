@@ -53,6 +53,10 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
       | string
       | null
       | undefined;
+    // Per-line rates the seller restated (currency, fixed amounts, per-metric
+    // unit prices). Absent on the vast majority of lines, which then price
+    // straight from the catalog as before.
+    const priceOverrides = payload.data.priceOverrides;
 
     await this.pricingVersionValidationService.validate({
       workspaceId: workspace.id,
@@ -60,18 +64,22 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
       pricingVersionId,
     });
 
+    let overrideDiscountPercent = 0;
+
     if (isDefined(pricingVersionId)) {
       const calculated =
         await this.priceCalculationService.calculateFromPricingVersion({
           workspaceId: workspace.id,
           pricingVersionId,
           factorQuantities,
+          priceOverrides,
         });
 
       if (isDefined(calculated)) {
         payload.data.installPrice = calculated.installPrice;
         payload.data.annualPrice = calculated.annualPrice;
         payload.data.priceSnapshot = calculated.priceSnapshot;
+        overrideDiscountPercent = calculated.overrideDiscountPercent;
       }
     } else {
       const calculated =
@@ -79,16 +87,28 @@ export class DealProductCreateOnePreQueryHook implements WorkspacePreQueryHookIn
           workspaceId: workspace.id,
           productId,
           factorQuantities,
+          priceOverrides,
+          quantity,
+          hasExplicitInstallPrice: isDefined(payload.data.installPrice),
         });
 
       if (isDefined(calculated)) {
         payload.data.installPrice = calculated.installPrice;
+        overrideDiscountPercent = calculated.overrideDiscountPercent;
 
         if (isDefined(calculated.annualPrice)) {
           payload.data.annualPrice = calculated.annualPrice;
         }
       }
     }
+
+    // Restating rates is a discount by another name, so it answers to the
+    // same ceiling the discountPercent field does.
+    await this.discountValidationService.validate({
+      workspaceId: workspace.id,
+      productId,
+      discountPercent: overrideDiscountPercent,
+    });
 
     await this.discountRuleValidationService.validate({
       workspaceId: workspace.id,

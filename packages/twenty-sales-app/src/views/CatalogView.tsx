@@ -19,7 +19,6 @@ import { navigate } from '../lib/router';
 import {
   CATALOG_STATUS_LABELS,
   CONDITION_TYPE_LABELS,
-  CURRENCY_LABELS,
   DISCOUNT_TYPE_LABELS,
   PRICING_MODEL_LABELS,
   T4,
@@ -69,6 +68,7 @@ const ProductsTab = () => {
             baseAnnualPriceAmount: p.baseAnnualPrice?.amountMicros
               ? p.baseAnnualPrice.amountMicros / 1_000_000
               : null,
+            priceBook: p.priceBook,
             maxDiscountPercent: p.maxDiscountPercent,
             pricingModel: p.pricingModel,
             pricingFactors: p.pricingFactors ?? [],
@@ -132,24 +132,12 @@ const ProductsTab = () => {
       {editing !== null && (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
           <h3>{editingId ? T4.editProduct : T4.newProduct}</h3>
-          <div className="f2" style={{ marginTop: 10 }}>
-            <div className="fld">
-              <label>{T4.nameLbl}</label>
-              <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
-            </div>
-            <div className="fld">
-              <label>{T4.currencyLbl}</label>
-              <select
-                value={editing.currencyCode ?? 'AFN'}
-                onChange={(e) => set({ currencyCode: e.target.value as ProductCurrencyCode })}
-              >
-                {Object.entries(CURRENCY_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Currency lives with the prices it denominates, in the pricing
+              section below, so a product priced in two currencies isn't set up
+              from two places. */}
+          <div className="fld" style={{ marginTop: 10 }}>
+            <label>{T4.nameLbl}</label>
+            <input value={editing.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
           <ProductTaxonomyFields
             brand={editing.brand}

@@ -37,6 +37,29 @@ describe('catalog product brand/category', () => {
     });
   });
 
+  it('saveCatalogProduct mirrors the primary currency amounts into the price book', async () => {
+    mockedCoreQuery.mockResolvedValue({ updateProduct: { id: 'p1' } });
+
+    await saveCatalogProduct(
+      {
+        name: 'HMIS',
+        currencyCode: 'AFN',
+        baseInstallPriceAmount: 15000,
+        baseAnnualPriceAmount: 7000,
+        priceBook: { USD: { install: 200, annual: 100 } },
+      },
+      'p1',
+    );
+
+    const [, variables] = mockedCoreQuery.mock.calls[0];
+    expect((variables as { data: Record<string, unknown> }).data).toMatchObject({
+      priceBook: {
+        AFN: { install: 15000, annual: 7000 },
+        USD: { install: 200, annual: 100 },
+      },
+    });
+  });
+
   it('saveCatalogProduct sends null for blank brand and category', async () => {
     mockedCoreQuery.mockResolvedValue({ updateProduct: { id: 'p1' } });
 
@@ -71,7 +94,56 @@ describe('catalog on an instance without the taxonomy fields', () => {
 
     expect(mockedCoreQuery).toHaveBeenCalledTimes(2);
     expect(mockedCoreQuery.mock.calls[1][0]).not.toContain('brand');
-    expect(products).toEqual([{ id: 'p1', name: 'HMIS', brand: null, category: null }]);
+    expect(products).toEqual([
+      { id: 'p1', name: 'HMIS', brand: null, category: null, priceBook: null },
+    ]);
+  });
+
+  it('fetchCatalogProducts keeps the taxonomy when only priceBook is missing', async () => {
+    mockedCoreQuery
+      .mockRejectedValueOnce(
+        new Error('Cannot query field "priceBook" on type "Product".'),
+      )
+      .mockResolvedValueOnce({
+        products: {
+          edges: [{ node: { id: 'p1', name: 'HMIS', brand: 'Hamagan', category: null } }],
+        },
+      });
+
+    const products = await fetchCatalogProducts();
+
+    expect(mockedCoreQuery).toHaveBeenCalledTimes(2);
+    expect(mockedCoreQuery.mock.calls[1][0]).not.toContain('priceBook');
+    expect(mockedCoreQuery.mock.calls[1][0]).toContain('brand');
+    expect(products).toEqual([
+      { id: 'p1', name: 'HMIS', brand: 'Hamagan', category: null, priceBook: null },
+    ]);
+  });
+
+  it('saveCatalogProduct retries without priceBook and keeps the rest of the edit', async () => {
+    mockedCoreQuery
+      .mockRejectedValueOnce(
+        new Error('Field "priceBook" is not defined by type "ProductUpdateInput".'),
+      )
+      .mockResolvedValueOnce({ updateProduct: { id: 'p1' } });
+
+    await saveCatalogProduct(
+      {
+        name: 'HMIS',
+        currencyCode: 'AFN',
+        baseInstallPriceAmount: 15000,
+        priceBook: { USD: { install: 200 } },
+      },
+      'p1',
+    );
+
+    const [, variables] = mockedCoreQuery.mock.calls[1];
+    const payload = (variables as { data: Record<string, unknown> }).data;
+    expect(payload).not.toHaveProperty('priceBook');
+    expect(payload).toMatchObject({
+      name: 'HMIS',
+      baseInstallPrice: { amountMicros: 15_000_000_000, currencyCode: 'AFN' },
+    });
   });
 
   it('saveCatalogProduct retries the mutation without brand/category', async () => {

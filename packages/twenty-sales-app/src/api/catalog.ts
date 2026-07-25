@@ -17,6 +17,15 @@ export type PricingFactor = {
   billingFrequency?: 'MONTHLY' | 'HOURLY' | 'ANNUAL';
 };
 
+// Fixed install/annual amounts per currency, in major units. A product priced
+// in both AFN and USD carries a separately-entered amount for each -- the
+// business quotes different numbers per currency rather than converting one,
+// so no exchange rate is ever applied. The entry for the primary currency
+// mirrors baseInstallPrice/baseAnnualPrice, which stay authoritative for the
+// CRM's own table views and reports.
+export type ProductPriceBookEntry = { install?: number; annual?: number };
+export type ProductPriceBook = Record<string, ProductPriceBookEntry>;
+
 export type CatalogProduct = {
   id: string;
   name: string;
@@ -33,6 +42,7 @@ export type CatalogProduct = {
   pricingFactors: PricingFactor[] | null;
   pricingFactorNotes: string | null;
   isSellable: boolean | null;
+  priceBook: ProductPriceBook | null;
   createdAt: string;
 };
 
@@ -42,29 +52,102 @@ const PRODUCT_FIELDS_BASE = `
   baseAnnualPrice { amountMicros currencyCode }
 `;
 
-const PRODUCT_FIELDS = `brand category ${PRODUCT_FIELDS_BASE}`;
+// Fields that only exist once their provisioning script has run on the
+// instance. GraphQL rejects the whole document over one unknown field -- which
+// would blank the catalog rather than just hide a value -- so every call asks
+// for them and drops the ones the server rejects. Grouped by the script that
+// provisions them: an instance missing `brand` is missing `category` too, so
+// retrying them one at a time would just cost a round trip. Same idea as
+// admin.ts's `link` fallback; see the sales-app schema-skew note. Drop a group
+// here once every instance has been provisioned.
+const OPTIONAL_PRODUCT_FIELD_GROUPS: string[][] = [
+  ['brand', 'category'],
+  ['priceBook'],
+];
 
-// An instance where provision-product-brand-category.mjs hasn't run yet doesn't
-// know brand/category, and GraphQL rejects the whole document over one unknown
-// field -- which would blank the catalog rather than just hide two values. So
-// every product call requests them, and falls back once on that exact error.
-// Same pattern as admin.ts's `link` fallback; see the sales-app schema-skew
-// note. Drop the fallback once every instance has run the script.
-const isMissingTaxonomyFieldError = (error: unknown): boolean =>
+const isFieldMissingFromError = (error: unknown, name: string): boolean =>
   error instanceof Error &&
-  /(Cannot query field|is not defined by type).*"(brand|category)"|"(brand|category)".*(is not defined by type)/i.test(
-    error.message,
+  new RegExp(
+    // Reads are rejected as `Cannot query field "x"`, writes as
+    // `Field "x" is not defined by type ...`.
+    `(Cannot query field|is not defined by type).*"${name}"|"${name}".*is not defined by type`,
+    'i',
+  ).test(error.message);
+
+const groupsWithoutMissingFields = (
+  error: unknown,
+  groups: string[][],
+): string[][] | undefined => {
+  const remaining = groups.filter(
+    (group) => !group.some((name) => isFieldMissingFromError(error, name)),
   );
 
-const withNullTaxonomy = (products: CatalogProduct[]): CatalogProduct[] =>
+  return remaining.length === groups.length ? undefined : remaining;
+};
+
+const withOptionalProductFields = async <TResult>(
+  run: (fields: string) => Promise<TResult>,
+): Promise<TResult> => {
+  let groups = OPTIONAL_PRODUCT_FIELD_GROUPS;
+
+  for (;;) {
+    try {
+      return await run(`${groups.flat().join(' ')} ${PRODUCT_FIELDS_BASE}`);
+    } catch (error) {
+      const remaining = groupsWithoutMissingFields(error, groups);
+      if (remaining === undefined) throw error;
+      groups = remaining;
+    }
+  }
+};
+
+// RAW_JSON reaches the client as an object on most instances and as a string
+// on some; either way it is user-editable in the CRM, so amounts are
+// re-validated here rather than trusted into the pricing math.
+export const parsePriceBook = (raw: unknown): ProductPriceBook | null => {
+  const value = typeof raw === 'string' ? safeParseJson(raw) : raw;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const book: ProductPriceBook = {};
+  for (const [currencyCode, entry] of Object.entries(value)) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const { install, annual } = entry as ProductPriceBookEntry;
+    const cleaned: ProductPriceBookEntry = {
+      ...(typeof install === 'number' && Number.isFinite(install) && install >= 0
+        ? { install }
+        : {}),
+      ...(typeof annual === 'number' && Number.isFinite(annual) && annual >= 0
+        ? { annual }
+        : {}),
+    };
+    if (Object.keys(cleaned).length > 0) {
+      book[currencyCode.trim().toUpperCase()] = cleaned;
+    }
+  }
+
+  return Object.keys(book).length > 0 ? book : null;
+};
+
+const safeParseJson = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const withOptionalDefaults = (products: CatalogProduct[]): CatalogProduct[] =>
   products.map((product) => ({
     ...product,
     brand: product.brand ?? null,
     category: product.category ?? null,
+    priceBook: parsePriceBook(product.priceBook),
   }));
 
-export const fetchCatalogProducts = async (): Promise<CatalogProduct[]> => {
-  const run = async (fields: string) => {
+export const fetchCatalogProducts = async (): Promise<CatalogProduct[]> =>
+  withOptionalProductFields(async (fields) => {
     const data = await coreQuery<{ products: { edges: { node: CatalogProduct }[] } }>(
       `query CatalogProducts {
         products(first: 200, orderBy: [{ name: AscNullsLast }]) {
@@ -72,19 +155,11 @@ export const fetchCatalogProducts = async (): Promise<CatalogProduct[]> => {
         }
       }`,
     );
-    return withNullTaxonomy(data.products.edges.map((e) => e.node));
-  };
+    return withOptionalDefaults(data.products.edges.map((e) => e.node));
+  });
 
-  try {
-    return await run(PRODUCT_FIELDS);
-  } catch (error) {
-    if (!isMissingTaxonomyFieldError(error)) throw error;
-    return run(PRODUCT_FIELDS_BASE);
-  }
-};
-
-export const fetchProductById = async (id: string): Promise<CatalogProduct | undefined> => {
-  const run = async (fields: string) => {
+export const fetchProductById = async (id: string): Promise<CatalogProduct | undefined> =>
+  withOptionalProductFields(async (fields) => {
     const data = await coreQuery<{ products: { edges: { node: CatalogProduct }[] } }>(
       `query CatalogProductById($id: UUID!) {
         products(filter: { id: { eq: $id } }, first: 1) {
@@ -93,26 +168,28 @@ export const fetchProductById = async (id: string): Promise<CatalogProduct | und
       }`,
       { id },
     );
-    return withNullTaxonomy(data.products.edges.map((e) => e.node))[0];
-  };
-
-  try {
-    return await run(PRODUCT_FIELDS);
-  } catch (error) {
-    if (!isMissingTaxonomyFieldError(error)) throw error;
-    return run(PRODUCT_FIELDS_BASE);
-  }
-};
+    return withOptionalDefaults(data.products.edges.map((e) => e.node))[0];
+  });
 
 export type ProductCurrencyCode = 'AFN' | 'USD';
+
+// Currencies a product can be priced in. Order matters: the first is what a
+// new product defaults to.
+export const SUPPORTED_CURRENCIES: ProductCurrencyCode[] = ['AFN', 'USD'];
 
 export type CatalogProductInput = {
   name: string;
   brand?: string | null;
   category?: string | null;
+  // The product's primary currency: what baseInstallPrice/baseAnnualPrice are
+  // denominated in, and the currency its metric rates are quoted in.
   currencyCode?: ProductCurrencyCode | null;
   baseInstallPriceAmount?: number | null;
   baseAnnualPriceAmount?: number | null;
+  // Fixed amounts in every currency the product is sold in, including the
+  // primary one -- the editor's source of truth. The primary entry and the
+  // base* amounts above are kept identical on save.
+  priceBook?: ProductPriceBook | null;
   maxDiscountPercent?: number | null;
   pricingModel?: string | null;
   pricingFactors?: PricingFactor[] | null;
@@ -146,6 +223,35 @@ const cleanPricingFactors = (
   return cleaned.length > 0 ? cleaned : null;
 };
 
+// The primary currency's entry in the price book and the base* amounts are
+// two views of one number -- writing the base amounts into the book on every
+// save keeps a product that predates the price book (or was edited in the CRM
+// itself) consistent instead of showing two different "fixed install" values.
+const syncPriceBook = (
+  priceBook: ProductPriceBook | null | undefined,
+  currencyCode: string,
+  installAmount: number | null | undefined,
+  annualAmount: number | null | undefined,
+): ProductPriceBook | null => {
+  const primaryEntry: ProductPriceBookEntry = {
+    ...(installAmount || installAmount === 0 ? { install: installAmount } : {}),
+    ...(annualAmount || annualAmount === 0 ? { annual: annualAmount } : {}),
+  };
+
+  const merged: ProductPriceBook = {
+    ...(priceBook ?? {}),
+    ...(Object.keys(primaryEntry).length > 0
+      ? { [currencyCode]: primaryEntry }
+      : {}),
+  };
+
+  if (Object.keys(primaryEntry).length === 0) {
+    delete merged[currencyCode];
+  }
+
+  return Object.keys(merged).length > 0 ? merged : null;
+};
+
 export const saveCatalogProduct = async (
   input: CatalogProductInput,
   id?: string,
@@ -157,6 +263,12 @@ export const saveCatalogProduct = async (
     category: trimToNull(input.category),
     baseInstallPrice: toAmount(input.baseInstallPriceAmount, currencyCode),
     baseAnnualPrice: toAmount(input.baseAnnualPriceAmount, currencyCode),
+    priceBook: syncPriceBook(
+      input.priceBook,
+      currencyCode,
+      input.baseInstallPriceAmount,
+      input.baseAnnualPriceAmount,
+    ),
     maxDiscountPercent: input.maxDiscountPercent ?? null,
     pricingModel: input.pricingModel || null,
     pricingFactors:
@@ -185,14 +297,24 @@ export const saveCatalogProduct = async (
     return created.createProduct.id;
   };
 
-  try {
-    return await run(payload);
-  } catch (error) {
-    if (!isMissingTaxonomyFieldError(error)) throw error;
-    // Save the rest rather than lose the edit; the taxonomy sticks once the
-    // provisioning script has run on this instance.
-    const { brand: _brand, category: _category, ...withoutTaxonomy } = payload;
-    return run(withoutTaxonomy);
+  // Save the rest rather than lose the edit: an instance that hasn't been
+  // provisioned yet rejects the field it doesn't know, and the value sticks
+  // once the script has run there.
+  let groups = OPTIONAL_PRODUCT_FIELD_GROUPS;
+  const attempted = { ...payload };
+
+  for (;;) {
+    try {
+      return await run(attempted);
+    } catch (error) {
+      const remaining = groupsWithoutMissingFields(error, groups);
+      if (remaining === undefined) throw error;
+
+      for (const name of groups.flat()) {
+        if (!remaining.flat().includes(name)) delete attempted[name];
+      }
+      groups = remaining;
+    }
   }
 };
 

@@ -6,6 +6,15 @@ import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspac
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type CurrencyValue } from 'src/modules/sales-crm/types/currency-value.type';
 import {
+  applyFactorRateOverridesToProductFactors,
+  applyFactorRateOverridesToTierSchedule,
+  impliedDiscountPercent,
+  type LinePriceOverrides,
+  parseLinePriceOverrides,
+  parseProductPriceBook,
+  resolveLineFixedAmounts,
+} from 'src/modules/sales-crm/utils/deal-line-price-overrides.util';
+import {
   computeFixedPlusMetricsPrice,
   type ProductPricingFactor,
 } from 'src/modules/sales-crm/utils/product-fixed-plus-metrics-price.util';
@@ -23,6 +32,17 @@ const readPricingFactors = (product: {
   Array.isArray(product.pricingFactors)
     ? (product.pricingFactors as ProductPricingFactor[])
     : [];
+
+// Both pricing paths report how far below the catalog the seller restated the
+// line, so the hook can hold it to the Product's discount ceiling. It is 0
+// whenever nothing was overridden, and also whenever the line is in a
+// different currency than the catalog price -- comparing ؋ to $ would produce
+// a meaningless "discount".
+export type CalculatedLinePrice = {
+  installPrice: CurrencyValue;
+  annualPrice?: CurrencyValue;
+  overrideDiscountPercent: number;
+};
 
 export type PriceSnapshot = {
   packageId: string | null;
@@ -60,13 +80,17 @@ export class DealProductPriceCalculationService {
     workspaceId,
     productId,
     factorQuantities,
+    priceOverrides: rawPriceOverrides,
+    quantity,
+    hasExplicitInstallPrice = false,
   }: {
     workspaceId: string;
     productId: string | null | undefined;
     factorQuantities: FactorQuantities | null | undefined;
-  }): Promise<
-    { installPrice: CurrencyValue; annualPrice?: CurrencyValue } | undefined
-  > {
+    priceOverrides?: unknown;
+    quantity?: number | null;
+    hasExplicitInstallPrice?: boolean;
+  }): Promise<CalculatedLinePrice | undefined> {
     if (!isDefined(productId)) {
       return undefined;
     }
@@ -88,31 +112,42 @@ export class DealProductPriceCalculationService {
         authContext,
       );
 
-    if (product?.pricingModel !== 'PER_FACTOR') {
+    if (!isDefined(product)) {
       return undefined;
+    }
+
+    const overrides = parseLinePriceOverrides(rawPriceOverrides);
+    // installPrice/annualPrice are CURRENCY composite fields ({amountMicros,
+    // currencyCode}), not plain numbers -- writing a raw number is silently
+    // dropped. The line's currency is whichever one the seller picked, else
+    // the one the product's own base prices are denominated in.
+    const baseInstallPrice = product.baseInstallPrice as CurrencyValue | null;
+    const baseAnnualPrice = product.baseAnnualPrice as CurrencyValue | null;
+    const priceBook = parseProductPriceBook(product.priceBook);
+
+    const resolved = resolveLineFixedAmounts({
+      priceBook,
+      overrides,
+      baseInstallPrice,
+      baseAnnualPrice,
+      fallbackCurrencyCode: FALLBACK_CURRENCY_CODE,
+    });
+
+    if (product.pricingModel !== 'PER_FACTOR') {
+      return this.priceFixedProductLine({
+        resolved,
+        quantity,
+        hasExplicitInstallPrice,
+      });
     }
 
     const pricingFactors = readPricingFactors(product);
 
-    // installPrice/annualPrice are CURRENCY composite fields ({amountMicros,
-    // currencyCode}), not plain numbers -- writing a raw number is silently
-    // dropped. Reuse whichever currency the product's own base prices are
-    // already denominated in (set by whoever entered the catalog data),
-    // falling back to USD only if both are unset.
-    const baseInstallPrice = product.baseInstallPrice as CurrencyValue | null;
-    const baseAnnualPrice = product.baseAnnualPrice as CurrencyValue | null;
-    const currencyCode =
-      baseInstallPrice?.currencyCode ??
-      baseAnnualPrice?.currencyCode ??
-      FALLBACK_CURRENCY_CODE;
-
-    const baseInstallMicros = Number(baseInstallPrice?.amountMicros ?? 0);
-    const baseAnnualMicros = Number(baseAnnualPrice?.amountMicros ?? 0);
-
     // Nothing to price off: no fixed amounts and no metric quantities on this
     // line. Returning undefined leaves whatever installPrice the caller set
     // untouched, rather than stamping a meaningless 0 over it.
-    const hasFixedAmount = baseInstallMicros !== 0 || baseAnnualMicros !== 0;
+    const hasFixedAmount =
+      resolved.baseInstallMicros !== 0 || resolved.baseAnnualMicros !== 0;
     const hasFactorQuantities =
       isDefined(factorQuantities) && Object.keys(factorQuantities).length > 0;
 
@@ -121,19 +156,108 @@ export class DealProductPriceCalculationService {
     }
 
     const { installMicros, annualMicros } = computeFixedPlusMetricsPrice({
+      pricingFactors: applyFactorRateOverridesToProductFactors(
+        pricingFactors,
+        overrides.factorRates,
+      ),
+      factorQuantities,
+      baseInstallMicros: resolved.baseInstallMicros,
+      baseAnnualMicros: resolved.baseAnnualMicros,
+    });
+
+    const catalogPrice = computeFixedPlusMetricsPrice({
       pricingFactors,
       factorQuantities,
-      baseInstallMicros,
-      baseAnnualMicros,
+      baseInstallMicros: Number(baseInstallPrice?.amountMicros ?? 0),
+      baseAnnualMicros: Number(baseAnnualPrice?.amountMicros ?? 0),
     });
 
     return {
-      installPrice: { amountMicros: installMicros, currencyCode },
+      installPrice: {
+        amountMicros: installMicros,
+        currencyCode: resolved.currencyCode,
+      },
       annualPrice:
         annualMicros > 0
-          ? { amountMicros: annualMicros, currencyCode }
+          ? { amountMicros: annualMicros, currencyCode: resolved.currencyCode }
           : undefined,
+      overrideDiscountPercent: this.overrideDiscountPercent({
+        overrides,
+        lineCurrencyCode: resolved.currencyCode,
+        catalogCurrencyCode:
+          baseInstallPrice?.currencyCode ??
+          baseAnnualPrice?.currencyCode ??
+          FALLBACK_CURRENCY_CODE,
+        catalogMicros: catalogPrice.installMicros + catalogPrice.annualMicros,
+        lineMicros: installMicros + annualMicros,
+      }),
     };
+  }
+
+  // A product that isn't priced per metric still has fixed amounts, and those
+  // are now per-currency -- so picking USD on a FLAT product has to reach the
+  // line. Only fills a price the caller left blank: a line whose installPrice
+  // was set by hand (in the CRM UI) keeps it.
+  private priceFixedProductLine({
+    resolved,
+    quantity,
+    hasExplicitInstallPrice,
+  }: {
+    resolved: ReturnType<typeof resolveLineFixedAmounts>;
+    quantity: number | null | undefined;
+    hasExplicitInstallPrice: boolean;
+  }): CalculatedLinePrice | undefined {
+    if (hasExplicitInstallPrice) {
+      return undefined;
+    }
+
+    const lineQuantity =
+      isDefined(quantity) && Number.isFinite(quantity) && quantity > 0
+        ? quantity
+        : 1;
+    const installMicros = resolved.baseInstallMicros * lineQuantity;
+    const annualMicros = resolved.baseAnnualMicros * lineQuantity;
+
+    if (installMicros === 0 && annualMicros === 0) {
+      return undefined;
+    }
+
+    return {
+      installPrice: {
+        amountMicros: installMicros,
+        currencyCode: resolved.currencyCode,
+      },
+      annualPrice:
+        annualMicros > 0
+          ? { amountMicros: annualMicros, currencyCode: resolved.currencyCode }
+          : undefined,
+      overrideDiscountPercent: 0,
+    };
+  }
+
+  // Only a like-for-like comparison counts: a line switched to another
+  // currency has no catalog price in that currency to be a discount against.
+  private overrideDiscountPercent({
+    overrides,
+    lineCurrencyCode,
+    catalogCurrencyCode,
+    catalogMicros,
+    lineMicros,
+  }: {
+    overrides: LinePriceOverrides;
+    lineCurrencyCode: string;
+    catalogCurrencyCode: string;
+    catalogMicros: number;
+    lineMicros: number;
+  }): number {
+    if (
+      Object.keys(overrides).length === 0 ||
+      lineCurrencyCode !== catalogCurrencyCode
+    ) {
+      return 0;
+    }
+
+    return impliedDiscountPercent(catalogMicros, lineMicros);
   }
 
   // Computes installPrice/annualPrice from a Package's Pricing Version
@@ -147,15 +271,18 @@ export class DealProductPriceCalculationService {
     workspaceId,
     pricingVersionId,
     factorQuantities,
+    priceOverrides: rawPriceOverrides,
   }: {
     workspaceId: string;
     pricingVersionId: string | null | undefined;
     factorQuantities: FactorQuantities | null | undefined;
+    priceOverrides?: unknown;
   }): Promise<
     | {
         installPrice: CurrencyValue;
         annualPrice: CurrencyValue;
         priceSnapshot: PriceSnapshot;
+        overrideDiscountPercent: number;
       }
     | undefined
   > {
@@ -241,14 +368,27 @@ export class DealProductPriceCalculationService {
       isDefined(product) ? readPricingFactors(product) : [],
     );
 
+    const overrides = parseLinePriceOverrides(rawPriceOverrides);
     const { breakdown, totalMonthly, totalHourly, totalAnnual } =
-      computePriceFromTierSchedule(mergedSchedule, factorQuantities);
+      computePriceFromTierSchedule(
+        applyFactorRateOverridesToTierSchedule(
+          mergedSchedule,
+          overrides.factorRates,
+        ),
+        factorQuantities,
+      );
 
-    const currencyCode =
+    const catalogTotals = computePriceFromTierSchedule(
+      mergedSchedule,
+      factorQuantities,
+    );
+
+    const catalogCurrencyCode =
       (pricingVersion.currencyCode as string | null | undefined) ??
       (product?.baseInstallPrice as CurrencyValue | null | undefined)
         ?.currencyCode ??
       FALLBACK_CURRENCY_CODE;
+    const currencyCode = overrides.currencyCode ?? catalogCurrencyCode;
 
     const priceSnapshot: PriceSnapshot = {
       packageId: (packageRecord?.id as string | undefined) ?? null,
@@ -275,6 +415,20 @@ export class DealProductPriceCalculationService {
         currencyCode,
       },
       priceSnapshot,
+      overrideDiscountPercent: this.overrideDiscountPercent({
+        overrides,
+        lineCurrencyCode: currencyCode,
+        catalogCurrencyCode,
+        catalogMicros: Math.round(
+          (catalogTotals.totalMonthly +
+            catalogTotals.totalHourly +
+            catalogTotals.totalAnnual) *
+            1_000_000,
+        ),
+        lineMicros: Math.round(
+          (totalMonthly + totalHourly + totalAnnual) * 1_000_000,
+        ),
+      }),
     };
   }
 }

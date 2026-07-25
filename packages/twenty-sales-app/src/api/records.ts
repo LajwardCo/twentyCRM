@@ -1,4 +1,9 @@
-import { type PricingFactor } from './catalog';
+import { type LinePriceOverridesPayload } from '../lib/dealLinePricing';
+import {
+  parsePriceBook,
+  type PricingFactor,
+  type ProductPriceBook,
+} from './catalog';
 import { coreQuery } from './client';
 
 // ---------- shared types ----------
@@ -920,18 +925,33 @@ export type ProductOption = {
   // deal-line form collects a quantity per metric.
   pricingModel: string | null;
   pricingFactors: PricingFactor[] | null;
+  // Fixed amounts per currency, so the deal-line form can suggest the right
+  // numbers when the seller quotes in USD rather than AFN.
+  priceBook: ProductPriceBook | null;
 };
 
-// brand/category only exist once provision-product-brand-category.mjs has run
-// on the instance; one unknown field fails the whole document, so fall back to
-// the picker without them rather than lose the pricing panel. Same pattern as
-// catalog.ts and admin.ts's `link`.
-const isMissingTaxonomyFieldError = (error: unknown): boolean =>
-  error instanceof Error &&
-  /(Cannot query field|is not defined by type).*"(brand|category)"/i.test(error.message);
+// brand/category/priceBook only exist once their provisioning script has run
+// on the instance; one unknown field fails the whole document, so drop
+// whichever the server rejects rather than lose the pricing panel. Same
+// pattern as catalog.ts and admin.ts's `link`.
+const missingProductFieldFromError = (
+  error: unknown,
+  candidates: string[],
+): string | undefined =>
+  error instanceof Error
+    ? candidates.find((name) =>
+        // Reads are rejected as `Cannot query field "x"`, writes as
+        // `Field "x" is not defined by type ...` -- the name lands on either
+        // side of the phrase depending on which.
+        new RegExp(
+          `(Cannot query field|is not defined by type).*"${name}"|"${name}".*is not defined by type`,
+          'i',
+        ).test(error.message),
+      )
+    : undefined;
 
 export const fetchProducts = async (): Promise<ProductOption[]> => {
-  const run = async (taxonomyFields: string) => {
+  const run = async (optionalFields: string[]) => {
     const data = await coreQuery<{
       products: { edges: { node: ProductOption }[] };
     }>(
@@ -941,7 +961,7 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
             node {
               id
               name
-              ${taxonomyFields}
+              ${optionalFields.join('\n              ')}
               pricingModel
               pricingFactors
               baseInstallPrice { amountMicros currencyCode }
@@ -955,14 +975,25 @@ export const fetchProducts = async (): Promise<ProductOption[]> => {
       ...e.node,
       brand: e.node.brand ?? null,
       category: e.node.category ?? null,
+      priceBook: parsePriceBook(e.node.priceBook),
     }));
   };
 
-  try {
-    return await run('brand\n              category');
-  } catch (error) {
-    if (!isMissingTaxonomyFieldError(error)) throw error;
-    return run('');
+  // Grouped by provisioning script: an instance missing `brand` is missing
+  // `category` too, so they are dropped together.
+  let groups = [['brand', 'category'], ['priceBook']];
+
+  for (;;) {
+    try {
+      return await run(groups.flat());
+    } catch (error) {
+      const remaining = groups.filter(
+        (group) =>
+          missingProductFieldFromError(error, group) === undefined,
+      );
+      if (remaining.length === groups.length) throw error;
+      groups = remaining;
+    }
   }
 };
 
@@ -978,23 +1009,45 @@ export const addProductToLead = async (input: {
   factorQuantities?: Record<string, number>;
   pricingVersionId?: string;
   discountRuleId?: string;
+  // Rates the seller restated for this line only -- the hook re-prices from
+  // them instead of the catalog. Omitted when nothing was changed.
+  priceOverrides?: LinePriceOverridesPayload;
 }): Promise<void> => {
-  await coreQuery(
-    `mutation AddDealProduct($data: DealProductCreateInput!) {
-      createDealProduct(data: $data) { id }
-    }`,
-    {
-      data: {
-        name: input.productName,
-        opportunityId: input.opportunityId,
-        productId: input.productId,
-        quantity: input.quantity,
-        ...(input.factorQuantities ? { factorQuantities: input.factorQuantities } : {}),
-        ...(input.pricingVersionId ? { pricingVersionId: input.pricingVersionId } : {}),
-        ...(input.discountRuleId ? { discountRuleId: input.discountRuleId } : {}),
-      },
-    },
-  );
+  const data: Record<string, unknown> = {
+    name: input.productName,
+    opportunityId: input.opportunityId,
+    productId: input.productId,
+    quantity: input.quantity,
+    ...(input.factorQuantities ? { factorQuantities: input.factorQuantities } : {}),
+    ...(input.pricingVersionId ? { pricingVersionId: input.pricingVersionId } : {}),
+    ...(input.discountRuleId ? { discountRuleId: input.discountRuleId } : {}),
+    ...(input.priceOverrides ? { priceOverrides: input.priceOverrides } : {}),
+  };
+
+  const run = (payload: Record<string, unknown>) =>
+    coreQuery(
+      `mutation AddDealProduct($data: DealProductCreateInput!) {
+        createDealProduct(data: $data) { id }
+      }`,
+      { data: payload },
+    );
+
+  try {
+    await run(data);
+  } catch (error) {
+    // An instance without provision-line-pricing-multicurrency.mjs run yet
+    // doesn't know priceOverrides. Saving the line at catalog prices beats
+    // losing it -- the seller sees the price it got and can correct it in the
+    // CRM; a lost line is silent.
+    if (
+      input.priceOverrides === undefined ||
+      missingProductFieldFromError(error, ['priceOverrides']) === undefined
+    ) {
+      throw error;
+    }
+    const { priceOverrides: _dropped, ...withoutOverrides } = data;
+    await run(withoutOverrides);
+  }
 };
 
 // ---------- reports ----------

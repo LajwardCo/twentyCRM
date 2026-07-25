@@ -101,9 +101,8 @@ export const parseProductPriceBook = (raw: unknown): ProductPriceBook => {
   return book;
 };
 
-export const hasLinePriceOverrides = (
-  overrides: LinePriceOverrides,
-): boolean => Object.keys(overrides).length > 0;
+export const hasLinePriceOverrides = (overrides: LinePriceOverrides): boolean =>
+  Object.keys(overrides).length > 0;
 
 export type ResolvedLineFixedAmounts = {
   currencyCode: string;
@@ -230,7 +229,9 @@ export const applyFactorRateOverridesToTierSchedule = (
     ),
     ...Object.entries(factorRates)
       .filter(([name]) => !scheduled.has(name))
-      .map(([name, unitPrice]) => productFactorToTierSchedule({ name, unitPrice })),
+      .map(([name, unitPrice]) =>
+        productFactorToTierSchedule({ name, unitPrice }),
+      ),
   ];
 };
 

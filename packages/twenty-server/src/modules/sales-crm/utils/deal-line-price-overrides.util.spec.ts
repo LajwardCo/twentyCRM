@@ -61,7 +61,10 @@ describe('parseProductPriceBook', () => {
 });
 
 describe('resolveLineFixedAmounts', () => {
-  const baseInstallPrice = { amountMicros: 15_000_000_000, currencyCode: 'AFN' };
+  const baseInstallPrice = {
+    amountMicros: 15_000_000_000,
+    currencyCode: 'AFN',
+  };
   const baseAnnualPrice = { amountMicros: 7_000_000_000, currencyCode: 'AFN' };
 
   it('should use the product base prices when there is no price book and no override', () => {
@@ -82,7 +85,10 @@ describe('resolveLineFixedAmounts', () => {
   it('should price in the requested currency from the price book', () => {
     expect(
       resolveLineFixedAmounts({
-        priceBook: { AFN: { install: 15000 }, USD: { install: 200, annual: 100 } },
+        priceBook: {
+          AFN: { install: 15000 },
+          USD: { install: 200, annual: 100 },
+        },
         overrides: { currencyCode: 'USD' },
         baseInstallPrice,
         baseAnnualPrice,
@@ -148,9 +154,9 @@ describe('applyFactorRateOverridesToProductFactors', () => {
   ];
 
   it('should return the catalog rates untouched when nothing is overridden', () => {
-    expect(applyFactorRateOverridesToProductFactors(factors, undefined)).toEqual(
-      factors,
-    );
+    expect(
+      applyFactorRateOverridesToProductFactors(factors, undefined),
+    ).toEqual(factors);
   });
 
   it('should replace the unit price of an overridden metric and keep its cadence', () => {

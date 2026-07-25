@@ -124,7 +124,9 @@ export class DealProductPriceCalculationService {
     return {
       installPrice: { amountMicros: installMicros, currencyCode },
       annualPrice:
-        annualMicros > 0 ? { amountMicros: annualMicros, currencyCode } : undefined,
+        annualMicros > 0
+          ? { amountMicros: annualMicros, currencyCode }
+          : undefined,
     };
   }
 

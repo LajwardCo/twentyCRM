@@ -17,6 +17,7 @@ import {
 } from '../api/catalog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { ProductMetricsEditor } from '../components/ProductMetricsEditor';
+import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { TierScheduleEditor } from '../components/TierScheduleEditor';
 import { useCached } from '../lib/cache';
 import { formatMoney, toLocalInputValue } from '../lib/format';
@@ -73,6 +74,8 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
   const startEdit = () => {
     setEditing({
       name: product.name,
+      brand: product.brand,
+      category: product.category,
       currencyCode:
         (product.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN',
       baseInstallPriceAmount: product.baseInstallPrice?.amountMicros
@@ -135,6 +138,7 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
         <div className="hero-main">
           <h1>{product.name}</h1>
           <div className="hero-meta">
+            {product.brand && <span>{product.brand}</span>}
             {product.pricingModel && <span>{PRICING_MODEL_LABELS[product.pricingModel] ?? product.pricingModel}</span>}
             {product.isSellable === false && <span>غیرفعال</span>}
           </div>
@@ -144,6 +148,18 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
       {editing === null ? (
         <div className="card card-pad anim d1" style={{ marginBottom: 16 }}>
           <div className="contact-rows">
+            {product.brand && (
+              <div className="c-row">
+                <span>{T4.brandLbl}</span>
+                <b>{product.brand}</b>
+              </div>
+            )}
+            {product.category && (
+              <div className="c-row">
+                <span>{T4.categoryLbl}</span>
+                <b>{product.category}</b>
+              </div>
+            )}
             {product.pricingModel === 'PER_FACTOR' ? (
               (product.pricingFactors ?? []).map((m) => (
                 <div className="c-row" key={m.name}>
@@ -216,6 +232,11 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
               </select>
             </div>
           </div>
+          <ProductTaxonomyFields
+            brand={editing.brand}
+            category={editing.category}
+            onChange={set}
+          />
           <div className="f2">
             <div className="fld">
               <label>{T4.pricingModelLbl}</label>

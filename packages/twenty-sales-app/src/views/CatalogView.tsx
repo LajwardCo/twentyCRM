@@ -12,6 +12,7 @@ import {
   type ProductCurrencyCode,
 } from '../api/catalog';
 import { ProductMetricsEditor } from '../components/ProductMetricsEditor';
+import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { useCached } from '../lib/cache';
 import { formatMoney } from '../lib/format';
 import { navigate } from '../lib/router';
@@ -23,11 +24,14 @@ import {
   PRICING_MODEL_LABELS,
   T4,
 } from '../lib/strings';
+import { collectTaxonomyValues } from '../lib/taxonomy';
 
 type Tab = 'products' | 'discountRules';
 
 const EMPTY_PRODUCT: CatalogProductInput = {
   name: '',
+  brand: '',
+  category: '',
   isSellable: true,
   pricingModel: 'FLAT',
   currencyCode: 'AFN',
@@ -41,6 +45,7 @@ const ProductsTab = () => {
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
 
   const { data: products, error: loadError, refresh } = useCached(
     'catalog:products',
@@ -52,6 +57,8 @@ const ProductsTab = () => {
       p
         ? {
             name: p.name,
+            brand: p.brand,
+            category: p.category,
             currencyCode:
               (p.baseInstallPrice?.currencyCode as ProductCurrencyCode | null) ?? 'AFN',
             baseInstallPriceAmount: p.baseInstallPrice?.amountMicros
@@ -90,6 +97,11 @@ const ProductsTab = () => {
     }
   };
 
+  const categories = collectTaxonomyValues(products, 'category');
+  const visibleProducts = (products ?? []).filter((p) =>
+    categoryFilter === '' ? true : (p.category ?? '') === categoryFilter,
+  );
+
   return (
     <>
       <div className="page-head anim" style={{ marginTop: 4 }}>
@@ -100,6 +112,20 @@ const ProductsTab = () => {
       </div>
 
       {loadError !== null && <div className="error-banner">{loadError}</div>}
+
+      {categories.length > 0 && (
+        <div className="fld" style={{ maxWidth: 260, marginBottom: 12 }}>
+          <label>{T4.categoryLbl}</label>
+          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+            <option value="">{T4.allCategories}</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {editing !== null && (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
@@ -123,6 +149,11 @@ const ProductsTab = () => {
               </select>
             </div>
           </div>
+          <ProductTaxonomyFields
+            brand={editing.brand}
+            category={editing.category}
+            onChange={set}
+          />
           <div className="f2">
             <div className="fld">
               <label>{T4.pricingModelLbl}</label>
@@ -227,11 +258,13 @@ const ProductsTab = () => {
         </div>
       )}
 
-      {products !== null && products.length === 0 && editing === null && (
-        <div className="empty-state">{T4.noProducts}</div>
+      {products !== null && visibleProducts.length === 0 && editing === null && (
+        <div className="empty-state">
+          {categoryFilter === '' ? T4.noProducts : T4.noProductsInCategory}
+        </div>
       )}
 
-      {products?.map((p) => (
+      {visibleProducts.map((p) => (
         <div
           className="card card-pad anim"
           key={p.id}
@@ -242,7 +275,9 @@ const ProductsTab = () => {
             <span className="deal-logo">{p.name.charAt(0)}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 750 }}>{p.name}</div>
+              {p.brand && <div className="sub">{p.brand}</div>}
               <div style={{ display: 'flex', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                {p.category && <span className="pill ok">{p.category}</span>}
                 {p.pricingModel && (
                   <span className="pill stage">{PRICING_MODEL_LABELS[p.pricingModel] ?? p.pricingModel}</span>
                 )}

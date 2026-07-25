@@ -147,12 +147,32 @@ export class WorkspaceInvitationService {
         type: AppTokenType.InvitationToken,
         deletedAt: IsNull(),
       },
-      select: {
-        value: false,
-      },
     });
 
-    return appTokens.map(castAppTokenToWorkspaceInvitationUtil);
+    return appTokens.map((appToken) =>
+      castAppTokenToWorkspaceInvitationUtil(
+        appToken,
+        this.buildInvitationLink(workspace, appToken),
+      ),
+    );
+  }
+
+  private buildInvitationLink(
+    workspace: WorkspaceEntity,
+    appToken: AppTokenEntity,
+  ): string {
+    return this.workspaceDomainsService
+      .buildWorkspaceURL({
+        workspace,
+        pathname: getAppPath(AppPath.Invite, {
+          workspaceInviteHash: workspace.inviteHash ?? '',
+        }),
+        searchParams: {
+          inviteToken: appToken.value,
+          email: appToken.context?.email ?? '',
+        },
+      })
+      .toString();
   }
 
   async createWorkspaceInvitation(
@@ -296,16 +316,10 @@ export class WorkspaceInvitationService {
 
     for (const invitation of invitationResults) {
       if (invitation.status === 'fulfilled') {
-        const link = this.workspaceDomainsService.buildWorkspaceURL({
+        const link = this.buildInvitationLink(
           workspace,
-          pathname: getAppPath(AppPath.Invite, {
-            workspaceInviteHash: workspace?.inviteHash,
-          }),
-          searchParams: {
-            inviteToken: invitation.value.appToken.value,
-            email: invitation.value.email,
-          },
-        });
+          invitation.value.appToken,
+        );
 
         if (!isDefined(sender.userEmail)) {
           throw new WorkspaceInvitationException(
@@ -323,7 +337,7 @@ export class WorkspaceInvitationService {
           : undefined;
 
         const emailData = {
-          link: link.toString(),
+          link,
           workspace: {
             name: workspace.displayName,
             logo,
@@ -384,7 +398,10 @@ export class WorkspaceInvitationService {
           }
         } else {
           acc.result.push(
-            castAppTokenToWorkspaceInvitationUtil(invitation.value.appToken),
+            castAppTokenToWorkspaceInvitationUtil(
+              invitation.value.appToken,
+              this.buildInvitationLink(workspace, invitation.value.appToken),
+            ),
           );
         }
 

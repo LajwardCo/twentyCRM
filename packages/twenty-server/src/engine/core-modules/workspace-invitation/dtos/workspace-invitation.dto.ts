@@ -17,4 +17,7 @@ export class WorkspaceInvitation {
 
   @Field({ nullable: false })
   expiresAt: Date;
+
+  @Field(() => String, { nullable: true })
+  link?: string | null;
 }

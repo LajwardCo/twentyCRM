@@ -9,6 +9,7 @@ import {
 
 export const castAppTokenToWorkspaceInvitationUtil = (
   appToken: AppTokenEntity,
+  link?: string | null,
 ) => {
   if (appToken.type !== AppTokenType.InvitationToken) {
     throw new WorkspaceInvitationException(
@@ -29,5 +30,6 @@ export const castAppTokenToWorkspaceInvitationUtil = (
     email: appToken.context.email,
     roleId: appToken.context.roleId ?? null,
     expiresAt: appToken.expiresAt,
+    link: link ?? null,
   };
 };

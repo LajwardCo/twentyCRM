@@ -56,6 +56,98 @@ export const assignRole = async (
   );
 };
 
+// ---------- member management (invite / edit / delete) ----------
+
+export type Invitation = {
+  id: string;
+  email: string;
+  roleId: string | null;
+  expiresAt: string;
+  link: string | null;
+};
+
+export const inviteMember = async (
+  email: string,
+  roleId?: string,
+): Promise<{ result: Invitation[]; errors: string[] }> => {
+  const data = await metadataQuery<{
+    sendInvitations: {
+      success: boolean;
+      errors: string[];
+      result: Invitation[];
+    };
+  }>(
+    `mutation SendInvitations($emails: [String!]!, $roleId: UUID) {
+      sendInvitations(emails: $emails, roleId: $roleId) {
+        success
+        errors
+        result { id email roleId expiresAt link }
+      }
+    }`,
+    { emails: [email], roleId: roleId ?? null },
+  );
+  return {
+    result: data.sendInvitations.result,
+    errors: data.sendInvitations.errors,
+  };
+};
+
+export const fetchInvitations = async (): Promise<Invitation[]> => {
+  const data = await metadataQuery<{ findWorkspaceInvitations: Invitation[] }>(
+    `query FindWorkspaceInvitations {
+      findWorkspaceInvitations { id email roleId expiresAt link }
+    }`,
+  );
+  return data.findWorkspaceInvitations;
+};
+
+export const resendInvitation = async (appTokenId: string): Promise<void> => {
+  await metadataQuery(
+    `mutation ResendInvite($appTokenId: String!) {
+      resendWorkspaceInvitation(appTokenId: $appTokenId) { success }
+    }`,
+    { appTokenId },
+  );
+};
+
+export const deleteInvitation = async (appTokenId: string): Promise<void> => {
+  await metadataQuery(
+    `mutation DeleteInvite($appTokenId: String!) {
+      deleteWorkspaceInvitation(appTokenId: $appTokenId)
+    }`,
+    { appTokenId },
+  );
+};
+
+export const updateMemberName = async (
+  workspaceMemberId: string,
+  firstName: string,
+  lastName: string,
+): Promise<void> => {
+  await metadataQuery(
+    `mutation UpdateMemberName($input: UpdateWorkspaceMemberSettingsInput!) {
+      updateWorkspaceMemberSettings(input: $input)
+    }`,
+    {
+      input: {
+        workspaceMemberId,
+        update: { name: { firstName, lastName } },
+      },
+    },
+  );
+};
+
+export const deleteMember = async (
+  workspaceMemberId: string,
+): Promise<void> => {
+  await metadataQuery(
+    `mutation DeleteMember($id: String!) {
+      deleteUserFromWorkspace(workspaceMemberIdToDelete: $id) { id }
+    }`,
+    { id: workspaceMemberId },
+  );
+};
+
 // ---------- competitors ----------
 
 export type Competitor = {

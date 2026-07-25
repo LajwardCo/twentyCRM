@@ -1,0 +1,80 @@
+name: Deploy Sales app (hamagan-management)
+
+# The Sales SPA is a standalone Vite app that nginx serves from
+# /opt/twenty-sales-app/dist under /sales/. It is NOT part of the Twenty docker
+# image, so deploy-hamagan-crm.yaml never touched it and every sales-app change
+# had to be shipped by hand (build -> tar -> scp -> swap dist). This workflow
+# does that on a push instead. Kept separate from the image deploy so a UI-only
+# change doesn't trigger the ~90min server rebuild, and vice versa.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/twenty-sales-app/**'
+      - '.github/workflows/deploy-hamagan-sales-app.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hamagan-sales-app
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: packages/twenty-sales-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Deliberately outside the yarn workspace — it has its own lockfile.
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npx vite build
+
+      # rsync --delete below would wipe the live app if the build produced
+      # nothing, so refuse to ship an empty dist.
+      - name: Verify build output
+        run: |
+          test -s dist/index.html
+          test -n "$(ls -A dist/assets)"
+          ls -la dist dist/assets
+
+      - name: Configure SSH
+        working-directory: .
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HAMAGAN_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.HAMAGAN_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # --delete-after so the new hashed assets land before the old ones go,
+      # keeping the window where index.html points at a missing bundle closed.
+      - name: Deploy dist to box
+        working-directory: .
+        run: |
+          rsync -az --delete-after \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
+            packages/twenty-sales-app/dist/ \
+            "${{ secrets.HAMAGAN_USER }}@${{ secrets.HAMAGAN_HOST }}:/opt/twenty-sales-app/dist/"
+
+      - name: Smoke check
+        working-directory: .
+        run: |
+          curl -fsS -m 20 https://crm.hamagan.com/sales/ | grep -q '<title>Hamagan Sales</title>'
+          echo ">> /sales/ is serving"

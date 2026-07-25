@@ -911,8 +911,9 @@ export type ProductOption = {
   name: string;
   baseInstallPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   baseAnnualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
-  // PER_FACTOR products price off their own metric table when the seller
-  // picks no package -- the deal-line form collects a quantity per metric.
+  // A PER_FACTOR product prices off its own metric table -- for the metrics no
+  // package tiers, and for every metric when the seller picks no package. The
+  // deal-line form collects a quantity per metric.
   pricingModel: string | null;
   pricingFactors: PricingFactor[] | null;
 };

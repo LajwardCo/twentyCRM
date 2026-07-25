@@ -12,9 +12,17 @@ import {
 import {
   computePriceFromTierSchedule,
   type FactorTierSchedule,
+  mergeProductFactorsIntoTierSchedule,
 } from 'src/modules/sales-crm/utils/pricing-tier-schedule.util';
 
 type FactorQuantities = Record<string, number>;
+
+const readPricingFactors = (product: {
+  pricingFactors?: unknown;
+}): ProductPricingFactor[] =>
+  Array.isArray(product.pricingFactors)
+    ? (product.pricingFactors as ProductPricingFactor[])
+    : [];
 
 export type PriceSnapshot = {
   packageId: string | null;
@@ -24,6 +32,7 @@ export type PriceSnapshot = {
   evaluatedAt: string;
   breakdown: ReturnType<typeof computePriceFromTierSchedule>['breakdown'];
   totalMonthly: number;
+  totalHourly: number;
   totalAnnual: number;
 };
 
@@ -83,10 +92,7 @@ export class DealProductPriceCalculationService {
       return undefined;
     }
 
-    const rawPricingFactors = product.pricingFactors;
-    const pricingFactors = Array.isArray(rawPricingFactors)
-      ? (rawPricingFactors as ProductPricingFactor[])
-      : null;
+    const pricingFactors = readPricingFactors(product);
 
     // installPrice/annualPrice are CURRENCY composite fields ({amountMicros,
     // currencyCode}), not plain numbers -- writing a raw number is silently
@@ -226,8 +232,17 @@ export class DealProductPriceCalculationService {
       return undefined;
     }
 
-    const { breakdown, totalMonthly, totalAnnual } =
-      computePriceFromTierSchedule(tierSchedule, factorQuantities);
+    // A Package tiers only the metrics it names. Every other metric priced on
+    // the Product (e.g. OPD tiers doctors but employees stay at 70/year) is
+    // billed on top -- otherwise selecting a package would silently zero out
+    // the metrics it doesn't mention.
+    const mergedSchedule = mergeProductFactorsIntoTierSchedule(
+      tierSchedule,
+      isDefined(product) ? readPricingFactors(product) : [],
+    );
+
+    const { breakdown, totalMonthly, totalHourly, totalAnnual } =
+      computePriceFromTierSchedule(mergedSchedule, factorQuantities);
 
     const currencyCode =
       (pricingVersion.currencyCode as string | null | undefined) ??
@@ -243,12 +258,16 @@ export class DealProductPriceCalculationService {
       evaluatedAt: new Date().toISOString(),
       breakdown,
       totalMonthly,
+      totalHourly,
       totalAnnual,
     };
 
     return {
+      // Same cadence mapping as the product-only path: the deal line has no
+      // hourly field, so monthly + hourly land in installPrice and annual
+      // metrics populate annualPrice -- no metric is dropped, none converted.
       installPrice: {
-        amountMicros: Math.round(totalMonthly * 1_000_000),
+        amountMicros: Math.round((totalMonthly + totalHourly) * 1_000_000),
         currencyCode,
       },
       annualPrice: {

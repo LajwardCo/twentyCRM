@@ -331,6 +331,8 @@ export const T4 = {
   newPricingVersion: 'نسخه جدید',
   activeVersionBadge: 'فعال',
   deactivatedVersionNote: 'ثبت این نسخه، نسخه فعال فعلی این بسته را غیرفعال می‌کند.',
+  untieredMetricsNote:
+    'این متریک‌ها در این بسته پله‌بندی نشده‌اند و با نرخ خودِ محصول علاوه بر بسته محاسبه می‌شوند:',
   effectiveFromLbl: 'مؤثر از',
   currencyCodeLbl: 'کد ارز',
   isActiveLbl: 'فعال',

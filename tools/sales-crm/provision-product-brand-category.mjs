@@ -13,12 +13,17 @@
 // Twenty CRM Products table view without any extra step here.
 //
 // Idempotent: skips a field that already exists. Safe to re-run.
+//
+// Auth: set TWENTY_TOKEN to a workspace API key (Settings > APIs & Webhooks) to
+// skip the password login entirely -- preferable against production, where you
+// don't want an admin password in your shell history. Otherwise it logs in with
+// TWENTY_EMAIL / TWENTY_PASSWORD (local dev defaults below).
 const META = process.env.TWENTY_META ?? 'http://localhost:3010/metadata';
 const ORIGIN = process.env.TWENTY_ORIGIN ?? 'http://localhost:3011';
 const EMAIL = process.env.TWENTY_EMAIL ?? 'tim@apple.dev';
 const PASSWORD = process.env.TWENTY_PASSWORD ?? 'tim@apple.dev';
 
-let TOKEN = null;
+let TOKEN = process.env.TWENTY_TOKEN ?? null;
 async function gql(query, variables) {
   const res = await fetch(META, {
     method: 'POST',
@@ -66,8 +71,12 @@ const FIELDS = [
 ];
 
 async function main() {
-  await login();
-  console.log('authenticated.\n');
+  if (TOKEN) {
+    console.log('using TWENTY_TOKEN (API key).\n');
+  } else {
+    await login();
+    console.log(`authenticated as ${EMAIL}.\n`);
+  }
 
   const d = await gql(`query {
     objects(paging:{first:500}){ edges { node {

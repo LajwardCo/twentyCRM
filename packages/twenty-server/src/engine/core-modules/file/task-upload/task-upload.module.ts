@@ -10,15 +10,20 @@ import { RecordCrudModule } from 'src/engine/core-modules/record-crud/record-cru
 import { ThrottlerModule } from 'src/engine/core-modules/throttler/throttler.module';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
+import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
 
 // GlobalWorkspaceOrmManager + TwentyConfigService are provided by @Global()
-// modules, so they don't need to be imported here.
+// modules, so they don't need to be imported here. PermissionsModule is
+// required because the resolver's SettingsPermissionGuard(UPLOAD_FILE) injects
+// PermissionsService -- without it Nest can't resolve the guard and the whole
+// server crashes on boot (the prod 502 crash-loop).
 @Module({
   imports: [
     JwtModule,
     FilesFieldModule,
     RecordCrudModule,
     ThrottlerModule,
+    PermissionsModule,
     TypeOrmModule.forFeature([ObjectMetadataEntity, FieldMetadataEntity]),
   ],
   providers: [TaskUploadService, TaskUploadResolver],

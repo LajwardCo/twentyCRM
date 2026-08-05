@@ -11,13 +11,24 @@ import {
   type ProductOption,
   type Referrer,
 } from '../api/records';
+import { findLeadDuplicates } from '../api/duplicates';
 import {
   DealLinePricingEditor,
   lineMetricNames,
 } from '../components/DealLinePricingEditor';
+import {
+  DuplicateConfirmDialog,
+  DuplicateWarning,
+} from '../components/DuplicateWarning';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { MoneyInput } from '../components/MoneyInput';
 import { invalidateCache } from '../lib/cache';
+import {
+  blockingMatches,
+  type DuplicateMatch,
+  normalizeName,
+  phoneKey,
+} from '../lib/duplicates';
 import {
   buildFactorQuantities,
   buildPriceOverrides,
@@ -111,6 +122,18 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
   const [error, setError] = useState<string | null>(null);
   const [savedOpportunityId, setSavedOpportunityId] = useState<string | null>(null);
 
+  // Duplicate prevention. `acknowledged` is a fingerprint of the identifying
+  // fields, so confirming once doesn't re-prompt — but editing the company name
+  // or phone afterwards asks again, because it is a different lead now.
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateMatch[] | null>(
+    null,
+  );
+  const [acknowledged, setAcknowledged] = useState<string | null>(null);
+
+  const identityFingerprint = `${normalizeName(companyName)}|${phoneKey(phone) ?? ''}|${email.trim().toLowerCase()}`;
+
   const selectedProduct = products.find((p) => p.id === dealLine.productId);
 
   // Same reset rules as the lead-detail editor: a new product means new
@@ -203,6 +226,35 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     return clearDockablePage;
   }, [companyName]);
 
+  // Look for duplicates while the seller types, so a company that is already in
+  // the CRM is visible before they fill in the rest of the form. Debounced, and
+  // only once there is enough to search on.
+  useEffect(() => {
+    const hasName = normalizeName(companyName).length >= 3;
+    const hasContact = phoneKey(phone) !== null || email.trim() !== '';
+    if (!hasName && !hasContact) {
+      setDuplicates([]);
+      return;
+    }
+
+    let active = true;
+    setCheckingDuplicates(true);
+    const timer = window.setTimeout(() => {
+      void findLeadDuplicates({ companyName, phone, email })
+        .then((matches) => {
+          if (active) setDuplicates(matches);
+        })
+        .finally(() => {
+          if (active) setCheckingDuplicates(false);
+        });
+    }, 500);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [companyName, phone, email]);
+
   const pickPreset = (preset: FollowUpPreset) => {
     setFollowUpPreset(preset);
     if (preset !== 'custom') {
@@ -212,6 +264,23 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    // A confirmed exact or strong match is asked about once per set of
+    // identifying values. The seller can always proceed -- they are the one
+    // standing in front of the customer.
+    if (acknowledged !== identityFingerprint) {
+      const blocking = blockingMatches(duplicates);
+      if (blocking.length > 0) {
+        setPendingDuplicates(blocking);
+        return;
+      }
+    }
+
+    await registerNow();
+  };
+
+  const registerNow = async () => {
+    setPendingDuplicates(null);
     setError(null);
     setBusy(T.saving);
 
@@ -360,6 +429,10 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                   onChange={(e) => setCompanyName(e.target.value)}
                 />
               </div>
+              <DuplicateWarning
+                matches={duplicates}
+                checking={checkingDuplicates && duplicates.length === 0}
+              />
             </div>
 
             <div className="card card-pad fieldset anim d2">
@@ -686,6 +759,17 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
           </div>
         </div>
       </form>
+
+      {pendingDuplicates !== null && (
+        <DuplicateConfirmDialog
+          matches={pendingDuplicates}
+          onCancel={() => setPendingDuplicates(null)}
+          onRegisterAnyway={() => {
+            setAcknowledged(identityFingerprint);
+            void registerNow();
+          }}
+        />
+      )}
     </main>
   );
 };

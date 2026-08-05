@@ -43,9 +43,12 @@ import {
   PARTNER_TYPE_LABELS,
   QUOTE_STATUS_LABELS,
   SOURCE_LABELS,
+  T,
   T2,
+  T6,
 } from '../lib/strings';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
+import { ModalSheet } from './ModalSheet';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
 
 // ---------- company info + other contacts ----------
@@ -408,6 +411,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   const [draft, setDraft] = useState<DealLineDraft>(emptyDealLineDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateProduct, setDuplicateProduct] = useState<string | null>(null);
 
   const { data: pricing, refresh } = useCached(`pricing:${lead.id}`, () =>
     fetchLeadPricing(lead.id),
@@ -461,9 +465,22 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     setDraft(emptyDealLineDraft());
   };
 
-  const addProduct = async () => {
+  // Adding the same product twice is nearly always a double-tap or a seller
+  // who forgot the line is already there, so it is confirmed once rather than
+  // silently creating a second line that inflates the deal.
+  const addProduct = async (confirmedDuplicate = false) => {
     const product = selectedProduct;
     if (!product) return;
+
+    const alreadyOnLead = (pricing?.dealProducts ?? []).some(
+      (line) => line.product?.id === product.id,
+    );
+    if (alreadyOnLead && !confirmedDuplicate) {
+      setDuplicateProduct(product.name);
+      return;
+    }
+
+    setDuplicateProduct(null);
     setBusy(true);
     setError(null);
     try {
@@ -532,11 +549,39 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
           <button
             className="btn sm"
             disabled={busy || draft.productId === ''}
-            onClick={addProduct}
+            onClick={() => addProduct()}
           >
             {busy ? '…' : `＋ ${T2.addProduct}`}
           </button>
         </div>
+      )}
+
+      {duplicateProduct !== null && (
+        <ModalSheet
+          title={T6.duplicateProductTitle}
+          onClose={() => setDuplicateProduct(null)}
+        >
+          <div className="sub" style={{ marginBottom: 12 }}>
+            <b style={{ color: 'var(--ink)' }}>{duplicateProduct}</b>
+            <div style={{ marginTop: 4 }}>{T6.duplicateProductHint}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn line sm"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={() => setDuplicateProduct(null)}
+            >
+              {T.close}
+            </button>
+            <button
+              className="btn gold"
+              style={{ flex: 2, padding: 12 }}
+              onClick={() => addProduct(true)}
+            >
+              {T6.duplicateAddAnyway}
+            </button>
+          </div>
+        </ModalSheet>
       )}
 
       {pricing === null && <div className="skeleton" style={{ height: 60, marginTop: 12 }} />}

@@ -174,6 +174,10 @@ export type LeadQueryOptions = {
   // instead of walking the whole pipeline.
   createdAfter?: string;
   stages?: string[];
+  // Clause built by the filter engine (lib/filters.ts). It is AND'ed with the
+  // options above rather than replacing them, so a screen's toggles and its
+  // filter sheet narrow the list together instead of overriding each other.
+  extraFilter?: Record<string, unknown>;
 };
 
 const leadFilter = (
@@ -200,6 +204,9 @@ const leadFilter = (
   }
   if (options.createdAfter) {
     filters.push({ createdAt: { gte: options.createdAfter } });
+  }
+  if (options.extraFilter) {
+    filters.push(options.extraFilter);
   }
   return filters.length > 0 ? { and: filters } : undefined;
 };
@@ -957,6 +964,115 @@ export const fetchCompanyContacts = async (
     { companyId },
   );
   return data.people.edges.map((e) => e.node);
+};
+
+// ---------- contacts (people) ----------
+
+export type PersonSummary = {
+  id: string;
+  name: { firstName: string; lastName: string };
+  jobTitle: string | null;
+  createdAt: string;
+  company: { id: string; name: string } | null;
+  phones: {
+    primaryPhoneCallingCode: string | null;
+    primaryPhoneNumber: string | null;
+  } | null;
+  emails: { primaryEmail: string | null } | null;
+};
+
+const PERSON_FIELDS = `
+  id
+  name { firstName lastName }
+  jobTitle
+  createdAt
+  company { id name }
+  phones { primaryPhoneCallingCode primaryPhoneNumber }
+  emails { primaryEmail }
+`;
+
+export type PersonQueryOptions = {
+  search?: string;
+  limit?: number;
+  extraFilter?: Record<string, unknown>;
+};
+
+const personFilter = (
+  options: PersonQueryOptions,
+): Record<string, unknown> | undefined => {
+  const filters: Record<string, unknown>[] = [];
+  if (options.search) {
+    // Name is split across two columns, so a typed name has to try both --
+    // otherwise searching a family name returns nothing.
+    filters.push({
+      or: [
+        { name: { firstName: { ilike: `%${options.search}%` } } },
+        { name: { lastName: { ilike: `%${options.search}%` } } },
+        { jobTitle: { ilike: `%${options.search}%` } },
+        { phones: { primaryPhoneNumber: { ilike: `%${options.search}%` } } },
+        { emails: { primaryEmail: { ilike: `%${options.search}%` } } },
+      ],
+    });
+  }
+  if (options.extraFilter) {
+    filters.push(options.extraFilter);
+  }
+  return filters.length > 0 ? { and: filters } : undefined;
+};
+
+const PEOPLE_PAGE_QUERY = `query People($filter: PersonFilterInput, $limit: Int, $after: String) {
+  people(
+    filter: $filter
+    first: $limit
+    after: $after
+    orderBy: [{ createdAt: DescNullsLast }]
+  ) {
+    edges { node { ${PERSON_FIELDS} } }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+export const fetchPeople = async (
+  options: PersonQueryOptions = {},
+): Promise<PersonSummary[]> => {
+  const data = await coreQuery<{ people: Connection<PersonSummary> }>(
+    PEOPLE_PAGE_QUERY,
+    {
+      filter: personFilter(options),
+      limit: Math.min(options.limit ?? 60, PAGE_SIZE),
+      after: null,
+    },
+  );
+  return data.people.edges.map((e) => e.node);
+};
+
+// Every person matching the filter, followed across pages -- the contacts
+// screen reports a count, and a count off a truncated page is a wrong count.
+export const fetchAllPeople = (
+  options: PersonQueryOptions = {},
+): Promise<PagedResult<PersonSummary>> =>
+  fetchAllPages<PersonSummary>(async (after) => {
+    const data = await coreQuery<{ people: Connection<PersonSummary> }>(
+      PEOPLE_PAGE_QUERY,
+      { filter: personFilter(options), limit: PAGE_SIZE, after },
+    );
+    return data.people;
+  });
+
+// Companies, for the contacts screen's company filter.
+export const fetchCompanyOptions = async (): Promise<
+  { id: string; name: string }[]
+> => {
+  const data = await coreQuery<{
+    companies: { edges: { node: { id: string; name: string } }[] };
+  }>(
+    `query CompanyOptions {
+      companies(first: ${PAGE_SIZE}, orderBy: [{ name: AscNullsLast }]) {
+        edges { node { id name } }
+      }
+    }`,
+  );
+  return data.companies.edges.map((e) => e.node);
 };
 
 // Referrers/partners a lead can be attributed to (relation target of

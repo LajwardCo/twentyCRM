@@ -1,19 +1,25 @@
 import { useCallback, useMemo, useState } from 'react';
 
+import { fetchMembers } from '../api/admin';
 import { type CurrentUser } from '../api/auth';
 import {
   fetchDoneTasksSince,
   fetchAllOpenTasks,
   setTaskStatus,
+  type DoneTask,
   type Task,
   type TaskType,
 } from '../api/records';
+import { FilterBar } from '../components/FilterBar';
 import { IconCheck } from '../components/icons';
 import { useCached } from '../lib/cache';
+import { applyFilters } from '../lib/filters';
 import { endOfToday, startOfToday } from '../lib/format';
 import { formatJalaliDate, relativeDueLabel, toPersianDigits } from '../lib/jalali';
-import { navigate } from '../lib/router';
-import { T, TASK_TYPE_LABELS } from '../lib/strings';
+import { navigate, useRoute } from '../lib/router';
+import { taskFilterFields } from '../lib/screenFilters';
+import { T, T7, TASK_TYPE_LABELS } from '../lib/strings';
+import { useFilters } from '../lib/useFilters';
 import { TASK_TYPE_ICONS } from './TaskView';
 
 type TasksViewProps = {
@@ -105,14 +111,34 @@ export const TasksView = ({ user }: TasksViewProps) => {
     fetchAll,
   );
 
+  // Assignees only matter when the list can hold more than one seller's tasks.
+  const { data: members } = useCached('members', () =>
+    allScope ? fetchMembers().catch(() => []) : Promise.resolve([]),
+  );
+
+  const fields = useMemo(() => taskFilterFields(members ?? []), [members]);
+  const route = useRoute();
+  const filters = useFilters('tasks', fields, route.query);
+
+  // The whole backlog is already in memory, so the sheet filters it here
+  // rather than paying a round trip per change.
   const openTasks = useMemo(
     () =>
-      (data?.open ?? []).filter(
-        (t) =>
-          !removed.has(t.id) &&
-          (typeFilter === 'ALL' || (t.taskType ?? 'OTHER') === typeFilter),
+      applyFilters<Task>(
+        fields,
+        filters.state,
+        (data?.open ?? []).filter(
+          (t) =>
+            !removed.has(t.id) &&
+            (typeFilter === 'ALL' || (t.taskType ?? 'OTHER') === typeFilter),
+        ),
       ),
-    [data, removed, typeFilter],
+    [data, removed, typeFilter, fields, filters.state],
+  );
+
+  const doneTasks = useMemo(
+    () => applyFilters<DoneTask>(fields, filters.state, data?.done ?? []),
+    [data, fields, filters.state],
   );
 
   const buckets = useMemo(() => bucketize(openTasks), [openTasks]);
@@ -213,6 +239,11 @@ export const TasksView = ({ user }: TasksViewProps) => {
             })}
           </div>
         )}
+        <FilterBar
+          fields={fields}
+          filters={filters}
+          resultCount={statusTab === 'open' ? openTasks.length : doneTasks.length}
+        />
       </div>
 
       {error !== null && <div className="error-banner">{error}</div>}
@@ -226,7 +257,20 @@ export const TasksView = ({ user }: TasksViewProps) => {
       )}
 
       {statusTab === 'open' && data !== null && buckets.length === 0 && (
-        <div className="empty-state">{T.allCaughtUp} 🎉</div>
+        <div className="empty-state">
+          {filters.count > 0 ? (
+            <>
+              {T7.noMatches}
+              <div style={{ marginTop: 10 }}>
+                <button className="btn line sm" onClick={filters.clearAll}>
+                  {T7.clearAll}
+                </button>
+              </div>
+            </>
+          ) : (
+            `${T.allCaughtUp} 🎉`
+          )}
+        </div>
       )}
 
       {statusTab === 'open' &&
@@ -305,12 +349,16 @@ export const TasksView = ({ user }: TasksViewProps) => {
             <h3>
               تکمیل‌شده — ۳۰ روز اخیر{' '}
               <span className="num" style={{ color: 'var(--ink-3)', fontWeight: 600 }}>
-                ({toPersianDigits(data.done.length)})
+                ({toPersianDigits(doneTasks.length)})
               </span>
             </h3>
           </div>
-          {data.done.length === 0 && <div className="empty-state">{T.noActivity}</div>}
-          {data.done.map((task) => (
+          {doneTasks.length === 0 && (
+            <div className="empty-state">
+              {filters.count > 0 ? T7.noMatches : T.noActivity}
+            </div>
+          )}
+          {doneTasks.map((task) => (
             <div className="task" key={task.id}>
               <span
                 className="chk"

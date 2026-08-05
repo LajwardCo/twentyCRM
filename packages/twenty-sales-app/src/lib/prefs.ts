@@ -10,6 +10,11 @@ export type Prefs = {
   openOnly: boolean;
   leadsSort: 'created' | 'value' | 'name';
   deepSearch: boolean;
+  // Encoded filter query per list screen ("leads" -> "stage=NEW_LEAD"), so a
+  // screen reopens filtered the way the seller left it. Stored encoded rather
+  // than as objects: it is the same string the URL carries, and a stale shape
+  // from an older build decodes to "no filter" instead of throwing.
+  filters: Record<string, string>;
 };
 
 const DEFAULTS: Prefs = {
@@ -19,6 +24,7 @@ const DEFAULTS: Prefs = {
   openOnly: true,
   leadsSort: 'created',
   deepSearch: false,
+  filters: {},
 };
 
 export const loadPrefs = (): Prefs => {

@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
 
-// Minimal hash router: routes look like "#/today", "#/lead/<id>", "#/lead/<id>/chat".
+// Minimal hash router: routes look like "#/today", "#/lead/<id>",
+// "#/lead/<id>/chat", optionally followed by a query string
+// ("#/leads?stage=NEW_LEAD") that carries list filters and upload tokens.
 export type Route = {
   path: string;
   parts: string[];
+  query: string;
 };
 
 const parseHash = (): Route => {
   const raw = window.location.hash.replace(/^#\/?/, '');
-  const parts = raw.split('/').filter(Boolean);
-  return { path: raw, parts };
+  const queryAt = raw.indexOf('?');
+  const pathname = queryAt === -1 ? raw : raw.slice(0, queryAt);
+  const query = queryAt === -1 ? '' : raw.slice(queryAt + 1);
+  const parts = pathname.split('/').filter(Boolean);
+  return { path: pathname, parts, query };
 };
 
 export const useRoute = (): Route => {
@@ -26,6 +32,20 @@ export const useRoute = (): Route => {
 
 export const navigate = (to: string) => {
   window.location.hash = to.startsWith('/') ? `#${to}` : `#/${to}`;
+};
+
+// Rewrites only the query half of the current hash, in place. It uses
+// replaceState rather than assigning to location.hash so that typing in a
+// filter doesn't bury the previous screen under a stack of history entries --
+// and, because replaceState fires no hashchange, so that the screen owning the
+// filter isn't re-rendered from the router on every keystroke.
+export const replaceQuery = (query: string) => {
+  const raw = window.location.hash.replace(/^#\/?/, '');
+  const pathname = raw.split('?')[0];
+  const next = `#/${pathname}${query ? `?${query}` : ''}`;
+  if (window.location.hash !== next) {
+    window.history.replaceState(null, '', next);
+  }
 };
 
 export const goBack = () => {

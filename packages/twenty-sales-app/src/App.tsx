@@ -13,6 +13,7 @@ import { navigate, useRoute } from './lib/router';
 import { T, T5 } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
+import { ContactsView } from './views/ContactsView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
 import { CalendarView } from './views/CalendarView';
@@ -188,6 +189,9 @@ export const App = () => {
     bar = backButton;
   } else if (section === 'leads') {
     view = <LeadsView user={user} search={search} />;
+    bar = <CmdSearch value={search} onChange={setSearch} />;
+  } else if (section === 'contacts') {
+    view = <ContactsView search={search} />;
     bar = <CmdSearch value={search} onChange={setSearch} />;
   } else if (section === 'new') {
     view = <NewLeadView user={user} />;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { enrichedGlobalSearch, type EnrichedHit } from '../api/deepSearch';
+import { advancedSearch, type AdvancedHit } from '../api/advancedSearch';
 import { dockAdd } from './workbench';
 
 // Background deep-search: on large datasets a full-text sweep can take a
@@ -11,7 +11,7 @@ export type BackgroundSearch = {
   id: string;
   query: string;
   status: 'running' | 'done' | 'error';
-  results: EnrichedHit[];
+  results: AdvancedHit[];
   startedAt: number;
   finishedAt: number | null;
 };
@@ -70,7 +70,7 @@ export const startBackgroundSearch = (query: string): string => {
 
   void (async () => {
     try {
-      const results = await enrichedGlobalSearch(query, 30);
+      const results = await advancedSearch(query, 40);
       searches = searches.map((s) =>
         s.id === id
           ? { ...s, status: 'done', results, finishedAt: Date.now() }

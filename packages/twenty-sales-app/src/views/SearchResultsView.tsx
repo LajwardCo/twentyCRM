@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { type EnrichedHit } from '../api/deepSearch';
+import { type AdvancedHit } from '../api/advancedSearch';
 import { searchHitRoute } from '../api/records';
 import { Highlight } from '../components/Highlight';
 import {
@@ -48,7 +48,7 @@ export const SearchResultsView = ({ searchId }: SearchResultsViewProps) => {
     return clearDockablePage;
   }, [search]);
 
-  const openHit = (hit: EnrichedHit) => {
+  const openHit = (hit: AdvancedHit) => {
     navigate(searchHitRoute(hit));
   };
 

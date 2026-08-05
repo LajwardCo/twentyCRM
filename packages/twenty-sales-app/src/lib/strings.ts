@@ -763,3 +763,35 @@ export const T9 = {
   reassignFailed: 'تغییر مسئول ناموفق بود',
   reassignSearchPlaceholder: 'جستجوی لید…',
 };
+
+// Subscriptions and lead conversion.
+export const T10 = {
+  subscriptionsSection: 'اشتراک‌ها',
+  subscriptionsHint: 'آنچه مشتری بعد از بستن معامله می‌پردازد',
+  noSubscriptions: 'هنوز اشتراکی ثبت نشده',
+  convertLead: 'ساخت اشتراک از این لید',
+  convertTitle: 'تبدیل لید به اشتراک',
+  convertHint: 'برای هر خط معامله یک اشتراک پیشنهاد شده — قبل از ثبت بررسی کنید',
+  convertNothing: 'هیچ خط معامله‌ای با مبلغ سالانه وجود ندارد',
+  convertConfirm: 'ثبت اشتراک‌ها',
+  convertDone: 'اشتراک‌ها ثبت شد ✓',
+  convertFailed: 'ثبت اشتراک ناموفق بود',
+  subscriptionsLoadFailed: 'اشتراک‌ها بارگیری نشدند',
+  startDateLbl: 'شروع',
+  endDateLbl: 'پایان',
+  recurringAmountLbl: 'مبلغ دوره‌ای',
+  cancelSubscription: 'لغو اشتراک',
+  activateSubscription: 'فعال‌سازی',
+};
+
+export const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'در انتظار',
+  ACTIVE: 'فعال',
+  EXPIRED: 'منقضی',
+  CANCELLED: 'لغو شده',
+};
+
+export const BILLING_PERIOD_LABELS: Record<string, string> = {
+  MONTHLY: 'ماهانه',
+  ANNUAL: 'سالانه',
+};

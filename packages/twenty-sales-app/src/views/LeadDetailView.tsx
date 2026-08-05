@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { generateText } from '../api/ai';
 import { type CurrentUser } from '../api/auth';
 import {
+  CONVERTIBLE_STAGES,
   createNoteForLead,
   createTaskForLead,
   fetchLead,
@@ -37,6 +38,7 @@ import {
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadOffersCard } from '../components/LeadOffersCard';
+import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
@@ -941,6 +943,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
           {/* pricing: deal products + quotations */}
           <PricingCard lead={lead} />
+
+          {/* What the customer pays after the deal closes, and the reviewed
+              conversion that creates it from the won lead's lines. */}
+          <LeadSubscriptionsCard
+            leadId={leadId}
+            companyId={lead.company?.id ?? null}
+            isWon={CONVERTIBLE_STAGES.includes(lead.stage ?? '')}
+          />
 
           {/* company info + other contacts */}
           {lead.company && <CompanyCard companyId={lead.company.id} />}

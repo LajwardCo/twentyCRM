@@ -95,6 +95,17 @@ export const STAGES: { value: string; label: string }[] = [
   { value: 'LOST_MISSED', label: 'Lost / Missed' },
 ];
 
+// Stages from which a lead can be converted into subscriptions. Deliberately
+// broader than the reports' won definition (ACTIVE_CUSTOMER alone): once a
+// contract is signed the recurring amounts are known and committed, and making
+// the seller wait until training finishes is how a subscription gets forgotten.
+export const CONVERTIBLE_STAGES = [
+  'SIGNED_AWAITING_PAYMENT',
+  'PAID_AWAITING_TRAINING',
+  'IN_TRAINING',
+  'ACTIVE_CUSTOMER',
+];
+
 export const LEAD_SOURCES: { value: string; label: string }[] = [
   { value: 'FIELD', label: 'Field Visit' },
   { value: 'WHATSAPP', label: 'WhatsApp' },

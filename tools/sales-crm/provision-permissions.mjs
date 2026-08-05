@@ -17,13 +17,18 @@
 // only see their own deals" becomes a hard requirement, that needs either an
 // Enterprise license or a custom PRE-hook-based filter (same code-level
 // mechanism as the discount-ceiling hook), not a metadata-only fix.
+//
+// Auth: set TWENTY_TOKEN to a workspace API key (Settings > APIs & Webhooks) to
+// skip the password login entirely -- preferable against production, where you
+// don't want an admin password in your shell history. Otherwise it logs in with
+// TWENTY_EMAIL / TWENTY_PASSWORD (local dev defaults below).
 const META = process.env.TWENTY_META ?? 'http://localhost:3010/metadata';
 const ORIGIN = process.env.TWENTY_ORIGIN ?? 'http://localhost:3011';
 const EMAIL = process.env.TWENTY_EMAIL ?? 'tim@apple.dev';
 const PASSWORD = process.env.TWENTY_PASSWORD ?? 'tim@apple.dev';
 const ROLE_LABEL = 'Seller';
 
-let TOKEN = null;
+let TOKEN = process.env.TWENTY_TOKEN ?? null;
 async function gql(query, variables) {
   const res = await fetch(META, {
     method: 'POST',
@@ -41,7 +46,12 @@ async function login() {
 }
 
 async function main() {
-  await login();
+  if (TOKEN) {
+    console.log('using TWENTY_TOKEN (API key).\n');
+  } else {
+    await login();
+    console.log(`authenticated as ${EMAIL}.\n`);
+  }
 
   const d = await gql(`query { objects(paging:{first:500}) { edges { node {
     id nameSingular
@@ -80,18 +90,32 @@ async function main() {
   // gets permission-denied on the End-of-Day report even once the object exists.
   const readWrite = ['opportunity', 'person', 'company', 'task', 'note', 'dealProduct', 'quotation', 'subscription', 'dailyReport'];
   const readOnly = ['product', 'partner'];
+  // Objects a seller may remove. "Remove" is always Twenty's soft delete: the
+  // record leaves every list but stays restorable from the trash view, and the
+  // Sales App records why on the record's deletionReason field first.
+  //
+  // canDestroyObjectRecords stays false everywhere -- that is the irreversible
+  // one, and nothing in the Sales App should be able to reach it. Nor is
+  // soft-delete granted on person/company: deleting a company would orphan the
+  // leads pointing at it, and a seller cleaning up a bad lead has no reason to.
+  const softDeletable = new Set(['opportunity', 'task', 'note', 'dealProduct', 'quotation']);
   // Skip (with a warning) any object not present in this workspace instead of
   // crashing on objs[n].id — lets the script run cleanly even if a later object
   // (e.g. dailyReport) hasn't been provisioned in the target environment yet.
   const present = (n) => { if (!objs[n]) { console.warn(`  skip: object '${n}' not found in this workspace`); return false; } return true; };
   const objectPermissions = [
-    ...readWrite.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: true, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
+    ...readWrite.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: true, canSoftDeleteObjectRecords: softDeletable.has(n), canDestroyObjectRecords: false })),
     ...readOnly.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: false, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
   ];
   await gql(`mutation($upsertObjectPermissionsInput: UpsertObjectPermissionsInput!){ upsertObjectPermissions(upsertObjectPermissionsInput:$upsertObjectPermissionsInput){ objectMetadataId canReadObjectRecords canUpdateObjectRecords } }`, {
     upsertObjectPermissionsInput: { roleId, objectPermissions },
   });
   console.log('object permissions set for', objectPermissions.length, 'objects');
+  console.log(
+    '  soft delete granted on:',
+    [...softDeletable].filter((n) => objs[n]).join(', '),
+    '(destroy stays denied on every object)',
+  );
 
   await gql(`mutation($upsertFieldPermissionsInput: UpsertFieldPermissionsInput!){ upsertFieldPermissions(upsertFieldPermissionsInput:$upsertFieldPermissionsInput){ objectMetadataId fieldMetadataId canReadFieldValue } }`, {
     upsertFieldPermissionsInput: {

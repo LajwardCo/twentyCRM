@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./client', () => ({
@@ -6,9 +9,27 @@ vi.mock('./client', () => ({
 }));
 
 import { coreQuery } from './client';
-import { fetchProducts } from './records';
+import {
+  fetchAllLeads,
+  fetchProducts,
+  softDeleteLead,
+  softDeleteNote,
+} from './records';
 
 const mockedCoreQuery = vi.mocked(coreQuery);
+
+const leadPage = (
+  count: number,
+  hasNextPage: boolean,
+  endCursor: string | null,
+) => ({
+  opportunities: {
+    edges: Array.from({ length: count }, (_, i) => ({
+      node: { id: `${endCursor ?? 'last'}-${i}` },
+    })),
+    pageInfo: { hasNextPage, endCursor },
+  },
+});
 
 // The deal-line product picker groups by category and shows the brand. On an
 // instance that hasn't run provision-product-brand-category.mjs yet those
@@ -48,5 +69,130 @@ describe('fetchProducts taxonomy tolerance', () => {
 
     await expect(fetchProducts()).rejects.toThrow('Network request failed');
     expect(mockedCoreQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The reports used to ask for `first: 300` and present the result as the whole
+// pipeline. Anything that aggregates now walks the connection cursor.
+describe('fetchAllLeads pagination', () => {
+  beforeEach(() => {
+    mockedCoreQuery.mockReset();
+  });
+
+  it('follows the cursor until the server says there is no next page', async () => {
+    mockedCoreQuery
+      .mockResolvedValueOnce(leadPage(200, true, 'cursor-1'))
+      .mockResolvedValueOnce(leadPage(200, true, 'cursor-2'))
+      .mockResolvedValueOnce(leadPage(37, false, null));
+
+    const result = await fetchAllLeads({});
+
+    expect(result.items).toHaveLength(437);
+    expect(result.truncated).toBe(false);
+    expect(mockedCoreQuery).toHaveBeenCalledTimes(3);
+    expect(mockedCoreQuery.mock.calls[0][1]).toMatchObject({ after: null });
+    expect(mockedCoreQuery.mock.calls[1][1]).toMatchObject({ after: 'cursor-1' });
+    expect(mockedCoreQuery.mock.calls[2][1]).toMatchObject({ after: 'cursor-2' });
+  });
+
+  it('stops at a single page when there is nothing more', async () => {
+    mockedCoreQuery.mockResolvedValueOnce(leadPage(12, false, null));
+
+    const result = await fetchAllLeads({});
+
+    expect(result.items).toHaveLength(12);
+    expect(result.truncated).toBe(false);
+    expect(mockedCoreQuery).toHaveBeenCalledTimes(1);
+  });
+
+  // A silent cap reads exactly like complete data, which is the failure being
+  // fixed -- so hitting the safety cap is reported instead.
+  it('reports truncation rather than silently capping', async () => {
+    mockedCoreQuery.mockResolvedValue(leadPage(200, true, 'cursor-n'));
+
+    const result = await fetchAllLeads({});
+
+    expect(result.truncated).toBe(true);
+    expect(mockedCoreQuery).toHaveBeenCalledTimes(50);
+  });
+
+  it('bounds the period server-side when the caller passes one', async () => {
+    mockedCoreQuery.mockResolvedValueOnce(leadPage(1, false, null));
+
+    await fetchAllLeads({ createdAfter: '2026-07-01T00:00:00.000Z' });
+
+    expect(mockedCoreQuery.mock.calls[0][1]).toMatchObject({
+      filter: { and: [{ createdAt: { gte: '2026-07-01T00:00:00.000Z' } }] },
+    });
+  });
+});
+
+describe('soft delete', () => {
+  beforeEach(() => {
+    mockedCoreQuery.mockReset();
+    mockedCoreQuery.mockResolvedValue({});
+  });
+
+  it('records the reason before deleting the lead', async () => {
+    await softDeleteLead({ id: 'lead-1', companyId: 'co-1' }, '  اشتباه ثبت شده  ');
+
+    const [reasonQuery, reasonVars] = mockedCoreQuery.mock.calls[0];
+    expect(reasonQuery).toContain('updateOpportunity');
+    expect(reasonVars).toMatchObject({
+      id: 'lead-1',
+      data: { deletionReason: 'اشتباه ثبت شده' },
+    });
+
+    const [deleteQuery] = mockedCoreQuery.mock.calls.at(-1) ?? [];
+    expect(deleteQuery).toContain('deleteOpportunity');
+  });
+
+  // An instance that hasn't run provision-deletion-reason.mjs must still be
+  // able to delete, with the reason filed somewhere that survives.
+  it('falls back to a note when the instance has no deletionReason field', async () => {
+    mockedCoreQuery
+      .mockRejectedValueOnce(
+        new Error('Field "deletionReason" is not defined by type "OpportunityUpdateInput".'),
+      )
+      .mockResolvedValue({ createNote: { id: 'note-1' } });
+
+    await softDeleteLead({ id: 'lead-1', companyId: 'co-1' }, 'تکراری بود');
+
+    const queries = mockedCoreQuery.mock.calls.map(([query]) => query as string);
+    expect(queries.some((q) => q.includes('createNote'))).toBe(true);
+    expect(queries.at(-1)).toContain('deleteOpportunity');
+  });
+
+  it('still deletes when the reason cannot be filed at all', async () => {
+    mockedCoreQuery.mockRejectedValueOnce(new Error('no such field'));
+    mockedCoreQuery.mockRejectedValueOnce(new Error('cannot create note'));
+    mockedCoreQuery.mockResolvedValue({});
+
+    await expect(
+      softDeleteLead({ id: 'lead-1' }, 'دلیل'),
+    ).resolves.toBeUndefined();
+
+    expect(mockedCoreQuery.mock.calls.at(-1)?.[0]).toContain('deleteOpportunity');
+  });
+
+  it('uses the soft delete mutation for notes too', async () => {
+    await softDeleteNote('note-1', 'اشتباه');
+
+    expect(mockedCoreQuery.mock.calls.at(-1)?.[0]).toContain('deleteNote');
+  });
+});
+
+// "Everything is soft deleted, no hard delete at all" is a property of the
+// whole API layer, not of one call site — so it is asserted over the source.
+describe('no hard delete anywhere in the API layer', () => {
+  it('contains no destroy mutation', () => {
+    const apiDir = join(import.meta.dirname, '.');
+    const offenders = readdirSync(apiDir)
+      .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
+      .filter((file) =>
+        /destroy[A-Z]/.test(readFileSync(join(apiDir, file), 'utf8')),
+      );
+
+    expect(offenders).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { type LeadSummary } from '../../api/records';
-import { formatAfn } from '../../lib/format';
+import { formatMoneyTotals } from '../../lib/format';
 import { toPersianDigits } from '../../lib/jalali';
 import { computeMarketerLeaderboard } from '../../lib/reportAggregations';
 import { MARKETER_LABELS, T2 } from '../../lib/strings';
@@ -58,7 +58,7 @@ export const MarketerLeaderboard = ({
                 <td className="num">{toPersianDigits(row.leads)}</td>
                 <td className="num">{toPersianDigits(row.won)}</td>
                 <td className="num">{toPersianDigits(row.winRate)}٪</td>
-                <td className="num">{formatAfn(row.pipelineValue)}</td>
+                <td className="num">{formatMoneyTotals(row.pipelineValue)}</td>
               </tr>
             ))}
           </tbody>

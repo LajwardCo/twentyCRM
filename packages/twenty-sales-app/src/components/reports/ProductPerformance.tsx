@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { fetchDealProductsSince } from '../../api/records';
 import { IconMoney, IconTasks } from '../icons';
 import { useCached } from '../../lib/cache';
-import { formatAfn } from '../../lib/format';
+import { formatMoneyTotals } from '../../lib/format';
 import { toPersianDigits } from '../../lib/jalali';
 import { computeProductStats } from '../../lib/reportAggregations';
 import { T2 } from '../../lib/strings';
@@ -53,7 +53,7 @@ export const ProductPerformance = ({ periodStartIso }: ProductPerformanceProps) 
             <span className="lbl">{T2.installRevenue}</span>
           </div>
           <div className="row">
-            <span className="big num">{formatAfn(stats.totals.installRevenue)}</span>
+            <span className="big num">{formatMoneyTotals(stats.totals.installRevenue)}</span>
           </div>
         </div>
         <div className="card kpi">
@@ -64,7 +64,7 @@ export const ProductPerformance = ({ periodStartIso }: ProductPerformanceProps) 
             <span className="lbl">{T2.annualRevenue}</span>
           </div>
           <div className="row">
-            <span className="big num">{formatAfn(stats.totals.annualRevenue)}</span>
+            <span className="big num">{formatMoneyTotals(stats.totals.annualRevenue)}</span>
           </div>
         </div>
         <div className="card kpi">

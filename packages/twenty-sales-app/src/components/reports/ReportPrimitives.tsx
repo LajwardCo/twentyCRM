@@ -1,4 +1,8 @@
-import { formatAfn } from '../../lib/format';
+import {
+  type CurrencyTotals,
+  formatMoneyTotals,
+  totalsAreEmpty,
+} from '../../lib/format';
 import { toPersianDigits } from '../../lib/jalali';
 
 // Vertical bar chart, used for the registrations trend over time buckets.
@@ -61,12 +65,15 @@ export const Bars = ({ series }: { series: { label: string; count: number }[] })
   );
 };
 
-// Horizontal ranked rows: a labelled bar with a count and optional AFN value.
+// Horizontal ranked rows: a labelled bar with a count and an optional value.
 // Reused across every breakdown card (stage/source/temp/marketer/product/...).
+// The value is per-currency: a row holding both AFN and USD leads shows both
+// rather than a sum of two different units. Abbreviated, because the row has
+// only the space left over from the bar.
 export const BreakdownRows = ({
   rows,
 }: {
-  rows: { label: string; count: number; value: number }[];
+  rows: { label: string; count: number; value: CurrencyTotals }[];
 }) => {
   const max = Math.max(1, ...rows.map((r) => r.count));
   return (
@@ -79,7 +86,9 @@ export const BreakdownRows = ({
           </div>
           <span className="f-meta num">
             <b>{toPersianDigits(r.count)}</b>
-            {r.value > 0 ? ` · ${formatAfn(r.value)}` : ''}
+            {!totalsAreEmpty(r.value)
+              ? ` · ${formatMoneyTotals(r.value, { compact: true })}`
+              : ''}
           </span>
         </div>
       ))}

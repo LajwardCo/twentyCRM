@@ -10,6 +10,9 @@ import {
   fetchLeadTasks,
   fetchReferrers,
   setTaskStatus,
+  softDeleteLead,
+  softDeleteNote,
+  softDeleteTask,
   STAGES,
   updateLead,
   type LeadSummary,
@@ -28,13 +31,17 @@ import {
   IconScript,
   IconSms,
   IconSummary,
+  IconTrash,
   IconWhatsApp,
 } from '../components/icons';
+import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
+import { NoteEditModal } from '../components/NoteEditModal';
+import { QuickTaskModal } from '../components/QuickTaskModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
-import { useCached } from '../lib/cache';
+import { invalidateCache, useCached } from '../lib/cache';
 import {
   type CurrencyCode,
   formatMoney,
@@ -55,7 +62,15 @@ import {
 } from '../lib/leadContext';
 import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
-import { SOURCE_LABELS, STAGE_LABELS, T, T2, TEMP_LABELS } from '../lib/strings';
+import {
+  SOURCE_LABELS,
+  STAGE_LABELS,
+  T,
+  T2,
+  T5,
+  T6,
+  TEMP_LABELS,
+} from '../lib/strings';
 
 type LeadDetailViewProps = {
   leadId: string;
@@ -69,6 +84,31 @@ type TimelineEntry =
 type TimelineFilter = 'all' | 'tasks' | 'notes';
 
 const CallIcon = () => <IconPhone size={16} />;
+
+// Edit / delete for one timeline row. Kept off the row's own click target so
+// tapping the row still opens the record.
+const RowActions = ({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}) => (
+  <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+    <button type="button" aria-label={T6.editAction} title={T6.editAction} onClick={onEdit}>
+      <IconEdit size={13} />
+    </button>
+    <button
+      type="button"
+      className="danger"
+      aria-label={T5.deleteAction}
+      title={T5.deleteAction}
+      onClick={onDelete}
+    >
+      <IconTrash size={13} />
+    </button>
+  </div>
+);
 
 export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [override, setOverride] = useState<Partial<LeadSummary>>({});
@@ -96,6 +136,16 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [editingAmount, setEditingAmount] = useState(false);
   const [amountInput, setAmountInput] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<CurrencyCode>('AFN');
+
+  // Quick edit / delete for the lead and for anything on its timeline.
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [deleting, setDeleting] = useState<
+    | { kind: 'lead' }
+    | { kind: 'task'; task: Task }
+    | { kind: 'note'; note: Note }
+    | null
+  >(null);
 
   useEffect(() => {
     let active = true;
@@ -259,6 +309,47 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     } finally {
       setFollowUpBusy(false);
     }
+  };
+
+  // Soft delete only: the record leaves the pipeline but stays in the CRM's
+  // trash, and the reason is filed on it first.
+  const confirmDelete = async (reason: string) => {
+    if (!deleting || !lead) return;
+
+    if (deleting.kind === 'lead') {
+      await softDeleteLead({ id: lead.id, companyId: lead.company?.id }, reason);
+      invalidateCache('leads:');
+      invalidateCache('today:');
+      invalidateCache('reports:');
+      invalidateCache(`lead:${lead.id}`);
+      setDeleting(null);
+      // Straight to the list rather than back: the previous page may well be a
+      // task belonging to the lead that no longer exists.
+      navigate('/leads');
+      return;
+    }
+
+    if (deleting.kind === 'task') {
+      await softDeleteTask(deleting.task.id, reason);
+      invalidateCache('today:');
+    } else {
+      await softDeleteNote(deleting.note.id, reason);
+    }
+    setDeleting(null);
+    showToast(deleting.kind === 'task' ? T6.taskDeleted : T6.noteDeleted);
+    await reload();
+  };
+
+  const deleteTargetLabel = (): string => {
+    if (!deleting) return '';
+    if (deleting.kind === 'lead') return lead?.name ?? '';
+    return deleting.kind === 'task' ? deleting.task.title : deleting.note.title;
+  };
+
+  const deleteTitle = (): string => {
+    if (!deleting) return '';
+    if (deleting.kind === 'lead') return T6.deleteLeadTitle;
+    return deleting.kind === 'task' ? T6.deleteTaskTitle : T6.deleteNoteTitle;
   };
 
   const timeline: TimelineEntry[] = [
@@ -442,7 +533,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   >
                     <IconCheck size={13} />
                   </button>
-                  <div className="t-main" style={{ cursor: 'default' }}>
+                  {/* Opens the task's own page — the body is truncated here. */}
+                  <div className="t-main" onClick={() => navigate(`/task/${task.id}`)}>
                     <div className="t-title">{task.title}</div>
                     {task.bodyV2?.markdown && (
                       <div className="t-sub">{task.bodyV2.markdown}</div>
@@ -455,6 +547,10 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   >
                     {relativeDueLabel(task.dueAt)}
                   </span>
+                  <RowActions
+                    onEdit={() => setEditingTask(task)}
+                    onDelete={() => setDeleting({ kind: 'task', task })}
+                  />
                 </div>
               ))}
             </div>
@@ -499,7 +595,10 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   <div className={`tl-ico ${entry.task.status === 'DONE' ? 'call' : 'todo'}`}>
                     <CallIcon />
                   </div>
-                  <div className="tl-body">
+                  <div
+                    className="tl-body tl-open"
+                    onClick={() => navigate(`/task/${entry.task.id}`)}
+                  >
                     <div className="tl-t">
                       {entry.task.title}{' '}
                       <span className={`pill ${entry.task.status === 'DONE' ? 'ok' : 'warm'}`}>
@@ -509,7 +608,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                     {entry.task.bodyV2?.markdown && (
                       <div className="tl-note">{entry.task.bodyV2.markdown}</div>
                     )}
-                    <div className="tl-meta">
+                    <div className="tl-meta" onClick={(e) => e.stopPropagation()}>
                       {formatJalaliDateTime(entry.at)}
                       {entry.task.status !== 'DONE' && (
                         <button
@@ -526,19 +625,30 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                       )}
                     </div>
                   </div>
+                  <RowActions
+                    onEdit={() => setEditingTask(entry.task)}
+                    onDelete={() => setDeleting({ kind: 'task', task: entry.task })}
+                  />
                 </div>
               ) : (
                 <div className="tl-item" key={`n-${entry.note.id}`}>
                   <div className="tl-ico note">
                     <IconNote size={16} />
                   </div>
-                  <div className="tl-body">
-                    <div className="tl-t">{T.note}</div>
+                  <div
+                    className="tl-body tl-open"
+                    onClick={() => navigate(`/note/${entry.note.id}`)}
+                  >
+                    <div className="tl-t">{entry.note.title || T.note}</div>
                     <div className="tl-note">
                       {entry.note.bodyV2?.markdown ?? entry.note.title}
                     </div>
                     <div className="tl-meta">{formatJalaliDateTime(entry.at)}</div>
                   </div>
+                  <RowActions
+                    onEdit={() => setEditingNote(entry.note)}
+                    onDelete={() => setDeleting({ kind: 'note', note: entry.note })}
+                  />
                 </div>
               ),
             )}
@@ -761,6 +871,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 </b>
               </div>
             </div>
+            <button
+              className="btn line sm danger"
+              style={{ marginTop: 14, width: '100%', justifyContent: 'center' }}
+              onClick={() => setDeleting({ kind: 'lead' })}
+            >
+              <IconTrash size={14} />
+              {T6.deleteLeadTitle}
+            </button>
           </div>
 
           {/* pricing: deal products + quotations */}
@@ -784,6 +902,40 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           personId={lead.pointOfContact.id}
           opportunityId={lead.id}
           onClose={() => setShowWhatsApp(false)}
+        />
+      )}
+
+      {editingTask !== null && (
+        <QuickTaskModal
+          mode="edit"
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={async () => {
+            setEditingTask(null);
+            showToast('ذخیره شد ✓');
+            await reload();
+          }}
+        />
+      )}
+
+      {editingNote !== null && (
+        <NoteEditModal
+          note={editingNote}
+          onClose={() => setEditingNote(null)}
+          onSaved={async () => {
+            setEditingNote(null);
+            showToast('ذخیره شد ✓');
+            await reload();
+          }}
+        />
+      )}
+
+      {deleting !== null && (
+        <DeleteWithReasonDialog
+          title={deleteTitle()}
+          recordLabel={deleteTargetLabel()}
+          onCancel={() => setDeleting(null)}
+          onConfirm={confirmDelete}
         />
       )}
 

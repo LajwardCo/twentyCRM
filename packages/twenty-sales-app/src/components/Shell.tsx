@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { type CurrentUser } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
 import { jalaliToday } from '../lib/jalali';
-import { navigate, useRoute } from '../lib/router';
+import { goBackOr, navigate, useRoute } from '../lib/router';
 import { T, T2, T3, T4 } from '../lib/strings';
 import {
   dockAdd,
@@ -82,7 +82,9 @@ export const AppShell = ({
       label: announced?.label ?? fallback.label,
       kind: announced?.kind ?? fallback.kind,
     });
-    navigate('/today');
+    // Minimizing puts the page away; it should reveal whatever was underneath
+    // -- the list the seller came from -- not jump to the dashboard.
+    goBackOr('/today');
   };
 
   return (

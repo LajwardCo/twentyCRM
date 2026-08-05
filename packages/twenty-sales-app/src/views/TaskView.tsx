@@ -14,21 +14,26 @@ import {
   fetchLeadNotes,
   fetchLeadTasks,
   fetchTask,
+  softDeleteTask,
   STAGES,
   updateLead,
   updateTask,
   type TaskType,
 } from '../api/records';
 import { ActionBar, type ActionBarItem } from '../components/ActionBar';
+import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
+import { QuickTaskModal } from '../components/QuickTaskModal';
 import {
   IconAI,
   IconCheck,
+  IconEdit,
   IconLeads,
   IconMapPin,
   IconPhone,
   IconPresentation,
   IconQr,
+  IconTrash,
   IconWhatsApp,
 } from '../components/icons';
 import { AttachmentUploadModal } from '../components/AttachmentUploadModal';
@@ -36,11 +41,13 @@ import { invalidateCache, useCached } from '../lib/cache';
 import { formatMoney, fullPhone, personName, toLocalInputValue } from '../lib/format';
 import { formatJalaliDateTime, relativeDueLabel } from '../lib/jalali';
 import { leadContextText, SUMMARIZE_SYSTEM_PROMPT } from '../lib/leadContext';
-import { navigate } from '../lib/router';
+import { goBackOr, navigate } from '../lib/router';
 import {
   SOURCE_LABELS,
   STAGE_LABELS,
   T,
+  T5,
+  T6,
   TASK_TYPE_LABELS,
   TEMP_LABELS,
 } from '../lib/strings';
@@ -121,6 +128,8 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
     toLocalInputValue(new Date(presetIso(1))),
   );
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const wrapUpRef = useRef<HTMLDivElement | null>(null);
   const [finishing, setFinishing] = useState<string | null>(null);
   const [finishError, setFinishError] = useState<string | null>(null);
@@ -375,9 +384,23 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
         {/* ======== main: during + after ======== */}
         <div className="stack">
           <div className="card card-pad anim d1">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <h3>۲ · حین وظیفه — یادداشت‌ها</h3>
-              <span className="sub">{notesSaved ? 'ذخیره شد ✓' : 'در حال ذخیره…'}</span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="sub">{notesSaved ? 'ذخیره شد ✓' : 'در حال ذخیره…'}</span>
+                {/* Title, type and due date live here; the body autosaves below. */}
+                <button className="btn line sm" onClick={() => setEditOpen(true)}>
+                  <IconEdit size={13} />
+                  {T6.editAction}
+                </button>
+                <button
+                  className="btn line sm danger"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <IconTrash size={13} />
+                  {T5.deleteAction}
+                </button>
+              </div>
             </div>
             <div className="sub" style={{ marginBottom: 10 }}>
               هر چه می‌شنوید همین‌جا بنویسید — در پایان، به یادداشت‌های لید هم اضافه می‌شود.
@@ -632,6 +655,39 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
           opportunityId={lead?.id ?? null}
           onUploaded={onAttachmentUploaded}
           onClose={() => setUploadModalOpen(false)}
+        />
+      )}
+
+      {editOpen && (
+        <QuickTaskModal
+          mode="edit"
+          task={task}
+          onClose={() => setEditOpen(false)}
+          onSaved={async () => {
+            setEditOpen(false);
+            invalidateCache('today:');
+            if (lead) invalidateCache(`lead:${lead.id}`);
+            await refresh();
+            showToast('ذخیره شد ✓');
+          }}
+        />
+      )}
+
+      {deleteOpen && (
+        <DeleteWithReasonDialog
+          title={T6.deleteTaskTitle}
+          recordLabel={task.title}
+          onCancel={() => setDeleteOpen(false)}
+          onConfirm={async (reason) => {
+            await softDeleteTask(task.id, reason);
+            invalidateCache('today:');
+            invalidateCache(`task:${task.id}`);
+            if (lead) invalidateCache(`lead:${lead.id}`);
+            setDeleteOpen(false);
+            // Back to the lead the task belongs to, or wherever we came from.
+            if (lead) navigate(`/lead/${lead.id}`);
+            else goBackOr('/today');
+          }}
         />
       )}
 

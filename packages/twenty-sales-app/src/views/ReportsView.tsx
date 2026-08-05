@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import {
-  fetchDoneTasksSince,
-  fetchLeads,
+  fetchAllDoneTasksSince,
+  fetchAllLeads,
   fetchLeadsMarketers,
 } from '../api/records';
 import { ActivityReport } from '../components/reports/ActivityReport';
@@ -12,7 +12,7 @@ import { OverviewReport } from '../components/reports/OverviewReport';
 import { ProductPerformance } from '../components/reports/ProductPerformance';
 import { SellerLeaderboard } from '../components/SellerLeaderboard';
 import { useCached } from '../lib/cache';
-import { formatJalaliDate } from '../lib/jalali';
+import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import { T2 } from '../lib/strings';
 
 type ReportsViewProps = {
@@ -53,24 +53,33 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
   // Shared lead set (+ me-scope done-task count, +team marketer map) that the
   // Overview / Sellers / Marketers sections read. Products and Activity fetch
   // their own data lazily inside their components.
+  //
+  // Every lead is fetched, not the first page: the funnel, the open-pipeline
+  // value and the active-customer count are all-time figures, and asking for a
+  // single page of 300 is what made the reports stop describing the pipeline
+  // once it passed 300 leads.
   const { data, error } = useCached(
     `reports:${user.workspaceMemberId}:${scope}:${period}`,
     async () => {
-      const [leads, doneTasks] = await Promise.all([
-        fetchLeads({
+      const [leadPage, doneTasks] = await Promise.all([
+        fetchAllLeads({
           ownerId: scope === 'me' ? user.workspaceMemberId : undefined,
-          limit: 300,
         }),
         scope === 'me'
-          ? fetchDoneTasksSince(startIso, user.workspaceMemberId)
-          : Promise.resolve([]),
+          ? fetchAllDoneTasksSince(startIso, user.workspaceMemberId)
+          : Promise.resolve({ items: [], truncated: false }),
       ]);
-      const inPeriodIds = leads
+      const inPeriodIds = leadPage.items
         .filter((l) => new Date(l.createdAt) >= start)
         .map((l) => l.id);
       const marketerMap =
         scope === 'team' ? await fetchLeadsMarketers(inPeriodIds) : {};
-      return { leads, doneTasks, marketerMap };
+      return {
+        leads: leadPage.items,
+        doneTasks: doneTasks.items,
+        marketerMap,
+        truncated: leadPage.truncated || doneTasks.truncated,
+      };
     },
   );
 
@@ -99,6 +108,9 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
           <h1>{T2.reports}</h1>
           <div className="sub">
             {`از ${formatJalaliDate(startIso)} تا امروز`}
+            {leads !== null
+              ? ` · ${toPersianDigits(leads.length)} ${T2.leadsCounted}`
+              : ''}
           </div>
         </div>
       </div>
@@ -141,6 +153,11 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
       </div>
 
       {error !== null && <div className="error-banner">{error}</div>}
+
+      {/* A capped fetch reads exactly like a complete one, so say so. */}
+      {data?.truncated === true && (
+        <div className="error-banner">{T2.partialData}</div>
+      )}
 
       {activeTab === 'overview' && (
         <OverviewReport

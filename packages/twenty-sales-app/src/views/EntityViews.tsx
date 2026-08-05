@@ -4,23 +4,28 @@ import {
   fetchLeads,
   fetchNote,
   fetchPerson,
+  softDeleteNote,
   type LeadSummary,
 } from '../api/records';
+import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { CompanyCard } from '../components/LeadPanels';
+import { NoteEditModal } from '../components/NoteEditModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import {
   IconBuilding,
+  IconEdit,
   IconMail,
   IconNote,
   IconPhone,
   IconSms,
+  IconTrash,
   IconWhatsApp,
 } from '../components/icons';
-import { useCached } from '../lib/cache';
+import { invalidateCache, useCached } from '../lib/cache';
 import { formatMoney, fullPhone, personName } from '../lib/format';
 import { formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
-import { navigate } from '../lib/router';
-import { STAGE_LABELS, T, TEMP_LABELS } from '../lib/strings';
+import { goBackOr, navigate } from '../lib/router';
+import { STAGE_LABELS, T, T5, T6, TEMP_LABELS } from '../lib/strings';
 
 const ViewSkeleton = () => (
   <main className="page">
@@ -63,7 +68,11 @@ const RelatedLeads = ({ leads }: { leads: LeadSummary[] }) => (
 // ---------- note viewer ----------
 
 export const NoteView = ({ noteId }: { noteId: string }) => {
-  const { data: note, error } = useCached(`note:${noteId}`, () => fetchNote(noteId));
+  const { data: note, error, refresh } = useCached(`note:${noteId}`, () =>
+    fetchNote(noteId),
+  );
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!note) {
     return error ? (
@@ -119,7 +128,49 @@ export const NoteView = ({ noteId }: { noteId: string }) => {
         >
           {note.bodyV2?.markdown?.trim() || '—'}
         </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button className="btn line sm" onClick={() => setEditing(true)}>
+            <IconEdit size={13} />
+            {T6.editAction}
+          </button>
+          <button
+            className="btn line sm danger"
+            onClick={() => setDeleting(true)}
+          >
+            <IconTrash size={13} />
+            {T5.deleteAction}
+          </button>
+        </div>
       </div>
+
+      {editing && (
+        <NoteEditModal
+          note={note}
+          onClose={() => setEditing(false)}
+          onSaved={async () => {
+            setEditing(false);
+            await refresh();
+          }}
+        />
+      )}
+
+      {deleting && (
+        <DeleteWithReasonDialog
+          title={T6.deleteNoteTitle}
+          recordLabel={note.title || T.note}
+          onCancel={() => setDeleting(false)}
+          onConfirm={async (reason) => {
+            await softDeleteNote(note.id, reason);
+            // The lead page lists this note; drop its cached copy so it does
+            // not reappear on the way back.
+            invalidateCache('lead:');
+            invalidateCache(`note:${note.id}`);
+            setDeleting(false);
+            goBackOr('/today');
+          }}
+        />
+      )}
     </main>
   );
 };

@@ -121,22 +121,73 @@ const LEAD_FIELDS = `
   referrer { id name partnerType commissionPercent }
 `;
 
+// ---------- pagination ----------
+
+// Twenty serves at most QUERY_MAX_RECORDS (200) rows per page and honours
+// `first` as given, so a lone `first: 300` silently returns a truncated set --
+// which is how the reports came to describe only part of the pipeline. Anything
+// that aggregates rather than previews goes through the connection cursor.
+const PAGE_SIZE = 200;
+
+// 10k rows. Past this the caller wants a data export, not a report, and the
+// request budget (100 req/60s) is better spent elsewhere.
+const MAX_PAGES = 50;
+
+type Connection<TNode> = {
+  edges: { node: TNode }[];
+  pageInfo: { hasNextPage: boolean; endCursor: string | null };
+};
+
+// `truncated` is surfaced rather than swallowed: a report that quietly stops at
+// a cap reads exactly like a complete one, which is the bug this replaces.
+export type PagedResult<TNode> = { items: TNode[]; truncated: boolean };
+
+const fetchAllPages = async <TNode>(
+  runPage: (after: string | null) => Promise<Connection<TNode>>,
+): Promise<PagedResult<TNode>> => {
+  const items: TNode[] = [];
+  let after: string | null = null;
+
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const connection = await runPage(after);
+    items.push(...connection.edges.map((edge) => edge.node));
+
+    if (!connection.pageInfo.hasNextPage || !connection.pageInfo.endCursor) {
+      return { items, truncated: false };
+    }
+    after = connection.pageInfo.endCursor;
+  }
+
+  return { items, truncated: true };
+};
+
 // ---------- leads ----------
 
-export const fetchLeads = async (options: {
+export type LeadQueryOptions = {
   search?: string;
   ownerId?: string;
   openOnly?: boolean;
   limit?: number;
   companyId?: string;
   pointOfContactId?: string;
-}): Promise<LeadSummary[]> => {
+  // Server-side period bound: lets a report paginate only the rows it uses
+  // instead of walking the whole pipeline.
+  createdAfter?: string;
+  stages?: string[];
+};
+
+const leadFilter = (
+  options: LeadQueryOptions,
+): Record<string, unknown> | undefined => {
   const filters: Record<string, unknown>[] = [];
   if (options.search) {
     filters.push({ name: { ilike: `%${options.search}%` } });
   }
   if (options.openOnly) {
     filters.push({ stage: { in: OPEN_STAGES } });
+  }
+  if (options.stages) {
+    filters.push({ stage: { in: options.stages } });
   }
   if (options.ownerId) {
     filters.push({ ownerId: { eq: options.ownerId } });
@@ -147,27 +198,52 @@ export const fetchLeads = async (options: {
   if (options.pointOfContactId) {
     filters.push({ pointOfContactId: { eq: options.pointOfContactId } });
   }
+  if (options.createdAfter) {
+    filters.push({ createdAt: { gte: options.createdAfter } });
+  }
+  return filters.length > 0 ? { and: filters } : undefined;
+};
 
-  const data = await coreQuery<{
-    opportunities: { edges: { node: LeadSummary }[] };
-  }>(
-    `query Leads($filter: OpportunityFilterInput, $limit: Int) {
-      opportunities(
-        filter: $filter
-        first: $limit
-        orderBy: [{ createdAt: DescNullsLast }]
-      ) {
-        edges { node { ${LEAD_FIELDS} } }
-      }
-    }`,
+const LEADS_PAGE_QUERY = `query Leads($filter: OpportunityFilterInput, $limit: Int, $after: String) {
+  opportunities(
+    filter: $filter
+    first: $limit
+    after: $after
+    orderBy: [{ createdAt: DescNullsLast }]
+  ) {
+    edges { node { ${LEAD_FIELDS} } }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+// Bounded fetch, for pickers and list previews where one page is the point.
+// Reports must use fetchAllLeads instead.
+export const fetchLeads = async (
+  options: LeadQueryOptions,
+): Promise<LeadSummary[]> => {
+  const data = await coreQuery<{ opportunities: Connection<LeadSummary> }>(
+    LEADS_PAGE_QUERY,
     {
-      filter: filters.length > 0 ? { and: filters } : undefined,
+      filter: leadFilter(options),
       limit: options.limit ?? 60,
+      after: null,
     },
   );
 
   return data.opportunities.edges.map((e) => e.node);
 };
+
+// Every lead matching the filter, followed across pages.
+export const fetchAllLeads = (
+  options: LeadQueryOptions = {},
+): Promise<PagedResult<LeadSummary>> =>
+  fetchAllPages<LeadSummary>(async (after) => {
+    const data = await coreQuery<{ opportunities: Connection<LeadSummary> }>(
+      LEADS_PAGE_QUERY,
+      { filter: leadFilter(options), limit: PAGE_SIZE, after },
+    );
+    return data.opportunities;
+  });
 
 export const fetchLead = async (id: string): Promise<LeadSummary> => {
   const data = await coreQuery<{ opportunity: LeadSummary }>(
@@ -271,10 +347,41 @@ export const fetchLeadNotes = async (opportunityId: string): Promise<Note[]> => 
 // assigneeId is optional: pass it to scope to one seller ("my tasks"), or omit
 // it so admins see every open task (the server still row-filters by the
 // caller's permissions).
-export const fetchMyOpenTasks = async (
+const OPEN_TASKS_PAGE_QUERY = `query MyOpenTasks($filter: TaskFilterInput, $limit: Int, $after: String) {
+  tasks(
+    filter: $filter
+    first: $limit
+    after: $after
+    orderBy: [{ dueAt: AscNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        title
+        status
+        taskType
+        dueAt
+        createdAt
+        bodyV2 { markdown }
+        assignee { id name { firstName lastName } }
+        taskTargets {
+          edges {
+            node {
+              opportunity { id name }
+              company { id name }
+            }
+          }
+        }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+const openTaskFilter = (
   assigneeId: string | null,
-  window: { dueBefore?: string; dueAfter?: string; limit?: number } = {},
-): Promise<Task[]> => {
+  window: { dueBefore?: string; dueAfter?: string },
+) => {
   const filters: Record<string, unknown>[] = [
     { status: { in: ['TODO', 'IN_PROGRESS'] } },
   ];
@@ -287,42 +394,38 @@ export const fetchMyOpenTasks = async (
   if (window.dueAfter) {
     filters.push({ dueAt: { gt: window.dueAfter } });
   }
+  return { and: filters };
+};
 
-  const data = await coreQuery<{
-    tasks: { edges: { node: Task }[] };
-  }>(
-    `query MyOpenTasks($filter: TaskFilterInput, $limit: Int) {
-      tasks(filter: $filter, first: $limit, orderBy: [{ dueAt: AscNullsLast }]) {
-        edges {
-          node {
-            id
-            title
-            status
-            taskType
-            dueAt
-            createdAt
-            bodyV2 { markdown }
-            assignee { id name { firstName lastName } }
-            taskTargets {
-              edges {
-                node {
-                  opportunity { id name }
-                  company { id name }
-                }
-              }
-            }
-          }
-        }
-      }
-    }`,
+export const fetchMyOpenTasks = async (
+  assigneeId: string | null,
+  window: { dueBefore?: string; dueAfter?: string; limit?: number } = {},
+): Promise<Task[]> => {
+  const data = await coreQuery<{ tasks: Connection<Task> }>(
+    OPEN_TASKS_PAGE_QUERY,
     {
-      filter: { and: filters },
+      filter: openTaskFilter(assigneeId, window),
       limit: window.limit ?? 100,
+      after: null,
     },
   );
 
   return data.tasks.edges.map((e) => e.node);
 };
+
+// The full open-task list, for the tasks screen and any count that must be
+// right rather than approximately right.
+export const fetchAllOpenTasks = (
+  assigneeId: string | null,
+  window: { dueBefore?: string; dueAfter?: string } = {},
+): Promise<PagedResult<Task>> =>
+  fetchAllPages<Task>(async (after) => {
+    const data = await coreQuery<{ tasks: Connection<Task> }>(
+      OPEN_TASKS_PAGE_QUERY,
+      { filter: openTaskFilter(assigneeId, window), limit: PAGE_SIZE, after },
+    );
+    return data.tasks;
+  });
 
 // Calendar: same task shape as fetchMyOpenTasks, but no status filter (DONE
 // tasks are shown on the calendar too, styled differently) and a plain
@@ -679,6 +782,93 @@ export const registerLead = async (
   }
 
   return { opportunityId, companyId, personId: personId ?? '' };
+};
+
+// ---------- soft delete (this app never hard-deletes) ----------
+//
+// Twenty's `delete<Object>` mutation sets deletedAt: the record leaves every
+// list but stays restorable from the CRM's trash view. `destroy<Object>` is the
+// irreversible one, and it is deliberately absent from this module -- the
+// Seller role is provisioned with canDestroyObjectRecords: false, so the server
+// refuses it even if a caller went looking for it. records.test.ts asserts no
+// destroy mutation ever appears here.
+
+type DeletableObject = 'Opportunity' | 'Task' | 'Note';
+
+// deletionReason is added by provision-deletion-reason.mjs. An instance that
+// has not run it yet must still be able to delete, so the reason write is
+// best-effort -- losing the record because we could not file the paperwork
+// would be the worse failure.
+const writeDeletionReason = async (
+  objectName: DeletableObject,
+  id: string,
+  reason: string,
+): Promise<boolean> => {
+  try {
+    await coreQuery(
+      `mutation SetDeletionReason($id: UUID!, $data: ${objectName}UpdateInput!) {
+        update${objectName}(id: $id, data: $data) { id }
+      }`,
+      { id, data: { deletionReason: reason } },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const softDeleteRecord = async (
+  objectName: DeletableObject,
+  id: string,
+): Promise<void> => {
+  await coreQuery(
+    `mutation SoftDelete($id: UUID!) {
+      delete${objectName}(id: $id) { id }
+    }`,
+    { id },
+  );
+};
+
+// The reason is written before the delete so it lands while the record is
+// still writable. Where the field is missing it becomes a note on the lead
+// instead, which survives the delete and is visible when the lead is restored.
+export const softDeleteLead = async (
+  lead: { id: string; companyId?: string | null },
+  reason: string,
+): Promise<void> => {
+  const trimmed = reason.trim();
+  const stored = await writeDeletionReason('Opportunity', lead.id, trimmed);
+
+  if (!stored) {
+    try {
+      await createNoteForLead({
+        title: 'دلیل حذف لید',
+        bodyMarkdown: trimmed,
+        target: { opportunityId: lead.id, companyId: lead.companyId },
+      });
+    } catch {
+      // The reason could not be filed anywhere; the delete still proceeds
+      // because the seller asked for it and it stays reversible.
+    }
+  }
+
+  await softDeleteRecord('Opportunity', lead.id);
+};
+
+export const softDeleteTask = async (
+  taskId: string,
+  reason: string,
+): Promise<void> => {
+  await writeDeletionReason('Task', taskId, reason.trim());
+  await softDeleteRecord('Task', taskId);
+};
+
+export const softDeleteNote = async (
+  noteId: string,
+  reason: string,
+): Promise<void> => {
+  await writeDeletionReason('Note', noteId, reason.trim());
+  await softDeleteRecord('Note', noteId);
 };
 
 // ---------- company panel (info + other contacts) ----------
@@ -1063,10 +1253,28 @@ export type DoneTask = {
 
 // assigneeId omitted = every seller's done tasks since sinceIso (used for
 // team-wide reporting); passed = one seller's (used for "my" reports).
-export const fetchDoneTasksSince = async (
-  sinceIso: string,
-  assigneeId?: string,
-): Promise<DoneTask[]> => {
+const DONE_TASKS_PAGE_QUERY = `query DoneTasksSince($filter: TaskFilterInput, $limit: Int, $after: String) {
+  tasks(
+    filter: $filter
+    first: $limit
+    after: $after
+    orderBy: [{ updatedAt: DescNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        title
+        updatedAt
+        taskType
+        bodyV2 { markdown }
+        assignee { id name { firstName lastName } }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+const doneTaskFilter = (sinceIso: string, assigneeId?: string) => {
   const filters: Record<string, unknown>[] = [
     { status: { eq: 'DONE' } },
     { updatedAt: { gte: sinceIso } },
@@ -1074,28 +1282,29 @@ export const fetchDoneTasksSince = async (
   if (assigneeId) {
     filters.push({ assigneeId: { eq: assigneeId } });
   }
-
-  const data = await coreQuery<{
-    tasks: { edges: { node: DoneTask }[] };
-  }>(
-    `query DoneTasksSince($filter: TaskFilterInput) {
-      tasks(filter: $filter, first: 200, orderBy: [{ updatedAt: DescNullsLast }]) {
-        edges {
-          node {
-            id
-            title
-            updatedAt
-            taskType
-            bodyV2 { markdown }
-            assignee { id name { firstName lastName } }
-          }
-        }
-      }
-    }`,
-    { filter: { and: filters } },
-  );
-  return data.tasks.edges.map((e) => e.node);
+  return { and: filters };
 };
+
+// Every done task in the period. A team-wide month easily passes the old
+// single-page 200 cap, which made the activity mix and the seller
+// leaderboard's task counts describe a subset of the period.
+export const fetchAllDoneTasksSince = (
+  sinceIso: string,
+  assigneeId?: string,
+): Promise<PagedResult<DoneTask>> =>
+  fetchAllPages<DoneTask>(async (after) => {
+    const data = await coreQuery<{ tasks: Connection<DoneTask> }>(
+      DONE_TASKS_PAGE_QUERY,
+      { filter: doneTaskFilter(sinceIso, assigneeId), limit: PAGE_SIZE, after },
+    );
+    return data.tasks;
+  });
+
+export const fetchDoneTasksSince = async (
+  sinceIso: string,
+  assigneeId?: string,
+): Promise<DoneTask[]> =>
+  (await fetchAllDoneTasksSince(sinceIso, assigneeId)).items;
 
 // Deal-product lines created in the period, across all leads -- powers the
 // Products report. Defensive try/catch (same precedent as fetchLeadPricing):
@@ -1106,37 +1315,50 @@ export type DealProductStat = {
   name: string;
   quantity: number | null;
   discountPercent: number | null;
-  installPrice: { amountMicros: number | null } | null;
-  annualPrice: { amountMicros: number | null } | null;
+  installPrice: { amountMicros: number | null; currencyCode?: string | null } | null;
+  annualPrice: { amountMicros: number | null; currencyCode?: string | null } | null;
   product: { id: string; name: string } | null;
   createdAt: string;
 };
 
+const DEAL_PRODUCTS_PAGE_QUERY = `query DealProductsSince($filter: DealProductFilterInput, $limit: Int, $after: String) {
+  dealProducts(
+    filter: $filter
+    first: $limit
+    after: $after
+    orderBy: [{ createdAt: DescNullsLast }]
+  ) {
+    edges {
+      node {
+        id
+        name
+        quantity
+        discountPercent
+        installPrice { amountMicros currencyCode }
+        annualPrice { amountMicros currencyCode }
+        product { id name }
+        createdAt
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
+export const fetchAllDealProductsSince = (
+  sinceIso: string,
+): Promise<PagedResult<DealProductStat>> =>
+  fetchAllPages<DealProductStat>(async (after) => {
+    const data = await coreQuery<{ dealProducts: Connection<DealProductStat> }>(
+      DEAL_PRODUCTS_PAGE_QUERY,
+      { filter: { createdAt: { gte: sinceIso } }, limit: PAGE_SIZE, after },
+    );
+    return data.dealProducts;
+  }).catch(() => ({ items: [] as DealProductStat[], truncated: false }));
+
 export const fetchDealProductsSince = async (
   sinceIso: string,
-): Promise<DealProductStat[]> => {
-  return coreQuery<{ dealProducts: { edges: { node: DealProductStat }[] } }>(
-    `query DealProductsSince($filter: DealProductFilterInput) {
-      dealProducts(filter: $filter, first: 200, orderBy: [{ createdAt: DescNullsLast }]) {
-        edges {
-          node {
-            id
-            name
-            quantity
-            discountPercent
-            installPrice { amountMicros }
-            annualPrice { amountMicros }
-            product { id name }
-            createdAt
-          }
-        }
-      }
-    }`,
-    { filter: { createdAt: { gte: sinceIso } } },
-  )
-    .then((d) => d.dealProducts.edges.map((e) => e.node))
-    .catch(() => [] as DealProductStat[]);
-};
+): Promise<DealProductStat[]> =>
+  (await fetchAllDealProductsSince(sinceIso)).items;
 
 // ---------- comprehensive search (native tsvector full-text) ----------
 
@@ -1259,6 +1481,18 @@ export const fetchNote = async (id: string): Promise<NoteDetail> => {
     bodyV2: data.note.bodyV2,
     targets: data.note.noteTargets.edges.map((e) => e.node),
   };
+};
+
+export const updateNote = async (
+  noteId: string,
+  update: Record<string, unknown>,
+): Promise<void> => {
+  await coreQuery(
+    `mutation UpdateNoteFields($id: UUID!, $data: NoteUpdateInput!) {
+      updateNote(id: $id, data: $data) { id }
+    }`,
+    { id: noteId, data: update },
+  );
 };
 
 export type PersonDetail = {

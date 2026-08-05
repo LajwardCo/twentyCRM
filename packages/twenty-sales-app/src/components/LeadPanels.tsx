@@ -27,7 +27,15 @@ import {
   emptyDealLineDraft,
   productPrimaryCurrency,
 } from '../lib/dealLinePricing';
-import { formatMoney, fullPhone, personName } from '../lib/format';
+import {
+  addCurrencyTotals,
+  type CurrencyTotals,
+  formatMoney,
+  formatMoneyTotals,
+  fullPhone,
+  personName,
+  totalsAreEmpty,
+} from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import {
   LINE_STATUS_LABELS,
@@ -35,9 +43,12 @@ import {
   PARTNER_TYPE_LABELS,
   QUOTE_STATUS_LABELS,
   SOURCE_LABELS,
+  T,
   T2,
+  T6,
 } from '../lib/strings';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
+import { ModalSheet } from './ModalSheet';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
 
 // ---------- company info + other contacts ----------
@@ -185,8 +196,12 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
 
 type MetaOption = { value: string; label: string };
 
-// Click-to-edit row: shows a value that turns into a <select> on click. The
-// server still enforces permissions — a rejected save just reverts on reload.
+// Click-to-edit row: shows a value that turns into a <select> on click.
+//
+// The select deliberately does NOT close on blur. Mobile browsers fire blur on
+// the select when the native option picker opens, which unmounted the control
+// before the user could choose — the edit looked like it simply did nothing.
+// Selecting commits and closes; Escape cancels.
 const EditableMetaRow = ({
   label,
   display,
@@ -204,35 +219,54 @@ const EditableMetaRow = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = async (value: string) => {
+    if (value === currentValue) {
+      setEditing(false);
+      return;
+    }
     setSaving(true);
+    setError(null);
     try {
       await onSave(value);
+      setEditing(false);
+    } catch (err) {
+      // A rejected save used to reject silently, so a permission error was
+      // indistinguishable from a control that did nothing.
+      setError(err instanceof Error ? err.message : T2.metaSaveFailed);
     } finally {
       setSaving(false);
-      setEditing(false);
     }
   };
 
   return (
-    <div className="c-row">
+    <div className="c-row" style={editing ? { alignItems: 'flex-start' } : undefined}>
       <span>{label}</span>
       {editing ? (
-        <select
-          className="meta-edit"
-          autoFocus
-          defaultValue={currentValue}
-          disabled={saving}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={() => setEditing(false)}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          <select
+            className="meta-edit"
+            autoFocus
+            defaultValue={currentValue}
+            disabled={saving}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setEditing(false);
+            }}
+          >
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          {error !== null && (
+            <span style={{ fontSize: 11, color: 'var(--hot)', maxWidth: 200 }}>
+              {error}
+            </span>
+          )}
+        </div>
       ) : editable ? (
         <button type="button" className="meta-editable" onClick={() => setEditing(true)}>
           {display}
@@ -273,14 +307,24 @@ export const MetaCard = ({
     })),
   ];
 
+  // The lead's current referrer is added when the fetched list doesn't contain
+  // it (the partner query is bounded, and an inactive partner may be absent).
+  // Without it the select would open showing "—" and a stray change could clear
+  // a referrer the seller never meant to touch.
+  const referrerLabelFor = (r: {
+    name: string;
+    partnerType: string | null;
+  }): string =>
+    r.partnerType
+      ? `${r.name} (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
+      : r.name;
+
   const referrerOptions: MetaOption[] = [
     { value: '', label: '—' },
-    ...referrers.map((r) => ({
-      value: r.id,
-      label: r.partnerType
-        ? `${r.name} (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
-        : r.name,
-    })),
+    ...referrers.map((r) => ({ value: r.id, label: referrerLabelFor(r) })),
+    ...(lead.referrer && !referrers.some((r) => r.id === lead.referrer?.id)
+      ? [{ value: lead.referrer.id, label: referrerLabelFor(lead.referrer) }]
+      : []),
   ];
 
   const marketerOptions: MetaOption[] = [
@@ -325,7 +369,10 @@ export const MetaCard = ({
           display={referrerDisplay}
           currentValue={lead.referrer?.id ?? ''}
           options={referrerOptions}
-          editable={canEdit && referrers.length > 0}
+          // Editable whenever there is something to choose — clearing an
+          // existing referrer counts, so an empty partner list no longer makes
+          // the row silently read-only.
+          editable={canEdit && referrerOptions.length > 1}
           onSave={(value) => onSaveLead!({ referrerId: value || null })}
         />
         <EditableMetaRow
@@ -364,6 +411,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
   const [draft, setDraft] = useState<DealLineDraft>(emptyDealLineDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateProduct, setDuplicateProduct] = useState<string | null>(null);
 
   const { data: pricing, refresh } = useCached(`pricing:${lead.id}`, () =>
     fetchLeadPricing(lead.id),
@@ -417,9 +465,22 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     setDraft(emptyDealLineDraft());
   };
 
-  const addProduct = async () => {
+  // Adding the same product twice is nearly always a double-tap or a seller
+  // who forgot the line is already there, so it is confirmed once rather than
+  // silently creating a second line that inflates the deal.
+  const addProduct = async (confirmedDuplicate = false) => {
     const product = selectedProduct;
     if (!product) return;
+
+    const alreadyOnLead = (pricing?.dealProducts ?? []).some(
+      (line) => line.product?.id === product.id,
+    );
+    if (alreadyOnLead && !confirmedDuplicate) {
+      setDuplicateProduct(product.name);
+      return;
+    }
+
+    setDuplicateProduct(null);
     setBusy(true);
     setError(null);
     try {
@@ -449,9 +510,16 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
 
   const lines = pricing?.dealProducts ?? [];
   const quotes = pricing?.quotations ?? [];
-  const totalInstall = lines.reduce(
-    (sum, l) => sum + (l.installPrice?.amountMicros ?? 0),
-    0,
+  // A lead can hold lines quoted in different currencies, so the total is kept
+  // per currency rather than added up and labelled with the first line's code.
+  const totalInstall = lines.reduce<CurrencyTotals>(
+    (totals, line) =>
+      addCurrencyTotals(
+        totals,
+        line.installPrice?.amountMicros,
+        line.installPrice?.currencyCode,
+      ),
+    {},
   );
 
   return (
@@ -481,11 +549,39 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
           <button
             className="btn sm"
             disabled={busy || draft.productId === ''}
-            onClick={addProduct}
+            onClick={() => addProduct()}
           >
             {busy ? '…' : `＋ ${T2.addProduct}`}
           </button>
         </div>
+      )}
+
+      {duplicateProduct !== null && (
+        <ModalSheet
+          title={T6.duplicateProductTitle}
+          onClose={() => setDuplicateProduct(null)}
+        >
+          <div className="sub" style={{ marginBottom: 12 }}>
+            <b style={{ color: 'var(--ink)' }}>{duplicateProduct}</b>
+            <div style={{ marginTop: 4 }}>{T6.duplicateProductHint}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn line sm"
+              style={{ flex: 1, justifyContent: 'center' }}
+              onClick={() => setDuplicateProduct(null)}
+            >
+              {T.close}
+            </button>
+            <button
+              className="btn gold"
+              style={{ flex: 2, padding: 12 }}
+              onClick={() => addProduct(true)}
+            >
+              {T6.duplicateAddAnyway}
+            </button>
+          </div>
+        </ModalSheet>
       )}
 
       {pricing === null && <div className="skeleton" style={{ height: 60, marginTop: 12 }} />}
@@ -538,7 +634,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               </div>
             </div>
           ))}
-          {totalInstall > 0 && (
+          {!totalsAreEmpty(totalInstall) && (
             <div
               className="c-row"
               style={{
@@ -548,7 +644,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               }}
             >
               <span>{T2.total}</span>
-              <b className="num">{formatMoney(totalInstall, lines[0]?.installPrice?.currencyCode)}</b>
+              <b className="num">{formatMoneyTotals(totalInstall)}</b>
             </div>
           )}
         </div>

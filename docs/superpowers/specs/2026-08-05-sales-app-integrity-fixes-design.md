@@ -178,6 +178,35 @@ only autosaves the body.
 - `TaskView`: an edit row for title / task type / due date next to the existing
   body autosave, plus delete-with-reason.
 
+## 5b. The referrer row cannot be changed
+
+Reported while the work was in progress: the معرف (referrer) field on the lead
+detail page does nothing when edited.
+
+### Problem
+
+Three independent causes in `EditableMetaRow` (`components/LeadPanels.tsx`),
+all of which also affect the source and marketer rows:
+
+1. `onBlur={() => setEditing(false)}` unmounted the `<select>` on blur. Mobile
+   browsers fire blur on a select when the native option picker opens, so the
+   control disappeared before the seller could choose — the edit looked like it
+   simply did nothing.
+2. `handleChange` had `try/finally` with no `catch`, so a rejected save
+   (permission, validation) produced an unhandled rejection and no UI change —
+   indistinguishable from cause 1.
+3. `editable={canEdit && referrers.length > 0}` made the row silently
+   read-only whenever the bounded partner query returned nothing, and a lead
+   whose referrer was absent from that list opened the select showing "—",
+   where a stray change would clear a referrer nobody meant to touch.
+
+### Design
+
+The select no longer closes on blur — selecting commits, Escape cancels. A
+failed save is caught and shown inline. The lead's current referrer is added to
+the options when the fetched list lacks it, and the row stays editable whenever
+there is anything to choose, including clearing an existing value.
+
 ## 6. Reports truncate at 300 records
 
 ### Problem

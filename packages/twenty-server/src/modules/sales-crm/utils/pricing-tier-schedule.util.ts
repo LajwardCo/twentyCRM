@@ -61,7 +61,8 @@ export type ProductPricingFactor = {
 export const productFactorDiscount = (
   factor: ProductPricingFactor,
 ): FactorDiscount | undefined =>
-  (factor.discountType === 'PERCENTAGE' || factor.discountType === 'FIXED_AMOUNT') &&
+  (factor.discountType === 'PERCENTAGE' ||
+    factor.discountType === 'FIXED_AMOUNT') &&
   typeof factor.discountValue === 'number' &&
   Number.isFinite(factor.discountValue) &&
   factor.discountValue > 0

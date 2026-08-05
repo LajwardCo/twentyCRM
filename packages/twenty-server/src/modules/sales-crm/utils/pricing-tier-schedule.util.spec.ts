@@ -109,7 +109,9 @@ describe('computePriceFromTierSchedule', () => {
     const inventoryHourly = {
       factor: 'inventory',
       billingFrequency: 'HOURLY' as const,
-      bands: [{ minQty: 1, maxQty: null, mode: 'PER_UNIT' as const, amount: 5 }],
+      bands: [
+        { minQty: 1, maxQty: null, mode: 'PER_UNIT' as const, amount: 5 },
+      ],
     };
 
     const result = computePriceFromTierSchedule(
@@ -241,7 +243,11 @@ describe('productFactorDiscount', () => {
 
   it('ignores a value with no type and a type with no value', () => {
     expect(
-      productFactorDiscount({ name: 'doctor', unitPrice: 400, discountValue: 10 }),
+      productFactorDiscount({
+        name: 'doctor',
+        unitPrice: 400,
+        discountValue: 10,
+      }),
     ).toBeUndefined();
     expect(
       productFactorDiscount({
@@ -261,11 +267,15 @@ describe('applyFactorDiscount', () => {
   });
 
   it('takes a fixed amount off the subtotal', () => {
-    expect(applyFactorDiscount(2000, { type: 'FIXED_AMOUNT', value: 150 })).toBe(150);
+    expect(
+      applyFactorDiscount(2000, { type: 'FIXED_AMOUNT', value: 150 }),
+    ).toBe(150);
   });
 
   it('never discounts more than the subtotal, so a charge cannot become a credit', () => {
-    expect(applyFactorDiscount(100, { type: 'FIXED_AMOUNT', value: 500 })).toBe(100);
+    expect(applyFactorDiscount(100, { type: 'FIXED_AMOUNT', value: 500 })).toBe(
+      100,
+    );
     expect(applyFactorDiscount(100, { type: 'PERCENTAGE', value: 250 })).toBe(
       100,
     );

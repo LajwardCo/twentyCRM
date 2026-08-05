@@ -27,7 +27,15 @@ import {
   emptyDealLineDraft,
   productPrimaryCurrency,
 } from '../lib/dealLinePricing';
-import { formatMoney, fullPhone, personName } from '../lib/format';
+import {
+  addCurrencyTotals,
+  type CurrencyTotals,
+  formatMoney,
+  formatMoneyTotals,
+  fullPhone,
+  personName,
+  totalsAreEmpty,
+} from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import {
   LINE_STATUS_LABELS,
@@ -449,9 +457,16 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
 
   const lines = pricing?.dealProducts ?? [];
   const quotes = pricing?.quotations ?? [];
-  const totalInstall = lines.reduce(
-    (sum, l) => sum + (l.installPrice?.amountMicros ?? 0),
-    0,
+  // A lead can hold lines quoted in different currencies, so the total is kept
+  // per currency rather than added up and labelled with the first line's code.
+  const totalInstall = lines.reduce<CurrencyTotals>(
+    (totals, line) =>
+      addCurrencyTotals(
+        totals,
+        line.installPrice?.amountMicros,
+        line.installPrice?.currencyCode,
+      ),
+    {},
   );
 
   return (
@@ -538,7 +553,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               </div>
             </div>
           ))}
-          {totalInstall > 0 && (
+          {!totalsAreEmpty(totalInstall) && (
             <div
               className="c-row"
               style={{
@@ -548,7 +563,7 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
               }}
             >
               <span>{T2.total}</span>
-              <b className="num">{formatMoney(totalInstall, lines[0]?.installPrice?.currencyCode)}</b>
+              <b className="num">{formatMoneyTotals(totalInstall)}</b>
             </div>
           )}
         </div>

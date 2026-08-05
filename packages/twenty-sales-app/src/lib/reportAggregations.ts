@@ -8,11 +8,28 @@ import {
   type LeadSummary,
   STAGES,
 } from '../api/records';
-import { sumAmountMicros } from './format';
+import {
+  addCurrencyTotals,
+  type CurrencyTotals,
+  sumByCurrency,
+} from './format';
 
-export type BreakdownRow = { label: string; count: number; value: number };
+// Values are per-currency: the team quotes in AFN and USD, and one summed
+// number would describe neither.
+export type BreakdownRow = {
+  label: string;
+  count: number;
+  value: CurrencyTotals;
+};
 
-const sumMicros = (leads: LeadSummary[]): number => sumAmountMicros(leads);
+const sumMicros = (leads: LeadSummary[]): CurrencyTotals =>
+  sumByCurrency(leads);
+
+// Ranking needs one comparable number even when a row mixes currencies. Rows
+// are ordered by the largest single-currency bucket -- an approximation that
+// never claims to be a total, unlike adding the buckets together.
+const rankValue = (totals: CurrencyTotals): number =>
+  Math.max(0, ...Object.values(totals));
 
 // ---------- conversion funnel + win/loss (Overview) ----------
 
@@ -83,7 +100,7 @@ export type MarketerRow = {
   leads: number;
   won: number;
   winRate: number;
-  pipelineValue: number;
+  pipelineValue: CurrencyTotals;
 };
 
 const OPEN_FOR_PIPELINE = (l: LeadSummary): boolean =>
@@ -124,8 +141,8 @@ export const computeMarketerLeaderboard = (
 export type ProductTotals = {
   lines: number;
   units: number;
-  installRevenue: number;
-  annualRevenue: number;
+  installRevenue: CurrencyTotals;
+  annualRevenue: CurrencyTotals;
   avgDiscount: number;
 };
 
@@ -140,16 +157,28 @@ const productKey = (line: DealProductStat): string =>
 const productLabel = (line: DealProductStat): string =>
   line.product?.name ?? line.name ?? '—';
 
-const lineRevenue = (line: DealProductStat): number =>
-  (line.installPrice?.amountMicros ?? 0) + (line.annualPrice?.amountMicros ?? 0);
+// A line's install and annual price share the line's currency, so both fold
+// into the same per-currency bucket.
+const addLineRevenue = (target: CurrencyTotals, line: DealProductStat): void => {
+  addCurrencyTotals(
+    target,
+    line.installPrice?.amountMicros,
+    line.installPrice?.currencyCode,
+  );
+  addCurrencyTotals(
+    target,
+    line.annualPrice?.amountMicros,
+    line.annualPrice?.currencyCode,
+  );
+};
 
 export const computeProductStats = (lines: DealProductStat[]): ProductStats => {
   const grouped = new Map<
     string,
-    { label: string; units: number; revenue: number }
+    { label: string; units: number; revenue: CurrencyTotals }
   >();
-  let installRevenue = 0;
-  let annualRevenue = 0;
+  const installRevenue: CurrencyTotals = {};
+  const annualRevenue: CurrencyTotals = {};
   let discountSum = 0;
   let discountCount = 0;
   let units = 0;
@@ -157,14 +186,26 @@ export const computeProductStats = (lines: DealProductStat[]): ProductStats => {
   for (const line of lines) {
     const key = productKey(line);
     const qty = line.quantity ?? 0;
-    const entry = grouped.get(key) ?? { label: productLabel(line), units: 0, revenue: 0 };
+    const entry = grouped.get(key) ?? {
+      label: productLabel(line),
+      units: 0,
+      revenue: {},
+    };
     entry.units += qty;
-    entry.revenue += lineRevenue(line);
+    addLineRevenue(entry.revenue, line);
     grouped.set(key, entry);
 
     units += qty;
-    installRevenue += line.installPrice?.amountMicros ?? 0;
-    annualRevenue += line.annualPrice?.amountMicros ?? 0;
+    addCurrencyTotals(
+      installRevenue,
+      line.installPrice?.amountMicros,
+      line.installPrice?.currencyCode,
+    );
+    addCurrencyTotals(
+      annualRevenue,
+      line.annualPrice?.amountMicros,
+      line.annualPrice?.currencyCode,
+    );
     if (line.discountPercent !== null && line.discountPercent !== undefined) {
       discountSum += line.discountPercent;
       discountCount += 1;
@@ -178,7 +219,7 @@ export const computeProductStats = (lines: DealProductStat[]): ProductStats => {
       .sort((a, b) => b.count - a.count),
     byRevenue: entries
       .map((e) => ({ label: e.label, count: e.units, value: e.revenue }))
-      .sort((a, b) => b.value - a.value),
+      .sort((a, b) => rankValue(b.value) - rankValue(a.value)),
     totals: {
       lines: lines.length,
       units,
@@ -234,7 +275,7 @@ export const computeActivity = (
 
   return {
     mix: [...mixMap.entries()]
-      .map(([type, count]) => ({ label: labels[type] ?? type, count, value: 0 }))
+      .map(([type, count]) => ({ label: labels[type] ?? type, count, value: {} }))
       .sort((a, b) => b.count - a.count),
     bySeller: [...sellerMap.entries()]
       .map(([sellerId, e]) => ({ sellerId, name: e.name, total: e.total, byType: e.byType }))

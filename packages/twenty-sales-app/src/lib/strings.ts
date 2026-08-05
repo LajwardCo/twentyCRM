@@ -283,6 +283,11 @@ export const T2 = {
   totalTasksDone: 'مجموع انجام‌شده',
   noActivityData: 'فعالیتی در این دوره ثبت نشده',
 
+  // data completeness
+  leadsCounted: 'لید بررسی شد',
+  partialData:
+    'داده‌ها بسیار زیاد است و گزارش روی بخشی از رکوردها ساخته شده — دوره کوتاه‌تری انتخاب کنید.',
+
   // quick task modal (restored — required by QuickTaskModal.tsx)
   quickTaskNewTitle: 'کار جدید',
   quickTaskEditTitle: 'ویرایش کار',

@@ -7,7 +7,14 @@ import {
 } from '../api/records';
 import { IconKanban, IconPlus, IconTable } from '../components/icons';
 import { useCached } from '../lib/cache';
-import { formatAfn, formatMoney, fullPhone, personName, sumAmountMicros } from '../lib/format';
+import {
+  formatMoney,
+  formatMoneyTotals,
+  fullPhone,
+  personName,
+  sumByCurrency,
+  totalsAreEmpty,
+} from '../lib/format';
 import { loadPrefs, savePref } from '../lib/prefs';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
@@ -92,7 +99,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
 
   const openValue = useMemo(
     () =>
-      sumAmountMicros(
+      sumByCurrency(
         (leads ?? []).filter((l) => l.stage && OPEN_STAGES.includes(l.stage)),
       ),
     [leads],
@@ -105,7 +112,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
     return stages
       .map((stage) => {
         const items = (leads ?? []).filter((l) => l.stage === stage);
-        return { stage, items, value: sumAmountMicros(items) };
+        return { stage, items, value: sumByCurrency(items) };
       })
       .filter((col) => col.items.length > 0);
   }, [leads, openOnly]);
@@ -118,7 +125,9 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
           <div className="sub">
             {leads !== null &&
               `${toPersianDigits(leads.length)} لید${
-                openValue > 0 ? ` · ارزش باز ${formatAfn(openValue)}` : ''
+                !totalsAreEmpty(openValue)
+                  ? ` · ارزش باز ${formatMoneyTotals(openValue, { compact: true })}`
+                  : ''
               }`}
           </div>
         </div>
@@ -250,7 +259,11 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
               <div className="kcol-h">
                 <span>{STAGE_LABELS[col.stage] ?? col.stage}</span>
                 <span className="cnt num">{toPersianDigits(col.items.length)}</span>
-                {col.value > 0 && <span className="sum num">{formatAfn(col.value)}</span>}
+                {!totalsAreEmpty(col.value) && (
+                  <span className="sum num">
+                    {formatMoneyTotals(col.value, { compact: true })}
+                  </span>
+                )}
               </div>
               {col.items.map((lead) => (
                 <div

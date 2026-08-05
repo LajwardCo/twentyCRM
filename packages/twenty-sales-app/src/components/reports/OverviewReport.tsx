@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 import { OPEN_STAGES, type LeadSummary } from '../../api/records';
 import { IconCheck, IconFlame, IconMoney, IconTasks } from '../icons';
-import { formatAfn, sumAmountMicros } from '../../lib/format';
+import { formatMoneyTotals, sumByCurrency } from '../../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../../lib/jalali';
 import {
   MARKETER_LABELS,
@@ -44,7 +44,7 @@ const groupBy = (
     .map(([k, list]) => ({
       label: labels[k] ?? k,
       count: list.length,
-      value: sumAmountMicros(list),
+      value: sumByCurrency(list),
     }))
     .sort((a, b) => b.count - a.count);
 };
@@ -169,7 +169,9 @@ export const OverviewReport = ({
             {loading ? (
               <div className="skeleton" style={{ width: 70, height: 30 }} />
             ) : (
-              <span className="big num">{formatAfn(sumAmountMicros(openLeads))}</span>
+              <span className="big num">
+                {formatMoneyTotals(sumByCurrency(openLeads), { compact: true })}
+              </span>
             )}
             <span className="hint">
               {!loading ? `${toPersianDigits(openLeads.length)} لید باز` : ''}

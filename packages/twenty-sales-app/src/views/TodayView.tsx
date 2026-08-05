@@ -4,7 +4,7 @@ import { useCached } from '../lib/cache';
 
 import { type CurrentUser } from '../api/auth';
 import {
-  fetchLeads,
+  fetchAllLeads,
   fetchMyOpenTasks,
   OPEN_STAGES,
   setTaskStatus,
@@ -17,7 +17,14 @@ import {
   IconMoney,
   IconTasks,
 } from '../components/icons';
-import { endOfToday, formatAfn, formatMoney, startOfToday, sumAmountMicros } from '../lib/format';
+import {
+  endOfToday,
+  formatMoney,
+  formatMoneyTotals,
+  startOfToday,
+  sumByCurrency,
+  totalsAreEmpty,
+} from '../lib/format';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { STAGE_LABELS, T, TASK_TYPE_LABELS } from '../lib/strings';
@@ -117,9 +124,9 @@ export const TodayView = ({ user }: TodayViewProps) => {
     const [dueNow, upcoming, myLeads] = await Promise.all([
       fetchMyOpenTasks(user.workspaceMemberId, { dueBefore: eod }),
       fetchMyOpenTasks(user.workspaceMemberId, { dueAfter: eod, limit: 8 }),
-      fetchLeads({ ownerId: user.workspaceMemberId, limit: 200 }),
+      fetchAllLeads({ ownerId: user.workspaceMemberId }),
     ]);
-    return { tasks: [...dueNow, ...upcoming], leads: myLeads };
+    return { tasks: [...dueNow, ...upcoming], leads: myLeads.items };
   }, [user.workspaceMemberId]);
 
   const { data, error, refresh } = useCached(
@@ -175,7 +182,7 @@ export const TodayView = ({ user }: TodayViewProps) => {
   const hotWarm = openLeads.filter(
     (l) => l.temperature === 'HOT' || l.temperature === 'WARM',
   );
-  const pipelineValue = sumAmountMicros(openLeads);
+  const pipelineValue = sumByCurrency(openLeads);
 
   const funnel = useMemo(() => {
     const groups = [...OPEN_STAGES.slice(0, 5), 'ACTIVE_CUSTOMER'];
@@ -184,7 +191,7 @@ export const TodayView = ({ user }: TodayViewProps) => {
       return {
         stage,
         count: inStage.length,
-        value: sumAmountMicros(inStage),
+        value: sumByCurrency(inStage),
       };
     });
     const max = Math.max(1, ...counts.map((c) => c.count));
@@ -296,7 +303,9 @@ export const TodayView = ({ user }: TodayViewProps) => {
             {leads === null ? (
               <div className="skeleton" style={{ width: 70, height: 30 }} />
             ) : (
-              <span className="big num">{formatAfn(pipelineValue)}</span>
+              <span className="big num">
+                {formatMoneyTotals(pipelineValue, { compact: true })}
+              </span>
             )}
             <span className="hint">
               {leads === null ? '' : `${toPersianDigits(openLeads.length)} لید باز`}
@@ -386,7 +395,9 @@ export const TodayView = ({ user }: TodayViewProps) => {
                     </div>
                     <span className="f-meta num">
                       <b>{toPersianDigits(f.count)}</b>
-                      {f.value > 0 ? ` · ${formatAfn(f.value)}` : ''}
+                      {!totalsAreEmpty(f.value)
+                        ? ` · ${formatMoneyTotals(f.value, { compact: true })}`
+                        : ''}
                     </span>
                   </div>
                 ))}

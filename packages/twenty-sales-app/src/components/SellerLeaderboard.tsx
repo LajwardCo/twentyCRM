@@ -2,7 +2,11 @@ import { useMemo } from 'react';
 
 import { fetchDoneTasksSince, type LeadSummary } from '../api/records';
 import { useCached } from '../lib/cache';
-import { formatAfn, sumAmountMicros } from '../lib/format';
+import {
+  type CurrencyTotals,
+  formatMoneyTotals,
+  sumByCurrency,
+} from '../lib/format';
 import { toPersianDigits } from '../lib/jalali';
 import { T2 } from '../lib/strings';
 
@@ -17,7 +21,7 @@ type SellerRow = {
   registered: number;
   won: number;
   winRate: number;
-  pipelineValue: number;
+  pipelineValue: CurrencyTotals;
   tasksDone: number;
 };
 
@@ -57,7 +61,7 @@ export const SellerLeaderboard = ({ leads, periodStartIso }: SellerLeaderboardPr
           registered: entry.leads.length,
           won,
           winRate: entry.leads.length > 0 ? Math.round((won / entry.leads.length) * 100) : 0,
-          pipelineValue: sumAmountMicros(openLeads),
+          pipelineValue: sumByCurrency(openLeads),
           tasksDone: tasksBySeller.get(sellerId) ?? 0,
         };
       })
@@ -88,7 +92,7 @@ export const SellerLeaderboard = ({ leads, periodStartIso }: SellerLeaderboardPr
               <td className="num">{toPersianDigits(row.registered)}</td>
               <td className="num">{toPersianDigits(row.won)}</td>
               <td className="num">{toPersianDigits(row.winRate)}٪</td>
-              <td className="num">{formatAfn(row.pipelineValue)}</td>
+              <td className="num">{formatMoneyTotals(row.pipelineValue)}</td>
               <td className="num">{toPersianDigits(row.tasksDone)}</td>
             </tr>
           ))}

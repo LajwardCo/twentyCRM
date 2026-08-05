@@ -14,7 +14,11 @@ import {
 const lead = (
   id: string,
   stage: string | null,
-  opts: { source?: string | null; amountMicros?: number } = {},
+  opts: {
+    source?: string | null;
+    amountMicros?: number;
+    currencyCode?: string;
+  } = {},
 ): LeadSummary =>
   ({
     id,
@@ -26,7 +30,12 @@ const lead = (
     company: null,
     pointOfContact: null,
     owner: null,
-    amount: opts.amountMicros ? { amountMicros: opts.amountMicros, currencyCode: 'AFN' } : null,
+    amount: opts.amountMicros
+      ? {
+          amountMicros: opts.amountMicros,
+          currencyCode: opts.currencyCode ?? 'AFN',
+        }
+      : null,
     createdBy: null,
     referrer: null,
   }) as LeadSummary;
@@ -42,6 +51,19 @@ describe('computeFunnel', () => {
     // pipeline order preserved regardless of size
     expect(rows.map((r) => r.label)[0]).toBe('New Lead');
     expect(rows.find((r) => r.label === 'In Training')?.count).toBe(1);
+  });
+
+  // AFN and USD micros are different quantities; adding them produced a
+  // pipeline number that was neither.
+  it('keeps stage value per currency instead of adding them together', () => {
+    const rows = computeFunnel(
+      [
+        lead('a', 'NEW_LEAD', { amountMicros: 1_000_000, currencyCode: 'AFN' }),
+        lead('b', 'NEW_LEAD', { amountMicros: 2_500_000, currencyCode: 'USD' }),
+      ],
+      {},
+    );
+    expect(rows[0].value).toEqual({ AFN: 1_000_000, USD: 2_500_000 });
   });
 });
 
@@ -95,7 +117,19 @@ describe('computeMarketerLeaderboard', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ label: 'Alavi', leads: 2, won: 1, winRate: 50 });
     // pipeline value = open leads only (b), not the won one (a)
-    expect(rows[0].pipelineValue).toBe(2_000_000);
+    expect(rows[0].pipelineValue).toEqual({ AFN: 2_000_000 });
+  });
+
+  it('reports a mixed-currency pipeline per currency', () => {
+    const rows = computeMarketerLeaderboard(
+      [
+        lead('a', 'NEW_LEAD', { amountMicros: 3_000_000, currencyCode: 'AFN' }),
+        lead('b', 'FOLLOWING_UP', { amountMicros: 2_500_000, currencyCode: 'USD' }),
+      ],
+      { a: 'ALAVI', b: 'ALAVI' },
+      {},
+    );
+    expect(rows[0].pipelineValue).toEqual({ AFN: 3_000_000, USD: 2_500_000 });
   });
 });
 
@@ -107,13 +141,14 @@ describe('computeProductStats', () => {
     install: number,
     annual: number,
     discount: number | null,
+    currencyCode = 'AFN',
   ): DealProductStat => ({
     id,
     name: `line-${id}`,
     quantity: qty,
     discountPercent: discount,
-    installPrice: { amountMicros: install },
-    annualPrice: { amountMicros: annual },
+    installPrice: { amountMicros: install, currencyCode },
+    annualPrice: { amountMicros: annual, currencyCode },
     product: productId ? { id: productId, name: `Product ${productId}` } : null,
     createdAt: '2026-07-05T00:00:00.000Z',
   });
@@ -130,10 +165,20 @@ describe('computeProductStats', () => {
     expect(stats.byRevenue[0].label).toBe('Product p1');
     expect(stats.totals.lines).toBe(3);
     expect(stats.totals.units).toBe(6);
-    expect(stats.totals.installRevenue).toBe(33_000_000);
-    expect(stats.totals.annualRevenue).toBe(10_000_000);
+    expect(stats.totals.installRevenue).toEqual({ AFN: 33_000_000 });
+    expect(stats.totals.annualRevenue).toEqual({ AFN: 10_000_000 });
     // avg discount ignores the null one: (10+20)/2 = 15
     expect(stats.totals.avgDiscount).toBe(15);
+  });
+
+  it('keeps revenue per currency and ranks on a single comparable currency', () => {
+    const stats = computeProductStats([
+      line('1', 'p1', 1, 1_000_000, 0, null, 'AFN'),
+      line('2', 'p2', 1, 2_500_000, 0, null, 'USD'),
+    ]);
+    expect(stats.totals.installRevenue).toEqual({ AFN: 1_000_000, USD: 2_500_000 });
+    const p2 = stats.byRevenue.find((r) => r.label === 'Product p2');
+    expect(p2?.value).toEqual({ USD: 2_500_000 });
   });
 
   it('falls back to line name when product is null', () => {

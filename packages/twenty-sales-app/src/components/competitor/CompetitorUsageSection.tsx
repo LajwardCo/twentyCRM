@@ -7,7 +7,7 @@ import {
   type CompetitorUsage,
   type CompetitorUsageInput,
 } from '../../api/competitors';
-import { fetchLeads } from '../../api/records';
+import { fetchAllLeads } from '../../api/records';
 import { useCached } from '../../lib/cache';
 import { toLocalInputValue } from '../../lib/format';
 import { formatJalaliDate } from '../../lib/jalali';
@@ -68,7 +68,9 @@ export const CompetitorUsageSection = ({
   const [formError, setFormError] = useState<string | null>(null);
 
   // Only loaded once the form opens — the list itself never needs it.
-  const { data: leads } = useCached('competitor-usage:leads', () => fetchLeads({ limit: 200 }));
+  const { data: leads } = useCached('competitor-usage:leads', async () =>
+    (await fetchAllLeads()).items,
+  );
 
   const setInput = (patch: Partial<CompetitorUsageInput>) =>
     setDraft((prev) => (prev ? { ...prev, input: { ...prev.input, ...patch } } : prev));

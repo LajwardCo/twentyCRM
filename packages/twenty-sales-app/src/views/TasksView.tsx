@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { type CurrentUser } from '../api/auth';
 import {
   fetchDoneTasksSince,
-  fetchMyOpenTasks,
+  fetchAllOpenTasks,
   setTaskStatus,
   type Task,
   type TaskType,
@@ -91,11 +91,13 @@ export const TasksView = ({ user }: TasksViewProps) => {
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const assigneeId = allScope ? null : user.workspaceMemberId;
+    // The tasks screen is the seller's whole backlog, so it follows the
+    // cursor rather than stopping at one page.
     const [open, done] = await Promise.all([
-      fetchMyOpenTasks(assigneeId, { limit: 200 }),
+      fetchAllOpenTasks(assigneeId),
       fetchDoneTasksSince(since.toISOString(), assigneeId ?? undefined),
     ]);
-    return { open, done };
+    return { open: open.items, done };
   }, [user.workspaceMemberId, allScope]);
 
   const { data, error, refresh } = useCached(

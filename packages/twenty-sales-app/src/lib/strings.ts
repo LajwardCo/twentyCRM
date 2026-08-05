@@ -283,6 +283,8 @@ export const T2 = {
   totalTasksDone: 'مجموع انجام‌شده',
   noActivityData: 'فعالیتی در این دوره ثبت نشده',
 
+  metaSaveFailed: 'ذخیره نشد',
+
   // data completeness
   leadsCounted: 'لید بررسی شد',
   partialData:
@@ -573,7 +575,9 @@ export const T5 = {
   editCompetitorUsage: 'ویرایش کاربر',
   editCompetitorUpdate: 'ویرایش یادداشت',
   deleteAction: 'حذف',
-  confirmDelete: 'حذف شود؟ این عمل قابل بازگشت نیست.',
+  // Every delete in this app is a soft delete; the old copy promised the
+  // opposite.
+  confirmDelete: 'حذف شود؟ رکورد به سطل زباله می‌رود و قابل بازیابی است.',
   openLead: 'باز کردن معامله',
   sourceLink: 'منبع',
   demoLink: 'دمو',
@@ -633,4 +637,57 @@ export const COMPETITOR_SWITCHING_SIGNAL_LABELS: Record<string, string> = {
   INTERESTED: 'علاقه‌مند',
   ACTIVELY_LOOKING: 'در حال بررسی',
   COMMITTED: 'قطعی',
+};
+
+// Delete-with-reason, record editing, and duplicate prevention.
+export const T6 = {
+  // --- soft delete ---
+  deleteLeadTitle: 'حذف لید',
+  deleteTaskTitle: 'حذف وظیفه',
+  deleteNoteTitle: 'حذف یادداشت',
+  deleteReasonLbl: 'دلیل حذف *',
+  deleteReasonPlaceholder: 'مثلاً: تکراری بود، اشتباه ثبت شده، شرکت بسته شده…',
+  deleteReasonRequired: 'دلیل حذف را بنویسید',
+  softDeleteExplainer:
+    'رکورد از فهرست‌ها حذف می‌شود اما پاک نمی‌شود — در سطل زبالهٔ CRM قابل بازیابی است.',
+  confirmDeleteAction: 'حذف کن',
+  deleting: 'در حال حذف…',
+  deleteFailed: 'حذف انجام نشد',
+  leadDeleted: 'لید حذف شد',
+  taskDeleted: 'وظیفه حذف شد',
+  noteDeleted: 'یادداشت حذف شد',
+
+  // --- record editing ---
+  editAction: 'ویرایش',
+  editNoteTitle: 'ویرایش یادداشت',
+  noteTitleLbl: 'عنوان',
+  noteBodyLbl: 'متن یادداشت',
+  noteBodyRequired: 'متن یادداشت را بنویسید',
+  saveChanges: 'ذخیره تغییرات',
+  saving: 'در حال ذخیره…',
+  saveFailed: 'ذخیره نشد',
+  openFullPage: 'باز کردن صفحه کامل',
+  editTaskDetails: 'ویرایش مشخصات وظیفه',
+  taskTitleLbl: 'عنوان وظیفه',
+
+  // --- duplicate prevention ---
+  duplicateWarningTitle: 'شاید تکراری باشد',
+  duplicateWarningHint:
+    'رکوردهای مشابهی پیدا شد. قبل از ثبت، بررسی کنید که لید جدید باشد.',
+  duplicateConfirmTitle: 'ثبت لید تکراری؟',
+  duplicateConfirmHint:
+    'این موارد با اطلاعاتی که وارد کردید هم‌خوانی دارند. اگر همان است، به‌جای ثبت دوباره همان را باز کنید.',
+  duplicateOpenExisting: 'باز کردن مورد موجود',
+  duplicateRegisterAnyway: 'به هر حال ثبت کن',
+  duplicateChecking: 'در حال بررسی تکراری بودن…',
+  duplicateMatchExactPhone: 'همین شماره تماس',
+  duplicateMatchExactEmail: 'همین ایمیل',
+  duplicateMatchName: 'نام مشابه',
+  duplicateKindLead: 'لید',
+  duplicateKindCompany: 'شرکت',
+  duplicateKindPerson: 'شخص',
+  duplicateProductTitle: 'این محصول قبلاً اضافه شده',
+  duplicateProductHint:
+    'این محصول همین حالا روی این لید ثبت است. یک سطر دیگر اضافه شود؟',
+  duplicateAddAnyway: 'اضافه کن',
 };

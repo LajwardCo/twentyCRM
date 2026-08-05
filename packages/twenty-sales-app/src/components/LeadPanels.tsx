@@ -193,8 +193,12 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
 
 type MetaOption = { value: string; label: string };
 
-// Click-to-edit row: shows a value that turns into a <select> on click. The
-// server still enforces permissions — a rejected save just reverts on reload.
+// Click-to-edit row: shows a value that turns into a <select> on click.
+//
+// The select deliberately does NOT close on blur. Mobile browsers fire blur on
+// the select when the native option picker opens, which unmounted the control
+// before the user could choose — the edit looked like it simply did nothing.
+// Selecting commits and closes; Escape cancels.
 const EditableMetaRow = ({
   label,
   display,
@@ -212,35 +216,54 @@ const EditableMetaRow = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = async (value: string) => {
+    if (value === currentValue) {
+      setEditing(false);
+      return;
+    }
     setSaving(true);
+    setError(null);
     try {
       await onSave(value);
+      setEditing(false);
+    } catch (err) {
+      // A rejected save used to reject silently, so a permission error was
+      // indistinguishable from a control that did nothing.
+      setError(err instanceof Error ? err.message : T2.metaSaveFailed);
     } finally {
       setSaving(false);
-      setEditing(false);
     }
   };
 
   return (
-    <div className="c-row">
+    <div className="c-row" style={editing ? { alignItems: 'flex-start' } : undefined}>
       <span>{label}</span>
       {editing ? (
-        <select
-          className="meta-edit"
-          autoFocus
-          defaultValue={currentValue}
-          disabled={saving}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={() => setEditing(false)}
-        >
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          <select
+            className="meta-edit"
+            autoFocus
+            defaultValue={currentValue}
+            disabled={saving}
+            onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setEditing(false);
+            }}
+          >
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          {error !== null && (
+            <span style={{ fontSize: 11, color: 'var(--hot)', maxWidth: 200 }}>
+              {error}
+            </span>
+          )}
+        </div>
       ) : editable ? (
         <button type="button" className="meta-editable" onClick={() => setEditing(true)}>
           {display}
@@ -281,14 +304,24 @@ export const MetaCard = ({
     })),
   ];
 
+  // The lead's current referrer is added when the fetched list doesn't contain
+  // it (the partner query is bounded, and an inactive partner may be absent).
+  // Without it the select would open showing "—" and a stray change could clear
+  // a referrer the seller never meant to touch.
+  const referrerLabelFor = (r: {
+    name: string;
+    partnerType: string | null;
+  }): string =>
+    r.partnerType
+      ? `${r.name} (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
+      : r.name;
+
   const referrerOptions: MetaOption[] = [
     { value: '', label: '—' },
-    ...referrers.map((r) => ({
-      value: r.id,
-      label: r.partnerType
-        ? `${r.name} (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
-        : r.name,
-    })),
+    ...referrers.map((r) => ({ value: r.id, label: referrerLabelFor(r) })),
+    ...(lead.referrer && !referrers.some((r) => r.id === lead.referrer?.id)
+      ? [{ value: lead.referrer.id, label: referrerLabelFor(lead.referrer) }]
+      : []),
   ];
 
   const marketerOptions: MetaOption[] = [
@@ -333,7 +366,10 @@ export const MetaCard = ({
           display={referrerDisplay}
           currentValue={lead.referrer?.id ?? ''}
           options={referrerOptions}
-          editable={canEdit && referrers.length > 0}
+          // Editable whenever there is something to choose — clearing an
+          // existing referrer counts, so an empty partner list no longer makes
+          // the row silently read-only.
+          editable={canEdit && referrerOptions.length > 1}
           onSave={(value) => onSaveLead!({ referrerId: value || null })}
         />
         <EditableMetaRow

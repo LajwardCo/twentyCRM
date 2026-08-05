@@ -758,6 +758,27 @@ textarea {
   font-size: 12.5px;
 }
 
+/* Destructive confirm. Uses the same red as the "hot" pill so the palette
+   stays closed, and only ever appears behind a confirmation dialog. */
+.btn.danger {
+  background: var(--hot);
+  color: #fff;
+}
+
+.btn.danger:hover {
+  background: #b8331f;
+}
+
+.btn.line.danger {
+  background: var(--card);
+  border-color: var(--hot);
+  color: var(--hot);
+}
+
+.btn.line.danger:hover {
+  background: var(--hot-bg);
+}
+
 .btn.block {
   width: 100%;
 }
@@ -1605,6 +1626,61 @@ table.leads tbody tr:hover {
 .tl-body {
   flex: 1;
   min-width: 0;
+}
+
+/* A timeline row opens its own record — the body here is truncated. */
+.tl-open {
+  cursor: pointer;
+}
+
+/* Per-row edit / delete. Always visible on touch, where there is no hover to
+   reveal them; on a pointer device they fade in with the row. */
+.row-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.row-actions button {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--line-soft);
+  background: var(--card);
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.row-actions button:hover {
+  color: var(--lapis-600);
+  border-color: var(--lapis-500);
+}
+
+.row-actions button.danger:hover {
+  color: var(--hot);
+  border-color: var(--hot);
+  background: var(--hot-bg);
+}
+
+@media (hover: hover) {
+  .row-actions {
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .task:hover .row-actions,
+  .tl-item:hover .row-actions,
+  .row-actions:focus-within {
+    opacity: 1;
+  }
 }
 
 .tl-t {

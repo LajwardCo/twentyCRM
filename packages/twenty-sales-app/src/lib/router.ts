@@ -35,3 +35,14 @@ export const goBack = () => {
     navigate('/today');
   }
 };
+
+// history.length counts entries the app never created -- a deep link opened in
+// a tab that has been used before still reports a long history -- so back() can
+// leave the app where it was. Watch the hash and fall back when nothing moved.
+export const goBackOr = (fallback: string, timeoutMs = 150) => {
+  const before = window.location.hash;
+  goBack();
+  window.setTimeout(() => {
+    if (window.location.hash === before) navigate(fallback);
+  }, timeoutMs);
+};

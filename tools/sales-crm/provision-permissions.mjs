@@ -80,18 +80,32 @@ async function main() {
   // gets permission-denied on the End-of-Day report even once the object exists.
   const readWrite = ['opportunity', 'person', 'company', 'task', 'note', 'dealProduct', 'quotation', 'subscription', 'dailyReport'];
   const readOnly = ['product', 'partner'];
+  // Objects a seller may remove. "Remove" is always Twenty's soft delete: the
+  // record leaves every list but stays restorable from the trash view, and the
+  // Sales App records why on the record's deletionReason field first.
+  //
+  // canDestroyObjectRecords stays false everywhere -- that is the irreversible
+  // one, and nothing in the Sales App should be able to reach it. Nor is
+  // soft-delete granted on person/company: deleting a company would orphan the
+  // leads pointing at it, and a seller cleaning up a bad lead has no reason to.
+  const softDeletable = new Set(['opportunity', 'task', 'note', 'dealProduct', 'quotation']);
   // Skip (with a warning) any object not present in this workspace instead of
   // crashing on objs[n].id — lets the script run cleanly even if a later object
   // (e.g. dailyReport) hasn't been provisioned in the target environment yet.
   const present = (n) => { if (!objs[n]) { console.warn(`  skip: object '${n}' not found in this workspace`); return false; } return true; };
   const objectPermissions = [
-    ...readWrite.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: true, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
+    ...readWrite.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: true, canSoftDeleteObjectRecords: softDeletable.has(n), canDestroyObjectRecords: false })),
     ...readOnly.filter(present).map((n) => ({ objectMetadataId: objs[n].id, canReadObjectRecords: true, canUpdateObjectRecords: false, canSoftDeleteObjectRecords: false, canDestroyObjectRecords: false })),
   ];
   await gql(`mutation($upsertObjectPermissionsInput: UpsertObjectPermissionsInput!){ upsertObjectPermissions(upsertObjectPermissionsInput:$upsertObjectPermissionsInput){ objectMetadataId canReadObjectRecords canUpdateObjectRecords } }`, {
     upsertObjectPermissionsInput: { roleId, objectPermissions },
   });
   console.log('object permissions set for', objectPermissions.length, 'objects');
+  console.log(
+    '  soft delete granted on:',
+    [...softDeletable].filter((n) => objs[n]).join(', '),
+    '(destroy stays denied on every object)',
+  );
 
   await gql(`mutation($upsertFieldPermissionsInput: UpsertFieldPermissionsInput!){ upsertFieldPermissions(upsertFieldPermissionsInput:$upsertFieldPermissionsInput){ objectMetadataId fieldMetadataId canReadFieldValue } }`, {
     upsertFieldPermissionsInput: {

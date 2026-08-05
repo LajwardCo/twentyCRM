@@ -757,3 +757,33 @@ export const T7 = {
   noCompany: 'بدون شرکت',
   contactLeads: 'لید',
 };
+
+export const T8 = {
+  // --- extra contacts on a lead / company ---
+  addContactAction: 'افزودن مخاطب',
+  addContactTitle: 'افزودن مخاطب',
+  contactTabNew: 'مخاطب جدید',
+  contactTabExisting: 'مخاطب موجود',
+  contactFirstNameLbl: 'نام *',
+  contactLastNameLbl: 'تخلص',
+  contactJobTitleLbl: 'سمت',
+  contactPhoneLbl: 'شماره تماس',
+  contactEmailLbl: 'ایمیل',
+  contactCityLbl: 'شهر',
+  contactFirstNameRequired: 'نام مخاطب را وارد کنید',
+  contactSave: 'ثبت مخاطب',
+  contactSaving: 'در حال ثبت…',
+  contactSaveFailed: 'مخاطب ثبت نشد',
+  contactAdded: 'مخاطب اضافه شد',
+  contactSearchLbl: 'جست‌وجوی نام یا شماره',
+  contactSearchPlaceholder: 'حداقل دو حرف بنویسید…',
+  contactSearching: 'در حال جست‌وجو…',
+  contactSearchEmpty: 'مخاطبی پیدا نشد',
+  contactAttach: 'افزودن به این شرکت',
+  contactAttachHint:
+    'شخصی که قبلاً در CRM ثبت شده به این شرکت وصل می‌شود — رکورد تکراری ساخته نمی‌شود.',
+  contactPrimaryBadge: 'مخاطب اصلی',
+  contactMakePrimary: 'مخاطب اصلی شود',
+  contactPrimaryChanged: 'مخاطب اصلی تغییر کرد',
+  contactPrimaryFailed: 'تغییر مخاطب اصلی انجام نشد',
+};

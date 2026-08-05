@@ -885,7 +885,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           <PricingCard lead={lead} />
 
           {/* company info + other contacts */}
-          {lead.company && <CompanyCard companyId={lead.company.id} />}
+          {lead.company && (
+            <CompanyCard
+              companyId={lead.company.id}
+              leadId={lead.id}
+              primaryContactId={lead.pointOfContact?.id ?? null}
+              onPrimaryChanged={() => void reload()}
+            />
+          )}
 
           {/* metadata: source, referrer, marketer, created-by */}
           <MetaCard

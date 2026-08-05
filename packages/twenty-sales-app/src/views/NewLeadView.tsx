@@ -226,9 +226,13 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     return clearDockablePage;
   }, [companyName]);
 
-  // Look for duplicates while the seller types, so a company that is already in
-  // the CRM is visible before they fill in the rest of the form. Debounced, and
-  // only once there is enough to search on.
+  // Look for duplicates while the seller types, so a company already in the CRM
+  // is visible before they fill in the rest of the form.
+  //
+  // Keyed on the normalized fingerprint rather than the raw fields: a trailing
+  // space or a switch between ی and ي describes the same lead and must not cost
+  // another round of queries. Sellers are on mobile data against a 100 req/60s
+  // limit, and registering the lead itself needs several of those requests.
   useEffect(() => {
     const hasName = normalizeName(companyName).length >= 3;
     const hasContact = phoneKey(phone) !== null || email.trim() !== '';
@@ -238,8 +242,9 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     }
 
     let active = true;
-    setCheckingDuplicates(true);
     const timer = window.setTimeout(() => {
+      if (!active) return;
+      setCheckingDuplicates(true);
       void findLeadDuplicates({ companyName, phone, email })
         .then((matches) => {
           if (active) setDuplicates(matches);
@@ -247,13 +252,14 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
         .finally(() => {
           if (active) setCheckingDuplicates(false);
         });
-    }, 500);
+    }, 600);
 
     return () => {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [companyName, phone, email]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identityFingerprint]);
 
   const pickPreset = (preset: FollowUpPreset) => {
     setFollowUpPreset(preset);

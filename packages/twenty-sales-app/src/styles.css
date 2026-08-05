@@ -1633,8 +1633,10 @@ table.leads tbody tr:hover {
   cursor: pointer;
 }
 
-/* Per-row edit / delete. Always visible on touch, where there is no hover to
-   reveal them; on a pointer device they fade in with the row. */
+/* Per-row edit / delete. Always visible, on every device: these exist because
+   sellers could not find a way to edit a task or note, and an affordance that
+   only appears on hover is the same problem wearing a hat. Muted by default,
+   coloured on hover. */
 .row-actions {
   display: flex;
   align-items: flex-start;
@@ -1672,12 +1674,13 @@ table.leads tbody tr:hover {
 
 @media (hover: hover) {
   .row-actions {
-    opacity: 0;
+    opacity: 0.55;
     transition: opacity 0.15s;
   }
 
   .task:hover .row-actions,
   .tl-item:hover .row-actions,
+  .row-actions:hover,
   .row-actions:focus-within {
     opacity: 1;
   }

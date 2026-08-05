@@ -9,6 +9,7 @@ import { coreQuery } from './client';
 import {
   classifyMatch,
   type DuplicateMatch,
+  type MatchReason,
   nameSimilarity,
   normalizeName,
   phoneKey,
@@ -63,16 +64,25 @@ const fetchLeadsByName = async (
 };
 
 // The search vector tokenizes the number as stored, so the normalized key is
-// tried alongside the raw digits the seller typed.
-const contactSearchTerms = (query: DuplicateQuery): string[] => {
-  const terms: string[] = [];
+// tried alongside the raw digits the seller typed. Each term carries what it
+// is, so a hit can be reported as "same phone" or "same email" rather than a
+// generic match.
+const contactSearchTerms = (
+  query: DuplicateQuery,
+): { term: string; reason: MatchReason }[] => {
+  const terms: { term: string; reason: MatchReason }[] = [];
   const key = phoneKey(query.phone);
   if (key) {
-    terms.push(key.replace('+', ''));
+    const normalized = key.replace('+', '');
+    terms.push({ term: normalized, reason: 'phone' });
     const local = query.phone.replace(/[\s\-()+]/g, '');
-    if (local !== '' && local !== key.replace('+', '')) terms.push(local);
+    if (local !== '' && local !== normalized) {
+      terms.push({ term: local, reason: 'phone' });
+    }
   }
-  if (query.email.trim() !== '') terms.push(query.email.trim());
+  if (query.email.trim() !== '') {
+    terms.push({ term: query.email.trim(), reason: 'email' });
+  }
   return terms;
 };
 
@@ -99,7 +109,11 @@ export const findLeadDuplicates = async (
     token ? settled(() => fetchCompaniesByName(token), []) : Promise.resolve([]),
     token ? settled(() => fetchLeadsByName(token), []) : Promise.resolve([]),
     Promise.all(
-      contactTerms.map((term) => settled(() => globalSearch(term, 8), [])),
+      contactTerms.map(({ term, reason }) =>
+        settled(() => globalSearch(term, 8), []).then((hits) =>
+          hits.map((hit) => ({ hit, reason })),
+        ),
+      ),
     ).then((results) => results.flat()),
   ]);
 
@@ -116,6 +130,7 @@ export const findLeadDuplicates = async (
       sub: lead.stage ?? '',
       score,
       level,
+      reason: 'name',
       route: `/lead/${lead.id}`,
     });
   }
@@ -131,13 +146,14 @@ export const findLeadDuplicates = async (
       sub: '',
       score,
       level,
+      reason: 'name',
       route: `/company/${company.id}`,
     });
   }
 
   // A phone or email hit is exact by construction — the search matched the
   // contact detail itself, not an approximation of the name.
-  for (const hit of contactHits) {
+  for (const { hit, reason } of contactHits) {
     if (hit.objectNameSingular === 'task' || hit.objectNameSingular === 'note') {
       continue;
     }
@@ -148,6 +164,7 @@ export const findLeadDuplicates = async (
       sub: '',
       score: 1,
       level: 'exact',
+      reason,
       route: searchHitRoute(hit),
     });
   }

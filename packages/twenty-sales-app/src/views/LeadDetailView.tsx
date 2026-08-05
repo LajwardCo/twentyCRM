@@ -60,7 +60,7 @@ import {
   leadContextText,
   SUMMARIZE_SYSTEM_PROMPT,
 } from '../lib/leadContext';
-import { goBackOr, navigate } from '../lib/router';
+import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import {
   SOURCE_LABELS,
@@ -323,7 +323,9 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       invalidateCache('reports:');
       invalidateCache(`lead:${lead.id}`);
       setDeleting(null);
-      goBackOr('/leads');
+      // Straight to the list rather than back: the previous page may well be a
+      // task belonging to the lead that no longer exists.
+      navigate('/leads');
       return;
     }
 

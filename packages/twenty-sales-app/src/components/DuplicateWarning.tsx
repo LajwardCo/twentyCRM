@@ -9,6 +9,19 @@ const KIND_LABELS: Record<DuplicateMatch['kind'], string> = {
   person: T6.duplicateKindPerson,
 };
 
+const REASON_LABELS: Record<DuplicateMatch['reason'], string> = {
+  phone: T6.duplicateMatchExactPhone,
+  email: T6.duplicateMatchExactEmail,
+  name: T6.duplicateMatchName,
+};
+
+// For a name match the lead's stage is more useful than repeating "same name";
+// a contact match says which detail matched.
+const matchDetail = (match: DuplicateMatch): string =>
+  match.reason === 'name'
+    ? (STAGE_LABELS[match.sub] ?? REASON_LABELS.name)
+    : REASON_LABELS[match.reason];
+
 const MatchRow = ({ match }: { match: DuplicateMatch }) => (
   <button
     type="button"
@@ -20,11 +33,7 @@ const MatchRow = ({ match }: { match: DuplicateMatch }) => (
       {KIND_LABELS[match.kind]}
     </span>
     <span className="dup-name">{match.label}</span>
-    <span className="dup-sub">
-      {match.level === 'exact'
-        ? T6.duplicateMatchExactPhone
-        : (STAGE_LABELS[match.sub] ?? T6.duplicateMatchName)}
-    </span>
+    <span className="dup-sub">{matchDetail(match)}</span>
     <span aria-hidden>←</span>
   </button>
 );

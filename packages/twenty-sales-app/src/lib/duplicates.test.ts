@@ -121,6 +121,7 @@ describe('rankMatches', () => {
     sub: '',
     score,
     level,
+    reason: level === 'exact' ? 'phone' : 'name',
     route: `/lead/${id}`,
   });
 

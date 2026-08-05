@@ -150,6 +150,10 @@ export const classifyMatch = ({
   return null;
 };
 
+// Why this record surfaced, so the UI can say "same phone number" rather than
+// guessing which signal fired.
+export type MatchReason = 'phone' | 'email' | 'name';
+
 export type DuplicateMatch = {
   id: string;
   kind: 'lead' | 'company' | 'person';
@@ -157,6 +161,7 @@ export type DuplicateMatch = {
   sub: string;
   score: number;
   level: MatchLevel;
+  reason: MatchReason;
   route: string;
 };
 

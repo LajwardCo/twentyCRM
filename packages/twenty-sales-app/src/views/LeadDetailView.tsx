@@ -37,6 +37,7 @@ import {
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadOffersCard } from '../components/LeadOffersCard';
+import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
@@ -831,6 +832,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             leadId={leadId}
             currentUserId={user.workspaceMemberId}
             onAgreed={() => void reload()}
+          />
+
+          {/* Additional referrers, each with the share negotiated for this
+              deal. Also hides itself when unprovisioned. */}
+          <LeadReferrersCard
+            leadId={leadId}
+            primaryReferrer={lead.referrer}
+            partners={referrers}
           />
 
           <div className="card card-pad anim d4">

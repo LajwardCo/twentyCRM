@@ -724,3 +724,29 @@ export const OFFER_STATUS_LABELS: Record<string, string> = {
   REJECTED: 'رد شده',
   SUPERSEDED: 'منقضی',
 };
+
+export const T8 = {
+  // --- additional referrers ---
+  referrersSection: 'معرفین دیگر',
+  referrersHint: 'معرف اصلی بالا ثبت است؛ اینجا کسانی که سهم جداگانه دارند',
+  noExtraReferrers: 'معرف دیگری ثبت نشده',
+  addReferrer: '＋ معرف جدید',
+  saveReferrer: 'ثبت معرف',
+  referrerPartnerLbl: 'معرف',
+  referrerPickPartner: 'یک معرف انتخاب کنید…',
+  referrerRoleLbl: 'نقش',
+  referrerCommissionLbl: 'کمیسیون این معامله (٪)',
+  referrerNoteLbl: 'توضیح',
+  removeReferrer: 'حذف',
+  totalCommissionLbl: 'مجموع کمیسیون',
+  commissionOverCommitted: 'مجموع کمیسیون از ۱۰۰٪ بیشتر است',
+  referrersLoadFailed: 'معرفین بارگیری نشدند',
+  referrerSaveFailed: 'ثبت معرف ناموفق بود',
+};
+
+export const REFERRER_ROLE_LABELS: Record<string, string> = {
+  FINDER: 'یابنده',
+  INTRODUCER: 'معرفی‌کننده',
+  CLOSER: 'نهایی‌کننده',
+  OTHER: 'سایر',
+};

@@ -1,5 +1,5 @@
 import { type PricingFactor } from '../api/catalog';
-import { BILLING_FREQUENCY_LABELS, T4 } from '../lib/strings';
+import { BILLING_FREQUENCY_LABELS, DISCOUNT_TYPE_LABELS, T4 } from '../lib/strings';
 
 // Structured builder for Product.pricingFactors (the "based on metrics" pricing
 // model). Each metric is a per-unit fee billed at a chosen cadence -- e.g.
@@ -81,6 +81,48 @@ export const ProductMetricsEditor = ({ value, currencyCode, onChange }: Props) =
               ))}
             </select>
           </div>
+          <div className="fld" style={{ maxWidth: 130 }}>
+            <label>{T4.metricDiscountLbl}</label>
+            <select
+              value={metric.discountType ?? ''}
+              onChange={(e) =>
+                updateMetric(
+                  mi,
+                  e.target.value === ''
+                    ? // Clearing the type clears the value too, so a stale
+                      // amount can never resurface if a discount is re-added.
+                      { discountType: undefined, discountValue: undefined }
+                    : {
+                        discountType: e.target
+                          .value as PricingFactor['discountType'],
+                      },
+                )
+              }
+            >
+              <option value="">{T4.metricDiscountNone}</option>
+              {Object.entries(DISCOUNT_TYPE_LABELS).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+          {metric.discountType !== undefined && (
+            <div className="fld" style={{ maxWidth: 120 }}>
+              <label>
+                {T4.metricDiscountValueLbl} (
+                {metric.discountType === 'PERCENTAGE' ? '%' : symbol})
+              </label>
+              <input
+                inputMode="decimal"
+                dir="ltr"
+                value={metric.discountValue ?? ''}
+                onChange={(e) =>
+                  updateMetric(mi, { discountValue: Number(e.target.value) || 0 })
+                }
+              />
+            </div>
+          )}
           <button type="button" className="btn line sm" onClick={() => removeMetric(mi)}>
             {T4.removeMetric}
           </button>

@@ -1,14 +1,11 @@
 import {
-  type BillingFrequency,
   computePriceFromTierSchedule,
   type FactorTierSchedule,
+  productFactorToTierSchedule,
+  type ProductPricingFactor,
 } from 'src/modules/sales-crm/utils/pricing-tier-schedule.util';
 
-export type ProductPricingFactor = {
-  name: string;
-  unitPrice: number;
-  billingFrequency?: BillingFrequency;
-};
+export { type ProductPricingFactor };
 
 export type FixedPlusMetricsPrice = {
   installMicros: number;
@@ -39,15 +36,9 @@ export const computeFixedPlusMetricsPrice = ({
 }): FixedPlusMetricsPrice => {
   // Each metric is a degenerate single-band per-unit tier schedule, so
   // product-level metrics and volume-tiered Package pricing stay on one
-  // engine. Rows without a billingFrequency are legacy and mean MONTHLY.
+  // engine -- and each metric's catalog discount comes along with it.
   const schedule: FactorTierSchedule[] = (pricingFactors ?? []).map(
-    (factor) => ({
-      factor: factor.name,
-      billingFrequency: factor.billingFrequency ?? 'MONTHLY',
-      bands: [
-        { minQty: 1, maxQty: null, mode: 'PER_UNIT', amount: factor.unitPrice },
-      ],
-    }),
+    productFactorToTierSchedule,
   );
 
   const { totalMonthly, totalHourly, totalAnnual } =

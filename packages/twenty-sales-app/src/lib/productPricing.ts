@@ -19,6 +19,31 @@ export type ProductPriceEstimate = {
 // Sub-annual cadences (monthly + hourly) land in installTotal because the
 // deal line has no dedicated field for them -- same bucketing as the server,
 // with no conversion between cadences.
+// Mirrors the server's applyFactorDiscount: a discount never turns a charge
+// into a credit, and a percentage past 100 is a data-entry slip rather than an
+// instruction to pay the customer.
+export const metricDiscountAmount = (
+  subtotal: number,
+  factor: PricingFactor,
+): number => {
+  const { discountType, discountValue } = factor;
+
+  if (
+    (discountType !== 'PERCENTAGE' && discountType !== 'FIXED_AMOUNT') ||
+    typeof discountValue !== 'number' ||
+    !Number.isFinite(discountValue) ||
+    discountValue <= 0 ||
+    subtotal <= 0
+  ) {
+    return 0;
+  }
+
+  const raw =
+    discountType === 'PERCENTAGE' ? (subtotal * discountValue) / 100 : discountValue;
+
+  return Math.min(Math.max(raw, 0), subtotal);
+};
+
 export const estimateProductPrice = ({
   pricingFactors,
   factorQuantities,
@@ -41,7 +66,10 @@ export const estimateProductPrice = ({
       continue;
     }
 
-    const subtotal = factor.unitPrice * quantity;
+    const grossSubtotal = factor.unitPrice * quantity;
+    // The metric's own discount comes off before the cadence buckets, so a
+    // discounted annual metric discounts the annual total and nothing else.
+    const subtotal = grossSubtotal - metricDiscountAmount(grossSubtotal, factor);
 
     if (factor.billingFrequency === 'HOURLY') {
       hourly += subtotal;

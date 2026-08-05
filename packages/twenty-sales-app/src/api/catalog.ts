@@ -15,6 +15,11 @@ export type PricingFactor = {
   name: string;
   unitPrice: number;
   billingFrequency?: 'MONTHLY' | 'HOURLY' | 'ANNUAL';
+  // A standing catalog concession on this one metric -- "we always give 10%
+  // off the doctor rate" -- as opposed to the per-line rate a seller restates
+  // during negotiation. Absent on rows saved before discounts existed.
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue?: number;
 };
 
 // Fixed install/annual amounts per currency, in major units. A product priced

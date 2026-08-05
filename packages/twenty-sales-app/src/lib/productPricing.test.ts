@@ -1,6 +1,62 @@
 import { describe, expect, it } from 'vitest';
 
-import { estimateProductPrice, hasPriceEstimate } from './productPricing';
+import {
+  estimateProductPrice,
+  hasPriceEstimate,
+  metricDiscountAmount,
+} from './productPricing';
+
+describe('metricDiscountAmount', () => {
+  const base = { name: 'doctor', unitPrice: 400 } as const;
+
+  it('should take a percentage off the subtotal', () => {
+    expect(
+      metricDiscountAmount(2_000, {
+        ...base,
+        discountType: 'PERCENTAGE',
+        discountValue: 10,
+      }),
+    ).toBe(200);
+  });
+
+  it('should take a fixed amount off the subtotal', () => {
+    expect(
+      metricDiscountAmount(2_000, {
+        ...base,
+        discountType: 'FIXED_AMOUNT',
+        discountValue: 150,
+      }),
+    ).toBe(150);
+  });
+
+  it('should never discount more than the subtotal', () => {
+    expect(
+      metricDiscountAmount(100, {
+        ...base,
+        discountType: 'FIXED_AMOUNT',
+        discountValue: 500,
+      }),
+    ).toBe(100);
+    expect(
+      metricDiscountAmount(100, {
+        ...base,
+        discountType: 'PERCENTAGE',
+        discountValue: 250,
+      }),
+    ).toBe(100);
+  });
+
+  it('should discount nothing for a metric that carries no discount', () => {
+    expect(metricDiscountAmount(2_000, base)).toBe(0);
+    expect(
+      metricDiscountAmount(2_000, {
+        ...base,
+        discountType: 'PERCENTAGE',
+        discountValue: 0,
+      }),
+    ).toBe(0);
+  });
+});
 
 describe('estimateProductPrice', () => {
   it('should add the one-time fixed fee to the monthly metric subtotals', () => {
@@ -112,5 +168,41 @@ describe('hasPriceEstimate', () => {
     });
 
     expect(hasPriceEstimate(estimate)).toBe(true);
+  });
+});
+
+describe('estimateProductPrice with per-metric discounts', () => {
+  it('should discount a metric within its own cadence bucket only', () => {
+    const estimate = estimateProductPrice({
+      pricingFactors: [
+        { name: 'user', unitPrice: 100, billingFrequency: 'MONTHLY' },
+        {
+          name: 'employee',
+          unitPrice: 1_000,
+          billingFrequency: 'ANNUAL',
+          discountType: 'PERCENTAGE',
+          discountValue: 20,
+        },
+      ],
+      factorQuantities: { user: 3, employee: 2 },
+      fixedInstall: 0,
+      fixedAnnual: 0,
+    });
+
+    // The undiscounted monthly metric is untouched by the annual discount.
+    expect(estimate.monthly).toBe(300);
+    // 2 employees at 1,000 = 2,000 annual, less 20%.
+    expect(estimate.annualMetrics).toBe(1_600);
+  });
+
+  it('should leave a legacy metric with no discount keys priced as entered', () => {
+    const estimate = estimateProductPrice({
+      pricingFactors: [{ name: 'user', unitPrice: 100, billingFrequency: 'MONTHLY' }],
+      factorQuantities: { user: 4 },
+      fixedInstall: 0,
+      fixedAnnual: 0,
+    });
+
+    expect(estimate.monthly).toBe(400);
   });
 });

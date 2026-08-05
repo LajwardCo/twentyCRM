@@ -1,7 +1,9 @@
 import {
+  applyFactorDiscount,
   computePriceFromTierSchedule,
   matchTierBand,
   mergeProductFactorsIntoTierSchedule,
+  productFactorDiscount,
 } from 'src/modules/sales-crm/utils/pricing-tier-schedule.util';
 
 const OPD_DOCTOR_SCHEDULE = {
@@ -73,6 +75,8 @@ describe('computePriceFromTierSchedule', () => {
         factor: 'doctor',
         quantity: 3,
         matchedBand: OPD_DOCTOR_SCHEDULE.bands[0],
+        grossSubtotal: 2000,
+        discountAmount: 0,
         subtotal: 2000,
         billingFrequency: 'MONTHLY',
       },
@@ -195,5 +199,148 @@ describe('mergeProductFactorsIntoTierSchedule', () => {
     );
 
     expect(merged[0].billingFrequency).toBe('MONTHLY');
+  });
+});
+
+describe('productFactorDiscount', () => {
+  it('reads a percentage discount off a product metric', () => {
+    expect(
+      productFactorDiscount({
+        name: 'doctor',
+        unitPrice: 400,
+        discountType: 'PERCENTAGE',
+        discountValue: 10,
+      }),
+    ).toEqual({ type: 'PERCENTAGE', value: 10 });
+  });
+
+  it('returns nothing for a legacy row that predates discounts', () => {
+    expect(
+      productFactorDiscount({ name: 'doctor', unitPrice: 400 }),
+    ).toBeUndefined();
+  });
+
+  it('treats a zero or negative value as no discount', () => {
+    expect(
+      productFactorDiscount({
+        name: 'doctor',
+        unitPrice: 400,
+        discountType: 'FIXED_AMOUNT',
+        discountValue: 0,
+      }),
+    ).toBeUndefined();
+    expect(
+      productFactorDiscount({
+        name: 'doctor',
+        unitPrice: 400,
+        discountType: 'PERCENTAGE',
+        discountValue: -5,
+      }),
+    ).toBeUndefined();
+  });
+
+  it('ignores a value with no type and a type with no value', () => {
+    expect(
+      productFactorDiscount({ name: 'doctor', unitPrice: 400, discountValue: 10 }),
+    ).toBeUndefined();
+    expect(
+      productFactorDiscount({
+        name: 'doctor',
+        unitPrice: 400,
+        discountType: 'PERCENTAGE',
+      }),
+    ).toBeUndefined();
+  });
+});
+
+describe('applyFactorDiscount', () => {
+  it('takes a percentage off the subtotal', () => {
+    expect(applyFactorDiscount(2000, { type: 'PERCENTAGE', value: 10 })).toBe(
+      200,
+    );
+  });
+
+  it('takes a fixed amount off the subtotal', () => {
+    expect(applyFactorDiscount(2000, { type: 'FIXED_AMOUNT', value: 150 })).toBe(150);
+  });
+
+  it('never discounts more than the subtotal, so a charge cannot become a credit', () => {
+    expect(applyFactorDiscount(100, { type: 'FIXED_AMOUNT', value: 500 })).toBe(100);
+    expect(applyFactorDiscount(100, { type: 'PERCENTAGE', value: 250 })).toBe(
+      100,
+    );
+  });
+
+  it('discounts nothing when there is no discount or nothing to charge', () => {
+    expect(applyFactorDiscount(2000, undefined)).toBe(0);
+    expect(applyFactorDiscount(0, { type: 'PERCENTAGE', value: 10 })).toBe(0);
+  });
+});
+
+describe('computePriceFromTierSchedule with per-metric discounts', () => {
+  it('reports gross, discount and net subtotals for a discounted metric', () => {
+    const result = computePriceFromTierSchedule(
+      [
+        {
+          ...OPD_DOCTOR_SCHEDULE,
+          discount: { type: 'PERCENTAGE' as const, value: 10 },
+        },
+      ],
+      { doctor: 9 },
+    );
+
+    // 9 doctors in the 5-9 band: 9 * 400 = 3600 gross, less 10%.
+    expect(result.breakdown[0].grossSubtotal).toBe(3600);
+    expect(result.breakdown[0].discountAmount).toBe(360);
+    expect(result.breakdown[0].subtotal).toBe(3240);
+    expect(result.totalMonthly).toBe(3240);
+  });
+
+  it('discounts each metric in its own cadence bucket only', () => {
+    const result = computePriceFromTierSchedule(
+      [
+        OPD_DOCTOR_SCHEDULE,
+        {
+          ...PHARMACY_EMPLOYEE_SCHEDULE,
+          discount: { type: 'FIXED_AMOUNT' as const, value: 20 },
+        },
+      ],
+      { doctor: 9, employee: 150 },
+    );
+
+    // The undiscounted monthly metric is untouched by the annual discount.
+    expect(result.totalMonthly).toBe(3600);
+    // 150 employees at 0.7 = 105 annual, less the fixed 20.
+    expect(result.totalAnnual).toBe(85);
+  });
+
+  it('leaves an undiscounted metric reporting a zero discount', () => {
+    const result = computePriceFromTierSchedule([OPD_DOCTOR_SCHEDULE], {
+      doctor: 9,
+    });
+
+    expect(result.breakdown[0].discountAmount).toBe(0);
+    expect(result.breakdown[0].grossSubtotal).toBe(
+      result.breakdown[0].subtotal,
+    );
+  });
+
+  it('carries a product metric discount through the merge into pricing', () => {
+    const merged = mergeProductFactorsIntoTierSchedule(
+      [],
+      [
+        {
+          name: 'employee',
+          unitPrice: 100,
+          billingFrequency: 'MONTHLY',
+          discountType: 'PERCENTAGE',
+          discountValue: 25,
+        },
+      ],
+    );
+
+    const result = computePriceFromTierSchedule(merged, { employee: 4 });
+
+    expect(result.totalMonthly).toBe(300);
   });
 });

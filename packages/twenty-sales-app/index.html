@@ -7,11 +7,23 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#2453d6" />
-    <link rel="icon" type="image/png" href="/sales/usystems-square.png" />
-    <link rel="apple-touch-icon" href="/sales/usystems-square.png" />
+    <!-- Relative, NOT /sales/…: the dev server prepends Vite's base to
+         root-relative hrefs and would serve /sales/sales/…. These resolve
+         against the document, which is always the base (nginx 301s /sales
+         to /sales/), so dev and the build agree. -->
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- iOS ignores the manifest: title, icon and status bar all come from these -->
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="همگان" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="application-name" content="همگان سیلز" />
+    <meta
+      name="description"
+      content="اپلیکیشن تیم فروش همگان — لیدها، وظایف، گزارش روزانه"
+    />
     <title>Hamagan Sales</title>
   </head>
   <body>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchCurrentUser, logout, type CurrentUser } from './api/auth';
 import { loadTokens, setSessionExpiredHandler } from './api/client';
 import { CommandPalette } from './components/CommandPalette';
+import { InstallPrompt } from './components/InstallPrompt';
 import { IconBack } from './components/icons';
 import { AppShell, CmdSearch } from './components/Shell';
 import { onSearchDone } from './lib/backgroundSearch';
@@ -248,6 +249,7 @@ export const App = () => {
       onOpenPalette={() => setPaletteOpen(true)}
     >
       {view}
+      <InstallPrompt />
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {searchToast !== null && (
         <button

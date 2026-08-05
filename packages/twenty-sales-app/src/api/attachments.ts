@@ -143,7 +143,7 @@ export const generateTaskUploadToken = async (
 export const uploadViaPublicToken = async (
   file: File,
   token: string,
-): Promise<{ taskLabel: string }> => {
+): Promise<{ taskLabel: string; attachmentId: string }> => {
   const form = new FormData();
   form.append('token', token);
   form.append('file', file, file.name);
@@ -153,7 +153,12 @@ export const uploadViaPublicToken = async (
     body: form,
   });
 
-  let json: { ok?: boolean; taskLabel?: string; message?: string } = {};
+  let json: {
+    ok?: boolean;
+    taskLabel?: string;
+    attachmentId?: string;
+    message?: string;
+  } = {};
   try {
     json = (await response.json()) as typeof json;
   } catch {
@@ -162,7 +167,34 @@ export const uploadViaPublicToken = async (
   if (!response.ok || json.ok === false) {
     throw new Error(json.message ?? 'آپلود ناموفق بود');
   }
-  return { taskLabel: json.taskLabel ?? '' };
+  return {
+    taskLabel: json.taskLabel ?? '',
+    attachmentId: json.attachmentId ?? '',
+  };
+};
+
+// Takes back a file the same public page just uploaded (a blurry photo, a
+// wrong document). The server only honours this for attachments created by
+// this very token, so it can never remove files that were already on the task.
+export const removeViaPublicToken = async (
+  attachmentId: string,
+  token: string,
+): Promise<void> => {
+  const response = await fetch('/public/task-upload/remove', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, attachmentId }),
+  });
+
+  let json: { ok?: boolean; message?: string } = {};
+  try {
+    json = (await response.json()) as typeof json;
+  } catch {
+    // fall through to the generic error
+  }
+  if (!response.ok || json.ok === false) {
+    throw new Error(json.message ?? 'حذف فایل ناموفق بود');
+  }
 };
 
 export const fetchTaskAttachments = async (

@@ -14,6 +14,7 @@ import {
   type ProductOption,
   type Referrer,
 } from '../api/records';
+import { setLeadPrimaryContact } from '../api/contacts';
 import {
   fetchDiscountRules,
   fetchPackagesForProduct,
@@ -46,17 +47,36 @@ import {
   T,
   T2,
   T6,
+  T8,
 } from '../lib/strings';
+import { AddContactModal } from './AddContactModal';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
 import { ModalSheet } from './ModalSheet';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
 
 // ---------- company info + other contacts ----------
 
-export const CompanyCard = ({ companyId }: { companyId: string }) => {
-  const [showContacts, setShowContacts] = useState(false);
+type CompanyCardProps = {
+  companyId: string;
+  // Lead context, absent on the standalone company page. With it the card can
+  // show which contact the lead currently dials, and switch it.
+  leadId?: string;
+  primaryContactId?: string | null;
+  onPrimaryChanged?: () => void;
+};
 
-  const { data } = useCached(`company:${companyId}`, async () => {
+export const CompanyCard = ({
+  companyId,
+  leadId,
+  primaryContactId,
+  onPrimaryChanged,
+}: CompanyCardProps) => {
+  const [showContacts, setShowContacts] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [promoting, setPromoting] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const { data, refresh } = useCached(`company:${companyId}`, async () => {
     const [info, extras, contacts] = await Promise.all([
       fetchCompanyInfo(companyId),
       fetchCompanyExtras(companyId),
@@ -74,6 +94,25 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
   }
 
   const { info, extras, contacts } = data;
+
+  const flash = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(null), 2200);
+  };
+
+  const makePrimary = async (personId: string) => {
+    if (!leadId) return;
+    setPromoting(personId);
+    try {
+      await setLeadPrimaryContact(leadId, personId);
+      flash(T8.contactPrimaryChanged);
+      onPrimaryChanged?.();
+    } catch {
+      flash(T8.contactPrimaryFailed);
+    } finally {
+      setPromoting(null);
+    }
+  };
 
   return (
     <div className="card card-pad anim">
@@ -157,6 +196,7 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
           )}
           {contacts.map((c) => {
             const phone = fullPhone(c.phones);
+            const isPrimary = primaryContactId === c.id;
             return (
               <div
                 key={c.id}
@@ -165,14 +205,27 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
               >
                 <span className="avatar av-26">{c.name.firstName.charAt(0)}</span>
                 <div className="t-main" style={{ cursor: 'default' }}>
-                  <div className="t-title" style={{ fontSize: 13 }}>
+                  <div
+                    className="t-title"
+                    style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'center' }}
+                  >
                     {personName(c)}
+                    {isPrimary && <span className="pill stage">{T8.contactPrimaryBadge}</span>}
                   </div>
                   <div className="t-sub num">
                     {c.jobTitle ? `${c.jobTitle} · ` : ''}
                     {phone ? toPersianDigits(phone) : '—'}
                   </div>
                 </div>
+                {leadId && !isPrimary && (
+                  <button
+                    className="btn line sm"
+                    disabled={promoting !== null}
+                    onClick={() => void makePrimary(c.id)}
+                  >
+                    {T8.contactMakePrimary}
+                  </button>
+                )}
                 {phone && (
                   <button
                     className="icon-btn"
@@ -186,7 +239,32 @@ export const CompanyCard = ({ companyId }: { companyId: string }) => {
               </div>
             );
           })}
+
+          <button
+            className="btn line sm"
+            style={{ width: '100%', marginTop: 10, justifyContent: 'center' }}
+            onClick={() => setAdding(true)}
+          >
+            + {T8.addContactAction}
+          </button>
         </div>
+      )}
+
+      {notice !== null && (
+        <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>{notice}</div>
+      )}
+
+      {adding && (
+        <AddContactModal
+          companyId={companyId}
+          onClose={() => setAdding(false)}
+          onSaved={(message) => {
+            setAdding(false);
+            setShowContacts(true);
+            flash(message);
+            void refresh();
+          }}
+        />
       )}
     </div>
   );

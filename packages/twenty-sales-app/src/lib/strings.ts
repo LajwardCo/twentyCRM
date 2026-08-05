@@ -750,3 +750,16 @@ export const REFERRER_ROLE_LABELS: Record<string, string> = {
   CLOSER: 'نهایی‌کننده',
   OTHER: 'سایر',
 };
+
+// Lead age in the current stage, and admin lead reassignment.
+export const T9 = {
+  stageAgeLbl: 'مدت در این مرحله',
+  reassignSection: 'تغییر مسئول لید',
+  reassignHint: 'لید را به فروشندهٔ دیگری بسپارید',
+  reassignPickLead: 'لید را انتخاب کنید…',
+  reassignPickOwner: 'مسئول جدید…',
+  reassignApply: 'انتقال بده',
+  reassignDone: 'مسئول لید تغییر کرد ✓',
+  reassignFailed: 'تغییر مسئول ناموفق بود',
+  reassignSearchPlaceholder: 'جستجوی لید…',
+};

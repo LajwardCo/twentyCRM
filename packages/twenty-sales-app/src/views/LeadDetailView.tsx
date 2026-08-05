@@ -62,6 +62,7 @@ import {
   leadContextText,
   SUMMARIZE_SYSTEM_PROMPT,
 } from '../lib/leadContext';
+import { ageTone, stageAgeDays } from '../lib/leadAge';
 import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import {
@@ -72,6 +73,7 @@ import {
   T5,
   T6,
   T7,
+  T9,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -394,6 +396,9 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     1,
     Math.round((Date.now() - new Date(lead.createdAt).getTime()) / 86400000),
   );
+
+  const stageAge = stageAgeDays(lead.stageChangedAt, lead.createdAt);
+  const stageTone = ageTone(stageAge);
 
   const barActions: ActionBarItem[] = [
     {
@@ -895,6 +900,27 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 <span>عمر لید</span>
                 <b className="num">{toPersianDigits(leadAgeDays)} روز</b>
               </div>
+              {/* Age in the CURRENT stage -- the number that identifies a
+                  stalling lead. Falls back to createdAt on leads that predate
+                  stageChangedAt, so it can over-state but never under-state. */}
+              {stageAge !== null && (
+                <div className="c-row">
+                  <span>{T9.stageAgeLbl}</span>
+                  <b
+                    className="num"
+                    style={{
+                      color:
+                        stageTone === 'stale'
+                          ? 'var(--danger)'
+                          : stageTone === 'warn'
+                            ? 'var(--warn)'
+                            : undefined,
+                    }}
+                  >
+                    {toPersianDigits(stageAge)} روز
+                  </b>
+                </div>
+              )}
               <div className="c-row">
                 <span>فعالیت‌ها</span>
                 <b className="num">

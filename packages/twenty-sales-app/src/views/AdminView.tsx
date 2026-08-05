@@ -13,6 +13,7 @@ import {
   updateMemberName,
   type Member,
 } from '../api/admin';
+import { LeadOwnerReassign } from '../components/LeadOwnerReassign';
 import { invalidateCache, useCached } from '../lib/cache';
 import { toPersianDigits } from '../lib/jalali';
 import { personName } from '../lib/format';
@@ -348,6 +349,10 @@ export const AdminView = ({ user }: AdminViewProps) => {
               </div>
             ))}
           </div>
+
+          {/* Lead reassignment — nothing else in the app can move a lead off
+              a seller who has left. */}
+          <LeadOwnerReassign members={data.members} onDone={flash} />
 
           {/* Roles */}
           <div className="card anim d2">

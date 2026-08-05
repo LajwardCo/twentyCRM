@@ -313,16 +313,38 @@ export const fetchLead = async (id: string): Promise<LeadSummary> =>
     return data.opportunity;
   });
 
+// Stamping stageChangedAt here rather than at each call site is deliberate:
+// there is more than one place that moves a stage, and a missed stamp shows up
+// later as a lead that looks freshly moved forever. Any update carrying a
+// stage gets the stamp.
+//
+// If the instance has no stageChangedAt yet the write is rejected as a whole,
+// so it is retried without the stamp -- the stage change itself must land.
 export const updateLead = async (
   id: string,
   update: Record<string, unknown>,
 ): Promise<void> => {
-  await coreQuery(
-    `mutation UpdateLead($id: UUID!, $data: OpportunityUpdateInput!) {
-      updateOpportunity(id: $id, data: $data) { id }
-    }`,
-    { id, data: update },
-  );
+  const run = (data: Record<string, unknown>) =>
+    coreQuery(
+      `mutation UpdateLead($id: UUID!, $data: OpportunityUpdateInput!) {
+        updateOpportunity(id: $id, data: $data) { id }
+      }`,
+      { id, data },
+    );
+
+  if (!('stage' in update)) {
+    await run(update);
+    return;
+  }
+
+  try {
+    await run({ ...update, stageChangedAt: new Date().toISOString() });
+  } catch (error) {
+    if (missingProductFieldFromError(error, ['stageChangedAt']) === undefined) {
+      throw error;
+    }
+    await run(update);
+  }
 };
 
 // ---------- lead timeline (tasks + notes via targets) ----------

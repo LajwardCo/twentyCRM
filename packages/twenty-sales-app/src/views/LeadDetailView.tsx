@@ -74,8 +74,8 @@ import {
   T2,
   T5,
   T6,
-  T8,
-  T10,
+  T9,
+  T11,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -885,7 +885,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   here would read as "agreed on nothing". */}
               {lead.agreedPrice?.amountMicros != null && (
                 <div className="c-row">
-                  <span>{T8.agreedPriceLbl}</span>
+                  <span>{T9.agreedPriceLbl}</span>
                   <b className="num">
                     {formatMoney(
                       lead.agreedPrice.amountMicros,
@@ -907,7 +907,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   stageChangedAt, so it can over-state but never under-state. */}
               {stageAge !== null && (
                 <div className="c-row">
-                  <span>{T10.stageAgeLbl}</span>
+                  <span>{T11.stageAgeLbl}</span>
                   <b
                     className="num"
                     style={{
@@ -953,7 +953,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           />
 
           {/* company info + other contacts */}
-          {lead.company && <CompanyCard companyId={lead.company.id} />}
+          {lead.company && (
+            <CompanyCard
+              companyId={lead.company.id}
+              leadId={lead.id}
+              primaryContactId={lead.pointOfContact?.id ?? null}
+              onPrimaryChanged={() => void reload()}
+            />
+          )}
 
           {/* metadata: source, referrer, marketer, created-by */}
           <MetaCard

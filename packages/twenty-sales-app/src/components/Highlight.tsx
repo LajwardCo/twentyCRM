@@ -1,4 +1,4 @@
-import { queryWords } from '../api/deepSearch';
+import { queryWords } from '../lib/searchText';
 
 // Renders text with every query word wrapped in a bold highlight.
 export const Highlight = ({ text, query }: { text: string; query: string }) => {

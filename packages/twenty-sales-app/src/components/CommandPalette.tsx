@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { enrichedGlobalSearch, type EnrichedHit } from '../api/deepSearch';
+import { advancedSearch, type AdvancedHit } from '../api/advancedSearch';
 import {
   fetchLeads,
   searchHitRoute,
@@ -40,6 +40,7 @@ const HIT_TYPE_FA: Record<string, string> = {
   company: 'شرکت',
   task: 'وظیفه',
   note: 'یادداشت',
+  product: 'محصول',
 };
 
 const hitIcon = (type: string) => {
@@ -61,7 +62,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
   const [query, setQuery] = useState('');
   const [deep, setDeepState] = useState(() => loadPrefs().deepSearch ?? false);
   const [leads, setLeads] = useState<LeadSummary[]>([]);
-  const [hits, setHits] = useState<EnrichedHit[]>([]);
+  const [hits, setHits] = useState<AdvancedHit[]>([]);
   const [searching, setSearching] = useState(false);
   const resolving: string | null = null;
   const notice: string | null = null;
@@ -97,7 +98,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
       async () => {
         try {
           if (deep) {
-            const found = await enrichedGlobalSearch(query.trim(), 16);
+            const found = await advancedSearch(query.trim(), 20);
             if (seq === requestSeq.current) setHits(found);
           } else {
             const found = await fetchLeads({ search: query.trim(), limit: 6 });
@@ -122,7 +123,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
     onClose();
   };
 
-  const openHit = (hit: EnrichedHit) => {
+  const openHit = (hit: AdvancedHit) => {
     go(searchHitRoute(hit));
   };
 
@@ -156,9 +157,14 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
 
   const resultItems: Item[] = deep
     ? hits.map((hit) => ({
-        key: hit.recordId,
+        key: `${hit.objectNameSingular}:${hit.recordId}`,
         label: hit.label || '—',
-        desc: hit.description,
+        // Advanced hits explain themselves: either the matched text, or which
+        // field matched when the match wasn't in the visible title.
+        desc:
+          hit.matchedField !== null && hit.description !== null
+            ? `${hit.matchedField} — ${hit.description}`
+            : (hit.matchedField ?? hit.description),
         hint: HIT_TYPE_FA[hit.objectNameSingular] ?? hit.objectNameSingular,
         icon: hitIcon(hit.objectNameSingular),
         run: () => openHit(hit),
@@ -209,7 +215,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
             ref={inputRef}
             placeholder={
               deep
-                ? 'جستجو در همه‌چیز — یادداشت‌ها، وظایف، متن‌ها…'
+                ? 'نام، شماره تماس، ایمیل، آدرس، متن یادداشت، محصول…'
                 : 'جستجوی لید یا فرمان…'
             }
             value={query}
@@ -222,11 +228,19 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
         </div>
 
         <div className="cp-modes">
-          <button className={!deep ? 'on' : ''} onClick={() => setDeep(false)}>
-            سریع
+          <button
+            className={!deep ? 'on' : ''}
+            onClick={() => setDeep(false)}
+            title="جستجوی سریع در نام لیدها"
+          >
+            عمومی
           </button>
-          <button className={deep ? 'on' : ''} onClick={() => setDeep(true)}>
-            🔎 عمیق — داخل یادداشت‌ها و وظایف
+          <button
+            className={deep ? 'on' : ''}
+            onClick={() => setDeep(true)}
+            title="جستجو در همهٔ فیلدها: تماس، ایمیل، آدرس، متن یادداشت‌ها و وظایف، کاتالوگ"
+          >
+            🔎 پیشرفته — همه‌جا
           </button>
           {deep && query.trim() !== '' && (
             <button

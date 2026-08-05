@@ -760,9 +760,39 @@ export const T7 = {
   noCompany: 'بدون شرکت',
   contactLeads: 'لید',
 };
+
+export const T8 = {
+  // --- extra contacts on a lead / company ---
+  addContactAction: 'افزودن مخاطب',
+  addContactTitle: 'افزودن مخاطب',
+  contactTabNew: 'مخاطب جدید',
+  contactTabExisting: 'مخاطب موجود',
+  contactFirstNameLbl: 'نام *',
+  contactLastNameLbl: 'تخلص',
+  contactJobTitleLbl: 'سمت',
+  contactPhoneLbl: 'شماره تماس',
+  contactEmailLbl: 'ایمیل',
+  contactCityLbl: 'شهر',
+  contactFirstNameRequired: 'نام مخاطب را وارد کنید',
+  contactSave: 'ثبت مخاطب',
+  contactSaving: 'در حال ثبت…',
+  contactSaveFailed: 'مخاطب ثبت نشد',
+  contactAdded: 'مخاطب اضافه شد',
+  contactSearchLbl: 'جست‌وجوی نام یا شماره',
+  contactSearchPlaceholder: 'حداقل دو حرف بنویسید…',
+  contactSearching: 'در حال جست‌وجو…',
+  contactSearchEmpty: 'مخاطبی پیدا نشد',
+  contactAttach: 'افزودن به این شرکت',
+  contactAttachHint:
+    'شخصی که قبلاً در CRM ثبت شده به این شرکت وصل می‌شود — رکورد تکراری ساخته نمی‌شود.',
+  contactPrimaryBadge: 'مخاطب اصلی',
+  contactMakePrimary: 'مخاطب اصلی شود',
+  contactPrimaryChanged: 'مخاطب اصلی تغییر کرد',
+  contactPrimaryFailed: 'تغییر مخاطب اصلی انجام نشد',
+};
 // Offer history, additional referrers, subscriptions, and lead age. See
 // docs/superpowers/specs/2026-08-05-sales-pricing-subscriptions-referrals-design.md.
-export const T8 = {
+export const T9 = {
   // --- offer history ---
   offersSection: 'تاریخچه پیشنهادها',
   offersHint: 'هر قیمتی که به مشتری پیشنهاد شده، با تاریخ و دلیلش',
@@ -790,7 +820,7 @@ export const OFFER_STATUS_LABELS: Record<string, string> = {
   SUPERSEDED: 'منقضی',
 };
 
-export const T9 = {
+export const T10 = {
   // --- additional referrers ---
   referrersSection: 'معرفین دیگر',
   referrersHint: 'معرف اصلی بالا ثبت است؛ اینجا کسانی که سهم جداگانه دارند',
@@ -817,7 +847,7 @@ export const REFERRER_ROLE_LABELS: Record<string, string> = {
 };
 
 // Lead age in the current stage, and admin lead reassignment.
-export const T10 = {
+export const T11 = {
   stageAgeLbl: 'مدت در این مرحله',
   reassignSection: 'تغییر مسئول لید',
   reassignHint: 'لید را به فروشندهٔ دیگری بسپارید',
@@ -830,7 +860,7 @@ export const T10 = {
 };
 
 // Subscriptions and lead conversion.
-export const T11 = {
+export const T12 = {
   subscriptionsSection: 'اشتراک‌ها',
   subscriptionsHint: 'آنچه مشتری بعد از بستن معامله می‌پردازد',
   noSubscriptions: 'هنوز اشتراکی ثبت نشده',

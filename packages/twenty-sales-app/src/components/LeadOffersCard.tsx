@@ -15,7 +15,7 @@ import {
   formatMoney,
   SUPPORTED_CURRENCIES,
 } from '../lib/format';
-import { OFFER_STATUS_LABELS, T8 } from '../lib/strings';
+import { OFFER_STATUS_LABELS, T9 } from '../lib/strings';
 
 // Negotiation history on a lead: what was offered, when, by whom, and which
 // offer was finally accepted. The card hides itself entirely on an instance
@@ -59,7 +59,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
       }
       setOffers(result.value);
     } catch {
-      setError(T8.offersLoadFailed);
+      setError(T9.offersLoadFailed);
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
       setAdding(false);
       await load();
     } catch {
-      setError(T8.offerSaveFailed);
+      setError(T9.offerSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -109,7 +109,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
       await load();
       onAgreed();
     } catch {
-      setError(T8.offerSaveFailed);
+      setError(T9.offerSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -122,7 +122,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
       await rejectLeadOffer(offer.id);
       await load();
     } catch {
-      setError(T8.offerSaveFailed);
+      setError(T9.offerSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -130,15 +130,15 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
 
   return (
     <div className="card card-pad anim d3">
-      <h3>{T8.offersSection}</h3>
-      <div className="sub">{T8.offersHint}</div>
+      <h3>{T9.offersSection}</h3>
+      <div className="sub">{T9.offersHint}</div>
 
       {error !== null && <div className="err">{error}</div>}
 
       {loading ? (
-        <div className="sub">{T8.loading}</div>
+        <div className="sub">{T9.loading}</div>
       ) : offers.length === 0 ? (
-        <div className="empty-state">{T8.noOffersYet}</div>
+        <div className="empty-state">{T9.noOffersYet}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
           {offers.map((offer) => (
@@ -177,7 +177,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
                     disabled={busy}
                     onClick={() => void accept(offer)}
                   >
-                    {T8.acceptOffer}
+                    {T9.acceptOffer}
                   </button>
                   <button
                     type="button"
@@ -185,7 +185,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
                     disabled={busy}
                     onClick={() => void reject(offer)}
                   >
-                    {T8.rejectOffer}
+                    {T9.rejectOffer}
                   </button>
                 </div>
               )}
@@ -199,7 +199,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div className="fld" style={{ flex: 1, minWidth: 120 }}>
               <label>
-                {T8.offerAmountLbl} ({CURRENCY_SYMBOLS[currency] ?? currency})
+                {T9.offerAmountLbl} ({CURRENCY_SYMBOLS[currency] ?? currency})
               </label>
               <input
                 inputMode="decimal"
@@ -209,7 +209,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
               />
             </div>
             <div className="fld" style={{ maxWidth: 110 }}>
-              <label>{T8.offerCurrencyLbl}</label>
+              <label>{T9.offerCurrencyLbl}</label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
@@ -223,10 +223,10 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
             </div>
           </div>
           <div className="fld">
-            <label>{T8.offerNoteLbl}</label>
+            <label>{T9.offerNoteLbl}</label>
             <input
               value={noteInput}
-              placeholder={T8.offerNotePlaceholder}
+              placeholder={T9.offerNotePlaceholder}
               onChange={(e) => setNoteInput(e.target.value)}
             />
           </div>
@@ -237,7 +237,7 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
               disabled={!canSubmit}
               onClick={() => void submit()}
             >
-              {T8.saveOffer}
+              {T9.saveOffer}
             </button>
             <button
               type="button"
@@ -245,14 +245,14 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
               disabled={busy}
               onClick={() => setAdding(false)}
             >
-              {T8.cancel}
+              {T9.cancel}
             </button>
           </div>
         </div>
       ) : (
         <div style={{ marginTop: 10 }}>
           <button type="button" className="btn soft sm" onClick={() => setAdding(true)}>
-            {T8.addOffer}
+            {T9.addOffer}
           </button>
         </div>
       )}

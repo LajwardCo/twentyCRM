@@ -17,8 +17,8 @@ import {
 import {
   BILLING_PERIOD_LABELS,
   SUBSCRIPTION_STATUS_LABELS,
-  T8,
-  T11,
+  T9,
+  T12,
 } from '../lib/strings';
 
 // What the customer pays after the deal closes, plus the conversion that
@@ -71,7 +71,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
       }
       setSubscriptions(result.value);
     } catch {
-      setError(T11.subscriptionsLoadFailed);
+      setError(T12.subscriptionsLoadFailed);
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
     } catch {
       // A part-way failure leaves the rows that landed, so reload either way
       // rather than assume nothing was written.
-      setError(T11.convertFailed);
+      setError(T12.convertFailed);
     } finally {
       setBusy(false);
       await load();
@@ -123,7 +123,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
       await updateSubscriptionStatus(subscription.id, status);
       await load();
     } catch {
-      setError(T11.convertFailed);
+      setError(T12.convertFailed);
     } finally {
       setBusy(false);
     }
@@ -131,15 +131,15 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
 
   return (
     <div className="card card-pad anim d3">
-      <h3>{T11.subscriptionsSection}</h3>
-      <div className="sub">{T11.subscriptionsHint}</div>
+      <h3>{T12.subscriptionsSection}</h3>
+      <div className="sub">{T12.subscriptionsHint}</div>
 
       {error !== null && <div className="err">{error}</div>}
 
       {loading ? (
-        <div className="sub">{T8.loading}</div>
+        <div className="sub">{T9.loading}</div>
       ) : subscriptions.length === 0 ? (
-        <div className="empty-state">{T11.noSubscriptions}</div>
+        <div className="empty-state">{T12.noSubscriptions}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
           {subscriptions.map((subscription) => (
@@ -184,7 +184,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
                   disabled={busy}
                   onClick={() => void setStatus(subscription, 'ACTIVE')}
                 >
-                  {T11.activateSubscription}
+                  {T12.activateSubscription}
                 </button>
               )}
               {(subscription.subscriptionStatus === 'ACTIVE' ||
@@ -195,7 +195,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
                   disabled={busy}
                   onClick={() => void setStatus(subscription, 'CANCELLED')}
                 >
-                  {T11.cancelSubscription}
+                  {T12.cancelSubscription}
                 </button>
               )}
             </div>
@@ -205,10 +205,10 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
 
       {drafts !== null && (
         <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-          <h3>{T11.convertTitle}</h3>
-          <div className="sub">{T11.convertHint}</div>
+          <h3>{T12.convertTitle}</h3>
+          <div className="sub">{T12.convertHint}</div>
           {drafts.length === 0 ? (
-            <div className="empty-state">{T11.convertNothing}</div>
+            <div className="empty-state">{T12.convertNothing}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
               {drafts.map((entry) => (
@@ -229,7 +229,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
               disabled={busy || drafts.length === 0}
               onClick={() => void confirmConversion()}
             >
-              {T11.convertConfirm}
+              {T12.convertConfirm}
             </button>
             <button
               type="button"
@@ -237,7 +237,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
               disabled={busy}
               onClick={() => setDrafts(null)}
             >
-              {T8.cancel}
+              {T9.cancel}
             </button>
           </div>
         </div>
@@ -246,7 +246,7 @@ export const LeadSubscriptionsCard = ({ leadId, companyId, isWon }: Props) => {
       {isWon && drafts === null && (
         <div style={{ marginTop: 10 }}>
           <button type="button" className="btn soft sm" onClick={startConversion}>
-            {T11.convertLead}
+            {T12.convertLead}
           </button>
         </div>
       )}

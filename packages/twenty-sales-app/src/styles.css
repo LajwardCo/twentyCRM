@@ -3477,6 +3477,108 @@ table.leads tbody tr:hover {
   flex-shrink: 0;
 }
 
+/* ---------- PWA install / update bar ---------- */
+/* Sits just above the mobile nav (or the safe area on desktop) so it never
+   covers the bottom tab bar. */
+.install-bar {
+  position: fixed;
+  bottom: calc(var(--mnav-h) + 12px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 34px rgba(8, 23, 55, 0.22);
+  font-size: 13px;
+  color: var(--ink);
+  z-index: 85;
+  animation: toast-rise 0.3s backwards;
+}
+
+.install-bar > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.install-bar .btn {
+  flex-shrink: 0;
+}
+
+/* ---------- public QR upload page: attached-file previews ---------- */
+.pub-uploads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pub-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.pub-upload-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pub-upload-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pub-upload-ext {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  letter-spacing: 0.4px;
+}
+
+.pub-upload-veil {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 23, 55, 0.45);
+  color: #fff;
+  font-weight: 700;
+}
+
+.pub-upload-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pub-upload-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- filters ---------- */
 
 .btn.line.on {

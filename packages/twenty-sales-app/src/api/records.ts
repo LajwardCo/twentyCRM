@@ -43,6 +43,12 @@ export type LeadSummary = {
   id: string;
   name: string;
   stage: string | null;
+  // Null both on leads that predate provision-subscriptions-referrals-offers.mjs
+  // and on instances where it hasn't run at all -- callers must treat "absent"
+  // as "not recorded", never as zero.
+  agreedPrice?: { amountMicros: number | null; currencyCode: string | null } | null;
+  agreedAt?: string | null;
+  stageChangedAt?: string | null;
   temperature: string | null;
   leadSource: string | null;
   createdAt: string;
@@ -120,6 +126,57 @@ const LEAD_FIELDS = `
   createdBy { name source }
   referrer { id name partnerType commissionPercent }
 `;
+
+// Lead fields that only exist once provision-subscriptions-referrals-offers.mjs
+// has run. One unknown field fails the whole document, which would blank the
+// lead screen rather than hide a value, so every lead query asks for them and
+// drops the group the server rejects. Grouped because one script provisions
+// all three -- retrying them one at a time would just cost round trips. Same
+// pattern as catalog.ts's optional product fields.
+const OPTIONAL_LEAD_FIELD_GROUPS: string[][] = [
+  ['agreedPrice { amountMicros currencyCode }', 'agreedAt'],
+  ['stageChangedAt'],
+];
+
+// Matched on the field name, which is the first word of each selection.
+const leadFieldName = (selection: string): string => selection.split(' ')[0];
+
+const leadGroupsWithoutMissing = (
+  error: unknown,
+  groups: string[][],
+): string[][] | undefined => {
+  if (!(error instanceof Error)) return undefined;
+
+  const remaining = groups.filter(
+    (group) =>
+      !group.some((selection) =>
+        // Reads are rejected as `Cannot query field "x"`, writes as
+        // `Field "x" is not defined by type ...`.
+        new RegExp(
+          `(Cannot query field|is not defined by type).*"${leadFieldName(selection)}"|"${leadFieldName(selection)}".*is not defined by type`,
+          'i',
+        ).test(error.message),
+      ),
+  );
+
+  return remaining.length === groups.length ? undefined : remaining;
+};
+
+const withOptionalLeadFields = async <TResult>(
+  run: (fields: string) => Promise<TResult>,
+): Promise<TResult> => {
+  let groups = OPTIONAL_LEAD_FIELD_GROUPS;
+
+  for (;;) {
+    try {
+      return await run(`${LEAD_FIELDS}\n  ${groups.flat().join('\n  ')}`);
+    } catch (error) {
+      const remaining = leadGroupsWithoutMissing(error, groups);
+      if (remaining === undefined) throw error;
+      groups = remaining;
+    }
+  }
+};
 
 // ---------- pagination ----------
 
@@ -245,15 +302,16 @@ export const fetchAllLeads = (
     return data.opportunities;
   });
 
-export const fetchLead = async (id: string): Promise<LeadSummary> => {
-  const data = await coreQuery<{ opportunity: LeadSummary }>(
-    `query Lead($id: UUID!) {
-      opportunity(filter: { id: { eq: $id } }) { ${LEAD_FIELDS} }
-    }`,
-    { id },
-  );
-  return data.opportunity;
-};
+export const fetchLead = async (id: string): Promise<LeadSummary> =>
+  withOptionalLeadFields(async (fields) => {
+    const data = await coreQuery<{ opportunity: LeadSummary }>(
+      `query Lead($id: UUID!) {
+        opportunity(filter: { id: { eq: $id } }) { ${fields} }
+      }`,
+      { id },
+    );
+    return data.opportunity;
+  });
 
 export const updateLead = async (
   id: string,

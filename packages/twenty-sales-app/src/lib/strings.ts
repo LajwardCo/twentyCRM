@@ -694,3 +694,33 @@ export const T6 = {
     'این محصول همین حالا روی این لید ثبت است. یک سطر دیگر اضافه شود؟',
   duplicateAddAnyway: 'اضافه کن',
 };
+
+// Offer history, additional referrers, subscriptions, and lead age. See
+// docs/superpowers/specs/2026-08-05-sales-pricing-subscriptions-referrals-design.md.
+export const T7 = {
+  // --- offer history ---
+  offersSection: 'تاریخچه پیشنهادها',
+  offersHint: 'هر قیمتی که به مشتری پیشنهاد شده، با تاریخ و دلیلش',
+  noOffersYet: 'هنوز پیشنهادی ثبت نشده',
+  addOffer: '＋ پیشنهاد جدید',
+  saveOffer: 'ثبت پیشنهاد',
+  offerAmountLbl: 'مبلغ پیشنهاد',
+  offerCurrencyLbl: 'واحد پول',
+  offerNoteLbl: 'توضیح',
+  offerNotePlaceholder: 'مثلاً: بعد از تخفیف رقابتی',
+  acceptOffer: 'قبول شد',
+  rejectOffer: 'رد شد',
+  offersLoadFailed: 'تاریخچه پیشنهادها بارگیری نشد',
+  offerSaveFailed: 'ثبت پیشنهاد ناموفق بود',
+  agreedPriceLbl: 'قیمت توافق‌شده',
+  agreedAtLbl: 'تاریخ توافق',
+  loading: 'در حال بارگیری…',
+  cancel: 'انصراف',
+};
+
+export const OFFER_STATUS_LABELS: Record<string, string> = {
+  PROPOSED: 'پیشنهاد شده',
+  ACCEPTED: 'قبول شده',
+  REJECTED: 'رد شده',
+  SUPERSEDED: 'منقضی',
+};

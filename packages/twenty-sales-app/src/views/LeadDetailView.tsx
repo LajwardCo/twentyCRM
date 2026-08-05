@@ -36,6 +36,7 @@ import {
 } from '../components/icons';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
+import { LeadOffersCard } from '../components/LeadOffersCard';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
@@ -69,6 +70,7 @@ import {
   T2,
   T5,
   T6,
+  T7,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -823,6 +825,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           </div>
 
           {/* deal info */}
+          {/* Negotiation history. Hides itself on an instance that hasn't run
+              provision-subscriptions-referrals-offers.mjs. */}
+          <LeadOffersCard
+            leadId={leadId}
+            currentUserId={user.workspaceMemberId}
+            onAgreed={() => void reload()}
+          />
+
           <div className="card card-pad anim d4">
             <h3>معلومات لید</h3>
             <div className="contact-rows">
@@ -855,6 +865,19 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   </button>
                 )}
               </div>
+              {/* Only once a price has actually been settled -- an empty row
+                  here would read as "agreed on nothing". */}
+              {lead.agreedPrice?.amountMicros != null && (
+                <div className="c-row">
+                  <span>{T7.agreedPriceLbl}</span>
+                  <b className="num">
+                    {formatMoney(
+                      lead.agreedPrice.amountMicros,
+                      lead.agreedPrice.currencyCode,
+                    )}
+                  </b>
+                </div>
+              )}
               <div className="c-row">
                 <span>{T.stage}</span>
                 <b>{STAGE_LABELS[lead.stage ?? ''] ?? '—'}</b>

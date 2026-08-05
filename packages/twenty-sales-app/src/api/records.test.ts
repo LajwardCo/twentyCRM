@@ -11,6 +11,7 @@ vi.mock('./client', () => ({
 import { coreQuery } from './client';
 import {
   fetchAllLeads,
+  fetchLead,
   fetchProducts,
   softDeleteLead,
   softDeleteNote,
@@ -194,5 +195,48 @@ describe('no hard delete anywhere in the API layer', () => {
       );
 
     expect(offenders).toEqual([]);
+  });
+});
+
+// agreedPrice/agreedAt/stageChangedAt only exist once
+// provision-subscriptions-referrals-offers.mjs has run. One unknown field
+// fails the whole document, so an unprovisioned instance must lose the values,
+// not the lead screen.
+describe('fetchLead optional-field tolerance', () => {
+  beforeEach(() => {
+    mockedCoreQuery.mockReset();
+  });
+
+  it('asks for the agreed price and the stage timestamp', async () => {
+    mockedCoreQuery.mockResolvedValue({ opportunity: { id: 'l1' } });
+
+    await fetchLead('l1');
+
+    const [query] = mockedCoreQuery.mock.calls[0];
+    expect(query).toContain('agreedPrice');
+    expect(query).toContain('agreedAt');
+    expect(query).toContain('stageChangedAt');
+  });
+
+  it('drops only the rejected group and still returns the lead', async () => {
+    mockedCoreQuery
+      .mockRejectedValueOnce(
+        new Error('Cannot query field "agreedPrice" on type "Opportunity".'),
+      )
+      .mockResolvedValueOnce({ opportunity: { id: 'l1', name: 'Nour' } });
+
+    const lead = await fetchLead('l1');
+
+    expect(lead).toEqual({ id: 'l1', name: 'Nour' });
+    const [retryQuery] = mockedCoreQuery.mock.calls[1];
+    expect(retryQuery).not.toContain('agreedPrice');
+    // A different script provisions stageChangedAt, so it survives.
+    expect(retryQuery).toContain('stageChangedAt');
+  });
+
+  it('gives up on a failure that is not a missing field', async () => {
+    mockedCoreQuery.mockRejectedValue(new Error('Network request failed'));
+
+    await expect(fetchLead('l1')).rejects.toThrow('Network request failed');
   });
 });

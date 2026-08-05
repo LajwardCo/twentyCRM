@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   fetchCompetitors,
   saveCompetitor,
   type Competitor,
 } from '../api/admin';
+import { FilterBar } from '../components/FilterBar';
 import { useCached } from '../lib/cache';
+import { applyFilters } from '../lib/filters';
 import { relativeDueLabel } from '../lib/jalali';
-import { navigate } from '../lib/router';
+import { navigate, useRoute } from '../lib/router';
+import { competitorFilterFields } from '../lib/screenFilters';
+import { useFilters } from '../lib/useFilters';
 import {
   COMPETITOR_STATUS_LABELS as STATUS_FA,
   COMPETITOR_THREAT_LABELS as THREAT_FA,
   COMPETITOR_TIER_LABELS as TIER_FA,
   T5,
+  T7,
 } from '../lib/strings';
 
 const threatClass = (t: string | null) =>
@@ -57,6 +62,14 @@ export const CompetitorsView = () => {
   const set = (patch: Partial<FormState>) =>
     setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
 
+  const fields = useMemo(competitorFilterFields, []);
+  const route = useRoute();
+  const filters = useFilters('competitors', fields, route.query);
+  const visible = useMemo(
+    () => applyFilters(fields, filters.state, competitors ?? []),
+    [fields, filters.state, competitors],
+  );
+
   return (
     <main className="page">
       <div className="page-head anim">
@@ -67,6 +80,11 @@ export const CompetitorsView = () => {
         <button className="btn gold" onClick={() => startEdit()}>
           ＋ بازیگر جدید
         </button>
+      </div>
+
+      <div className="toolbar anim d1">
+        <FilterBar fields={fields} filters={filters} resultCount={visible.length} />
+        <div className="grow" />
       </div>
 
       {loadError !== null && <div className="error-banner">{loadError}</div>}
@@ -169,11 +187,24 @@ export const CompetitorsView = () => {
         </div>
       )}
 
-      {competitors !== null && competitors.length === 0 && editing === null && (
-        <div className="empty-state">هنوز بازیگری ثبت نشده — اولین را اضافه کنید</div>
+      {competitors !== null && visible.length === 0 && editing === null && (
+        <div className="empty-state">
+          {filters.count > 0 ? (
+            <>
+              {T7.noMatches}
+              <div style={{ marginTop: 10 }}>
+                <button className="btn line sm" onClick={filters.clearAll}>
+                  {T7.clearAll}
+                </button>
+              </div>
+            </>
+          ) : (
+            'هنوز بازیگری ثبت نشده — اولین را اضافه کنید'
+          )}
+        </div>
       )}
 
-      {competitors?.map((c) => (
+      {visible.map((c) => (
         <div
           className="card card-pad anim hoverable"
           key={c.id}

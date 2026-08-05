@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   fetchCatalogProducts,
@@ -11,11 +11,15 @@ import {
   type CatalogDiscountRuleInput,
   type ProductCurrencyCode,
 } from '../api/catalog';
+import { FilterBar } from '../components/FilterBar';
 import { ProductPricingFields } from '../components/ProductPricingFields';
 import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { useCached } from '../lib/cache';
+import { applyFilters } from '../lib/filters';
 import { formatMoney } from '../lib/format';
-import { navigate } from '../lib/router';
+import { navigate, useRoute } from '../lib/router';
+import { catalogFilterFields } from '../lib/screenFilters';
+import { useFilters } from '../lib/useFilters';
 import {
   CATALOG_STATUS_LABELS,
   CONDITION_TYPE_LABELS,
@@ -23,7 +27,6 @@ import {
   PRICING_MODEL_LABELS,
   T4,
 } from '../lib/strings';
-import { collectTaxonomyValues } from '../lib/taxonomy';
 
 type Tab = 'products' | 'discountRules';
 
@@ -44,7 +47,6 @@ const ProductsTab = () => {
   const [editingId, setEditingId] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
 
   const { data: products, error: loadError, refresh } = useCached(
     'catalog:products',
@@ -99,9 +101,13 @@ const ProductsTab = () => {
     }
   };
 
-  const categories = collectTaxonomyValues(products, 'category');
-  const visibleProducts = (products ?? []).filter((p) =>
-    categoryFilter === '' ? true : (p.category ?? '') === categoryFilter,
+  // The catalog is small and already fully loaded, so it filters in memory.
+  const fields = useMemo(() => catalogFilterFields(products ?? []), [products]);
+  const route = useRoute();
+  const filters = useFilters('catalog', fields, route.query);
+  const visibleProducts = useMemo(
+    () => applyFilters(fields, filters.state, products ?? []),
+    [fields, filters.state, products],
   );
 
   return (
@@ -115,19 +121,14 @@ const ProductsTab = () => {
 
       {loadError !== null && <div className="error-banner">{loadError}</div>}
 
-      {categories.length > 0 && (
-        <div className="fld" style={{ maxWidth: 260, marginBottom: 12 }}>
-          <label>{T4.categoryLbl}</label>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="">{T4.allCategories}</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="toolbar anim d1">
+        <FilterBar
+          fields={fields}
+          filters={filters}
+          resultCount={visibleProducts.length}
+        />
+        <div className="grow" />
+      </div>
 
       {editing !== null && (
         <div className="card card-pad anim" style={{ marginBottom: 16 }}>
@@ -210,7 +211,7 @@ const ProductsTab = () => {
 
       {products !== null && visibleProducts.length === 0 && editing === null && (
         <div className="empty-state">
-          {categoryFilter === '' ? T4.noProducts : T4.noProductsInCategory}
+          {filters.count === 0 ? T4.noProducts : T4.noProductsInCategory}
         </div>
       )}
 

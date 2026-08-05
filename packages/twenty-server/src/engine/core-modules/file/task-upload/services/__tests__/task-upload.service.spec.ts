@@ -8,7 +8,7 @@ import { TaskUploadService } from 'src/engine/core-modules/file/task-upload/serv
 const buildService = (overrides: {
   verifyJwtToken?: jest.Mock;
   uploadFile?: jest.Mock;
-  createRecord?: jest.Mock;
+  attachmentSave?: jest.Mock;
   taskFindOne?: jest.Mock;
   fieldFindOne?: jest.Mock;
   objectFindOne?: jest.Mock;
@@ -30,19 +30,27 @@ const buildService = (overrides: {
     uploadFile:
       overrides.uploadFile ?? jest.fn().mockResolvedValue({ id: 'file-1' }),
   };
-  const createRecordService = {
-    execute:
-      overrides.createRecord ?? jest.fn().mockResolvedValue({ success: true }),
-  };
   const taskRepository = {
     findOne:
       overrides.taskFindOne ??
       jest.fn().mockResolvedValue({ id: 'task-1', title: 'Demo' }),
   };
+  const attachmentRepository = {
+    save:
+      overrides.attachmentSave ??
+      jest.fn().mockResolvedValue({ id: 'attachment-1' }),
+    findOne: jest.fn(),
+    softDelete: jest.fn(),
+  };
   const globalWorkspaceOrmManager = {
-    // run the callback immediately, handing it the mocked task repository
+    // run the callback immediately; the repository it asks for is picked by
+    // entity name, the same way the real manager dispatches
     executeInWorkspaceContext: jest.fn((fn: () => unknown) => fn()),
-    getRepository: jest.fn().mockResolvedValue(taskRepository),
+    getRepository: jest.fn((_workspaceId: string, entityName: string) =>
+      Promise.resolve(
+        entityName === 'attachment' ? attachmentRepository : taskRepository,
+      ),
+    ),
   };
   const throttlerService = {
     tokenBucketThrottleOrThrow: jest.fn().mockResolvedValue(1),
@@ -61,14 +69,13 @@ const buildService = (overrides: {
     jwtWrapperService as never,
     twentyConfigService as never,
     filesFieldService as never,
-    createRecordService as never,
     globalWorkspaceOrmManager as never,
     throttlerService as never,
     fieldMetadataRepository as never,
     objectMetadataRepository as never,
   );
 
-  return { service, createRecordService, filesFieldService };
+  return { service, attachmentRepository, filesFieldService };
 };
 
 const okFile = {
@@ -145,13 +152,17 @@ describe('TaskUploadService.handlePublicUpload', () => {
   });
 
   it('uploads and creates a task-scoped attachment on the happy path', async () => {
-    const { service, createRecordService, filesFieldService } = buildService(
+    const { service, attachmentRepository, filesFieldService } = buildService(
       {},
     );
 
     const result = await service.handlePublicUpload({ token: 't', ...okFile });
 
-    expect(result).toEqual({ taskLabel: 'Demo' });
+    expect(result).toEqual({
+      taskLabel: 'Demo',
+      attachmentId: 'attachment-1',
+      fileName: 'photo.jpg',
+    });
     expect(filesFieldService.uploadFile).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceId: 'ws-1',
@@ -159,23 +170,22 @@ describe('TaskUploadService.handlePublicUpload', () => {
         filename: 'photo.jpg',
       }),
     );
-    expect(createRecordService.execute).toHaveBeenCalledWith(
+    expect(attachmentRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({
-        objectName: 'attachment',
-        objectRecord: expect.objectContaining({
-          targetTaskId: 'task-1',
-          file: [{ fileId: 'file-1', label: 'photo.jpg', extension: 'jpg' }],
-        }),
+        targetTaskId: 'task-1',
+        file: [{ fileId: 'file-1', label: 'photo.jpg', extension: 'jpg' }],
       }),
     );
   });
 
+  // The bug this whole rewrite exists for: CreateRecordService threw
+  // "Invalid auth context" for a system context, so every upload died here.
+  // Whatever the write layer is, a failure must surface as this code.
   it('surfaces a failure when attachment creation fails', async () => {
     const { service } = buildService({
-      createRecord: jest.fn().mockResolvedValue({
-        success: false,
-        error: 'boom',
-      }),
+      attachmentSave: jest
+        .fn()
+        .mockRejectedValue(new Error('Invalid auth context')),
     });
 
     await expect(

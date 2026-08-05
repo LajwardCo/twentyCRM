@@ -117,6 +117,23 @@ async function main() {
     '(destroy stays denied on every object)',
   );
 
+  // Tool permission flags. Without these the Seller role is denied at the
+  // guard, not at the data layer, so the Sales App's AI buttons and the file
+  // upload / QR flow all fail with "permission denied" even though every
+  // object permission above is granted:
+  //   AI            -> POST /rest/ai/generate-text (summary, call script) and
+  //                    the agent chat resolvers ("Ask AI about this lead")
+  //   UPLOAD_FILE   -> uploadFilesFieldFile (attach from this device) and
+  //                    generateTaskUploadToken (the QR / mobile upload code)
+  //   DOWNLOAD_FILE -> opening an attachment back off a task
+  // These are tool flags, not settings flags: none of them grants access to
+  // Settings, roles, billing, or the data model.
+  const permissionFlagKeys = ['AI', 'UPLOAD_FILE', 'DOWNLOAD_FILE'];
+  await gql(`mutation($upsertPermissionFlagsInput: UpsertPermissionFlagsInput!){ upsertPermissionFlags(upsertPermissionFlagsInput:$upsertPermissionFlagsInput){ id flag } }`, {
+    upsertPermissionFlagsInput: { roleId, permissionFlagKeys },
+  });
+  console.log('permission flags granted:', permissionFlagKeys.join(', '));
+
   await gql(`mutation($upsertFieldPermissionsInput: UpsertFieldPermissionsInput!){ upsertFieldPermissions(upsertFieldPermissionsInput:$upsertFieldPermissionsInput){ objectMetadataId fieldMetadataId canReadFieldValue } }`, {
     upsertFieldPermissionsInput: {
       roleId,

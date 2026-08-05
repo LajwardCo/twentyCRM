@@ -18,7 +18,6 @@ import {
   TaskUploadExceptionCode,
 } from 'src/engine/core-modules/file/task-upload/task-upload.exception';
 import { JwtWrapperService } from 'src/engine/core-modules/jwt/services/jwt-wrapper.service';
-import { CreateRecordService } from 'src/engine/core-modules/record-crud/services/create-record.service';
 import { ThrottlerService } from 'src/engine/core-modules/throttler/throttler.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
@@ -28,6 +27,23 @@ import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system
 
 type TaskEntityShape = { id: string; title: string | null };
 
+type AttachmentEntityShape = {
+  id: string;
+  name: string | null;
+  file: { fileId: string; label: string; extension: string }[] | null;
+  targetTaskId: string | null;
+  targetOpportunityId: string | null;
+  createdAt: Date | string;
+  createdBy: unknown;
+};
+
+// The verified token plus the one claim the delete path needs.
+type VerifiedUploadToken = UploadTokenJwtPayload & { issuedAtMs: number };
+
+// Stamped on `createdBy.name` so a file that arrived from a phone is
+// distinguishable from one a seller attached at their desk.
+const PUBLIC_UPLOAD_ACTOR_NAME = 'ارسال از موبایل';
+
 @Injectable()
 export class TaskUploadService {
   private readonly logger = new Logger(TaskUploadService.name);
@@ -36,7 +52,6 @@ export class TaskUploadService {
     private readonly jwtWrapperService: JwtWrapperService,
     private readonly twentyConfigService: TwentyConfigService,
     private readonly filesFieldService: FilesFieldService,
-    private readonly createRecordService: CreateRecordService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
     private readonly throttlerService: ThrottlerService,
     @InjectRepository(FieldMetadataEntity)
@@ -109,7 +124,7 @@ export class TaskUploadService {
     buffer: Buffer;
     filename: string;
     mimetype: string;
-  }): Promise<{ taskLabel: string }> {
+  }): Promise<{ taskLabel: string; attachmentId: string; fileName: string }> {
     const payload = await this.verifyUploadToken(token);
 
     await this.throttlerService.tokenBucketThrottleOrThrow(
@@ -148,39 +163,100 @@ export class TaskUploadService {
     const extension =
       dotIndex >= 0 ? filename.slice(dotIndex + 1).toLowerCase() : '';
 
-    const result = await this.createRecordService.execute({
-      objectName: 'attachment',
-      objectRecord: {
-        name: filename,
-        file: [{ fileId: uploaded.id, label: filename, extension }],
-        targetTaskId: payload.targetTaskId,
-        ...(payload.targetOpportunityId
-          ? { targetOpportunityId: payload.targetOpportunityId }
-          : {}),
-      },
-      authContext: buildSystemAuthContext(payload.workspaceId),
-      createdBy: {
-        source: FieldActorSource.MANUAL,
-        workspaceMemberId: payload.workspaceMemberId,
-        name: 'ارسال از موبایل',
-        context: {},
-      },
-    });
+    // Written straight through the workspace ORM with permission checks
+    // bypassed, NOT through CreateRecordService: that service resolves a role
+    // from the auth context and rejects a system context outright ("Invalid
+    // auth context - no authentication mechanism found"), which is why every
+    // QR upload used to fail at the attach step. There is no role to resolve
+    // here — the upload token IS the authorization, and it was already
+    // verified above.
+    const attachmentId = await this.globalWorkspaceOrmManager
+      .executeInWorkspaceContext(async () => {
+        const attachmentRepository =
+          await this.globalWorkspaceOrmManager.getRepository<AttachmentEntityShape>(
+            payload.workspaceId,
+            'attachment',
+            { shouldBypassPermissionChecks: true },
+          );
 
-    if (!result.success) {
-      this.logger.error(`Public attachment creation failed: ${result.error}`);
-      throw new TaskUploadException(
-        'Failed to attach the uploaded file',
-        TaskUploadExceptionCode.ATTACHMENT_CREATION_FAILED,
-      );
-    }
+        const saved = await attachmentRepository.save({
+          name: filename,
+          file: [{ fileId: uploaded.id, label: filename, extension }],
+          targetTaskId: payload.targetTaskId,
+          targetOpportunityId: payload.targetOpportunityId ?? null,
+          createdBy: {
+            source: FieldActorSource.MANUAL,
+            workspaceMemberId: payload.workspaceMemberId,
+            name: PUBLIC_UPLOAD_ACTOR_NAME,
+            context: {},
+          },
+        });
 
-    return { taskLabel: task.title ?? 'وظیفه' };
+        return saved.id;
+      }, buildSystemAuthContext(payload.workspaceId))
+      .catch((error: unknown) => {
+        this.logger.error(`Public attachment creation failed: ${error}`);
+        throw new TaskUploadException(
+          'Failed to attach the uploaded file',
+          TaskUploadExceptionCode.ATTACHMENT_CREATION_FAILED,
+        );
+      });
+
+    return {
+      taskLabel: task.title ?? 'وظیفه',
+      attachmentId,
+      fileName: filename,
+    };
+  }
+
+  // Lets the public page take back a file it just sent — a mis-shot photo
+  // should not need a call to the office. Deliberately narrow: the attachment
+  // must hang off the token's own task AND have been created after the token
+  // was issued, so a token can only ever undo its own uploads, never touch
+  // files that were already on the task.
+  async handlePublicDelete({
+    token,
+    attachmentId,
+  }: {
+    token: string;
+    attachmentId: string;
+  }): Promise<void> {
+    const payload = await this.verifyUploadToken(token);
+
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const attachmentRepository =
+        await this.globalWorkspaceOrmManager.getRepository<AttachmentEntityShape>(
+          payload.workspaceId,
+          'attachment',
+          { shouldBypassPermissionChecks: true },
+        );
+
+      const attachment = await attachmentRepository.findOne({
+        where: { id: attachmentId },
+        select: { id: true, targetTaskId: true, createdAt: true },
+      });
+
+      const belongsToToken =
+        attachment !== null &&
+        attachment.targetTaskId === payload.targetTaskId &&
+        new Date(attachment.createdAt).getTime() >= payload.issuedAtMs;
+
+      if (!belongsToToken) {
+        throw new TaskUploadException(
+          'This file cannot be removed with this link',
+          TaskUploadExceptionCode.INVALID_TOKEN,
+        );
+      }
+
+      // Soft delete — same semantics as removing a record anywhere else in the
+      // CRM, so an accidental removal is still recoverable from the trash.
+      await attachmentRepository.softDelete(attachmentId);
+    }, buildSystemAuthContext(payload.workspaceId));
   }
 
   private async verifyUploadToken(
     token: string,
-  ): Promise<UploadTokenJwtPayload> {
+  ): Promise<VerifiedUploadToken> {
     let verified: unknown;
 
     try {
@@ -192,7 +268,9 @@ export class TaskUploadService {
       );
     }
 
-    const payload = verified as Partial<UploadTokenJwtPayload>;
+    const payload = verified as Partial<UploadTokenJwtPayload> & {
+      iat?: number;
+    };
 
     // Strict token-type check prevents confusing an ACCESS/FILE token for an
     // upload token (and vice-versa).
@@ -214,6 +292,9 @@ export class TaskUploadService {
       targetTaskId: payload.targetTaskId,
       workspaceMemberId: payload.workspaceMemberId ?? null,
       targetOpportunityId: payload.targetOpportunityId ?? null,
+      // `iat` is whole seconds; floor to the second so an attachment created in
+      // the same second as the token is never judged "older" than it.
+      issuedAtMs: (payload.iat ?? 0) * 1000,
     };
   }
 

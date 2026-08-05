@@ -43,7 +43,7 @@ export class TaskUploadController {
   async uploadTaskFile(
     @Body('token') token: string | undefined,
     @UploadedFile() file: UploadedMulterFile | undefined,
-  ): Promise<{ ok: true; taskLabel: string }> {
+  ): Promise<{ ok: true; taskLabel: string; attachmentId: string }> {
     if (!token || !file) {
       throw new HttpException(
         { ok: false, message: 'Missing token or file' },
@@ -52,24 +52,55 @@ export class TaskUploadController {
     }
 
     try {
-      const { taskLabel } = await this.taskUploadService.handlePublicUpload({
-        token,
-        buffer: file.buffer,
-        filename: file.originalname,
-        mimetype: file.mimetype,
-      });
+      const { taskLabel, attachmentId } =
+        await this.taskUploadService.handlePublicUpload({
+          token,
+          buffer: file.buffer,
+          filename: file.originalname,
+          mimetype: file.mimetype,
+        });
 
-      return { ok: true, taskLabel };
+      return { ok: true, taskLabel, attachmentId };
     } catch (error) {
-      if (error instanceof TaskUploadException) {
-        throw new HttpException(
-          { ok: false, message: error.message, code: error.code },
-          error.httpStatus,
-        );
-      }
-
-      this.logger.error(`Unexpected task-upload failure: ${error}`);
-      throw new HttpException({ ok: false, message: 'Upload failed' }, 500);
+      throw this.toHttpException(error, 'Upload failed');
     }
+  }
+
+  // Undo for the page above: removes a file this same token just uploaded. The
+  // service enforces that the attachment belongs to the token's task and
+  // post-dates the token, so this can never reach pre-existing files.
+  @Post('task-upload/remove')
+  @UseGuards(PublicEndpointGuard, NoPermissionGuard)
+  async removeTaskFile(
+    @Body('token') token: string | undefined,
+    @Body('attachmentId') attachmentId: string | undefined,
+  ): Promise<{ ok: true }> {
+    if (!token || !attachmentId) {
+      throw new HttpException(
+        { ok: false, message: 'Missing token or attachmentId' },
+        400,
+      );
+    }
+
+    try {
+      await this.taskUploadService.handlePublicDelete({ token, attachmentId });
+
+      return { ok: true };
+    } catch (error) {
+      throw this.toHttpException(error, 'Remove failed');
+    }
+  }
+
+  private toHttpException(error: unknown, fallback: string): HttpException {
+    if (error instanceof TaskUploadException) {
+      return new HttpException(
+        { ok: false, message: error.message, code: error.code },
+        error.httpStatus,
+      );
+    }
+
+    this.logger.error(`Unexpected task-upload failure: ${error}`);
+
+    return new HttpException({ ok: false, message: fallback }, 500);
   }
 }

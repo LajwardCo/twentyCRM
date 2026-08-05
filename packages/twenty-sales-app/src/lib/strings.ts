@@ -695,9 +695,74 @@ export const T6 = {
   duplicateAddAnyway: 'اضافه کن',
 };
 
+// --- filters & contacts ---
+export const T7 = {
+  // filter chrome
+  filters: 'فیلترها',
+  filterTitle: 'فیلتر کردن',
+  clearAll: 'پاک کردن همه',
+  removeFilter: 'برداشتن این فیلتر',
+  reset: 'بازنشانی',
+  showResults: 'نمایش نتایج',
+  noOptions: 'گزینه‌ای موجود نیست',
+  from: 'از',
+  to: 'تا',
+  any: 'فرقی ندارد',
+  yes: 'بله',
+  no: 'خیر',
+  noMatches: 'هیچ موردی با این فیلترها پیدا نشد',
+  clearFiltersHint: 'فیلترها را پاک کنید تا همه موارد دیده شود',
+
+  // lead filter fields
+  fStage: 'مرحله',
+  fTemperature: 'وضعیت',
+  fSource: 'منبع',
+  fOwner: 'مسئول',
+  fReferrer: 'معرف',
+  fValue: 'ارزش',
+  fCreated: 'تاریخ ثبت',
+  fHasContact: 'شخص تماس دارد',
+  fNoOwner: 'بدون مسئول',
+  fNoStage: 'بدون مرحله',
+  fNoSource: 'بدون منبع',
+  fNoValue: 'بدون وضعیت',
+
+  // task filter fields
+  fTaskType: 'نوع کار',
+  fStatus: 'وضعیت کار',
+  fAssignee: 'مسئول کار',
+  fDue: 'موعد',
+  fHasLead: 'به لید وصل است',
+  fNoAssignee: 'بدون مسئول',
+  fNoDue: 'بدون موعد',
+
+  // catalog filter fields
+  fCategory: 'دسته',
+  fBrand: 'برند',
+  fCurrency: 'ارز',
+  fHasPricing: 'قیمت‌گذاری دارد',
+  fNoCategory: 'بدون دسته',
+  fNoBrand: 'بدون برند',
+
+  // competitor filter fields
+  fCompetitorType: 'نوع',
+  fStrength: 'قدرت',
+
+  // contacts screen
+  contacts: 'مخاطبین',
+  contactsCount: 'مخاطب',
+  fCompany: 'شرکت',
+  fJobTitle: 'سمت',
+  fHasPhone: 'شماره تماس دارد',
+  fHasEmail: 'ایمیل دارد',
+  fName: 'نام',
+  noContactsFound: 'مخاطبی پیدا نشد',
+  noCompany: 'بدون شرکت',
+  contactLeads: 'لید',
+};
 // Offer history, additional referrers, subscriptions, and lead age. See
 // docs/superpowers/specs/2026-08-05-sales-pricing-subscriptions-referrals-design.md.
-export const T7 = {
+export const T8 = {
   // --- offer history ---
   offersSection: 'تاریخچه پیشنهادها',
   offersHint: 'هر قیمتی که به مشتری پیشنهاد شده، با تاریخ و دلیلش',
@@ -725,7 +790,7 @@ export const OFFER_STATUS_LABELS: Record<string, string> = {
   SUPERSEDED: 'منقضی',
 };
 
-export const T8 = {
+export const T9 = {
   // --- additional referrers ---
   referrersSection: 'معرفین دیگر',
   referrersHint: 'معرف اصلی بالا ثبت است؛ اینجا کسانی که سهم جداگانه دارند',
@@ -752,7 +817,7 @@ export const REFERRER_ROLE_LABELS: Record<string, string> = {
 };
 
 // Lead age in the current stage, and admin lead reassignment.
-export const T9 = {
+export const T10 = {
   stageAgeLbl: 'مدت در این مرحله',
   reassignSection: 'تغییر مسئول لید',
   reassignHint: 'لید را به فروشندهٔ دیگری بسپارید',
@@ -765,7 +830,7 @@ export const T9 = {
 };
 
 // Subscriptions and lead conversion.
-export const T10 = {
+export const T11 = {
   subscriptionsSection: 'اشتراک‌ها',
   subscriptionsHint: 'آنچه مشتری بعد از بستن معامله می‌پردازد',
   noSubscriptions: 'هنوز اشتراکی ثبت نشده',

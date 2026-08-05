@@ -351,3 +351,23 @@ export const IconTrash = ({ size }: IconProps) => (
     <line x1="14" y1="11" x2="14" y2="17" />
   </svg>
 );
+
+export const IconFilter = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M3 5h18l-7 8v6l-4 2v-8Z" />
+  </svg>
+);
+
+export const IconClose = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="m6 6 12 12M18 6 6 18" />
+  </svg>
+);
+
+export const IconContacts = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20" />
+    <circle cx="9.5" cy="7.5" r="3.5" />
+    <path d="M17 4.5a3.5 3.5 0 0 1 0 6.8M21 20v-1.5a4 4 0 0 0-3-3.8" />
+  </svg>
+);

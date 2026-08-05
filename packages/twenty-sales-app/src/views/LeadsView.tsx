@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { fetchMembers } from '../api/admin';
 import { type CurrentUser } from '../api/auth';
 import {
   fetchLeads,
+  fetchReferrers,
   OPEN_STAGES,
 } from '../api/records';
+import { FilterBar } from '../components/FilterBar';
 import { IconKanban, IconPlus, IconTable } from '../components/icons';
 import { useCached } from '../lib/cache';
+import { buildGraphQLFilter } from '../lib/filters';
+import { leadFilterFields } from '../lib/screenFilters';
+import { useFilters } from '../lib/useFilters';
 import {
   formatMoney,
   formatMoneyTotals,
@@ -17,8 +23,8 @@ import {
 } from '../lib/format';
 import { loadPrefs, savePref } from '../lib/prefs';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
-import { navigate } from '../lib/router';
-import { SOURCE_LABELS, STAGE_LABELS, T, TEMP_LABELS } from '../lib/strings';
+import { navigate, useRoute } from '../lib/router';
+import { SOURCE_LABELS, STAGE_LABELS, T, T7, TEMP_LABELS } from '../lib/strings';
 
 type LeadsViewProps = {
   user: CurrentUser;
@@ -72,14 +78,43 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
     savePref('leadsSort', v);
   };
 
+  // Option lists for the filter sheet. Both are small, cached, and shared with
+  // other screens; a failure here must not take the leads list down with it.
+  const { data: filterOptions } = useCached('lead-filter-options', async () => {
+    const [members, referrers] = await Promise.all([
+      fetchMembers().catch(() => []),
+      fetchReferrers().catch(() => []),
+    ]);
+    return { members, referrers };
+  });
+
+  const fields = useMemo(
+    () =>
+      leadFilterFields(filterOptions?.members ?? [], filterOptions?.referrers ?? []),
+    [filterOptions],
+  );
+
+  const route = useRoute();
+  const filters = useFilters('leads', fields, route.query);
+
+  // Leads are server-paged, so the filter has to run in the query: filtering
+  // one page in the browser would quietly filter a truncated pipeline.
+  const serverFilter = useMemo(
+    () => buildGraphQLFilter(fields, filters.state),
+    [fields, filters.state],
+  );
+
   const { data, error } = useCached(
-    `leads:${user.workspaceMemberId}:${mineOnly}:${openOnly}:${debouncedSearch}`,
+    `leads:${user.workspaceMemberId}:${mineOnly}:${openOnly}:${debouncedSearch}:${JSON.stringify(
+      serverFilter ?? null,
+    )}`,
     () =>
       fetchLeads({
         search: debouncedSearch || undefined,
         ownerId: mineOnly ? user.workspaceMemberId : undefined,
         openOnly,
         limit: 200,
+        extraFilter: serverFilter,
       }),
   );
 
@@ -154,6 +189,11 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
             همه مراحل
           </button>
         </div>
+        <FilterBar
+          fields={fields}
+          filters={filters}
+          resultCount={leads?.length ?? null}
+        />
         <div className="grow" />
         <div className="seg only-desktop">
           <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>
@@ -178,7 +218,20 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
       )}
 
       {leads !== null && leads.length === 0 && (
-        <div className="empty-state">{T.noLeadsFound}</div>
+        <div className="empty-state">
+          {filters.count > 0 ? (
+            <>
+              {T7.noMatches}
+              <div style={{ marginTop: 10 }}>
+                <button className="btn line sm" onClick={filters.clearAll}>
+                  {T7.clearAll}
+                </button>
+              </div>
+            </>
+          ) : (
+            T.noLeadsFound
+          )}
+        </div>
       )}
 
       {/* desktop: table or kanban */}

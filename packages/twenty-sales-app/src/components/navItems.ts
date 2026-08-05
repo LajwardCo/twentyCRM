@@ -1,7 +1,8 @@
-import { T, T2, T3, T4 } from '../lib/strings';
+import { T, T2, T3, T4, T7 } from '../lib/strings';
 import {
   IconCalendar,
   IconChart,
+  IconContacts,
   IconDailyReport,
   IconDashboard,
   IconFlame,
@@ -24,6 +25,7 @@ export const NAV: readonly NavItem[] = [
   { key: 'calendar', label: T2.calendar, icon: IconCalendar },
   { key: 'tasks', label: 'کارها', icon: IconTasks },
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
+  { key: 'contacts', label: T7.contacts, icon: IconContacts },
   { key: 'reports', label: T2.reports, icon: IconChart },
   { key: 'daily-report', label: T3.dailyReport, icon: IconDailyReport },
   { key: 'competitors', label: 'بازیگران بازار', icon: IconFlame },
@@ -44,7 +46,7 @@ const ROUTE_TO_NAV_KEY: Record<string, string> = {
   task: 'tasks',
   new: 'leads',
   company: 'leads',
-  person: 'leads',
+  person: 'contacts',
   search: 'leads',
 };
 

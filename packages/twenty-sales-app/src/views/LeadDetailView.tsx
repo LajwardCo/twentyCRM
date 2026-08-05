@@ -74,8 +74,8 @@ import {
   T2,
   T5,
   T6,
-  T7,
-  T9,
+  T8,
+  T10,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -885,7 +885,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   here would read as "agreed on nothing". */}
               {lead.agreedPrice?.amountMicros != null && (
                 <div className="c-row">
-                  <span>{T7.agreedPriceLbl}</span>
+                  <span>{T8.agreedPriceLbl}</span>
                   <b className="num">
                     {formatMoney(
                       lead.agreedPrice.amountMicros,
@@ -907,7 +907,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   stageChangedAt, so it can over-state but never under-state. */}
               {stageAge !== null && (
                 <div className="c-row">
-                  <span>{T9.stageAgeLbl}</span>
+                  <span>{T10.stageAgeLbl}</span>
                   <b
                     className="num"
                     style={{

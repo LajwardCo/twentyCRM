@@ -10,7 +10,7 @@ import {
 } from '../api/leadReferrers';
 import { type Referrer } from '../api/records';
 import { toPersianDigits } from '../lib/jalali';
-import { REFERRER_ROLE_LABELS, T7, T8 } from '../lib/strings';
+import { REFERRER_ROLE_LABELS, T8, T9 } from '../lib/strings';
 
 // Additional referrers credited on a lead, each with the commission share
 // negotiated for THIS deal. The primary referrer (opportunity.referrer) is
@@ -52,7 +52,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
       }
       setEntries(result.value);
     } catch {
-      setError(T8.referrersLoadFailed);
+      setError(T9.referrersLoadFailed);
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
       setAdding(false);
       await load();
     } catch {
-      setError(T8.referrerSaveFailed);
+      setError(T9.referrerSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -115,7 +115,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
       await removeLeadReferrer(id);
       await load();
     } catch {
-      setError(T8.referrerSaveFailed);
+      setError(T9.referrerSaveFailed);
     } finally {
       setBusy(false);
     }
@@ -123,15 +123,15 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
 
   return (
     <div className="card card-pad anim d3">
-      <h3>{T8.referrersSection}</h3>
-      <div className="sub">{T8.referrersHint}</div>
+      <h3>{T9.referrersSection}</h3>
+      <div className="sub">{T9.referrersHint}</div>
 
       {error !== null && <div className="err">{error}</div>}
 
       {loading ? (
-        <div className="sub">{T7.loading}</div>
+        <div className="sub">{T8.loading}</div>
       ) : entries.length === 0 ? (
-        <div className="empty-state">{T8.noExtraReferrers}</div>
+        <div className="empty-state">{T9.noExtraReferrers}</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
           {entries.map((item) => (
@@ -164,7 +164,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
                 disabled={busy}
                 onClick={() => void remove(item.id)}
               >
-                {T8.removeReferrer}
+                {T9.removeReferrer}
               </button>
             </div>
           ))}
@@ -173,18 +173,18 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
 
       {(entries.length > 0 || primaryReferrer !== null) && (
         <div className="c-row" style={{ marginTop: 8 }}>
-          <span>{T8.totalCommissionLbl}</span>
+          <span>{T9.totalCommissionLbl}</span>
           <b className="num">{toPersianDigits(Math.round(total * 100) / 100)}٪</b>
         </div>
       )}
-      {total > 100 && <div className="err">{T8.commissionOverCommitted}</div>}
+      {total > 100 && <div className="err">{T9.commissionOverCommitted}</div>}
 
       {adding ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           <div className="fld">
-            <label>{T8.referrerPartnerLbl}</label>
+            <label>{T9.referrerPartnerLbl}</label>
             <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
-              <option value="">{T8.referrerPickPartner}</option>
+              <option value="">{T9.referrerPickPartner}</option>
               {selectable.map((partner) => (
                 <option key={partner.id} value={partner.id}>
                   {partner.name}
@@ -194,7 +194,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div className="fld" style={{ flex: 1, minWidth: 120 }}>
-              <label>{T8.referrerRoleLbl}</label>
+              <label>{T9.referrerRoleLbl}</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as ReferrerRole)}
@@ -207,7 +207,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
               </select>
             </div>
             <div className="fld" style={{ maxWidth: 140 }}>
-              <label>{T8.referrerCommissionLbl}</label>
+              <label>{T9.referrerCommissionLbl}</label>
               <input
                 inputMode="decimal"
                 dir="ltr"
@@ -217,7 +217,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
             </div>
           </div>
           <div className="fld">
-            <label>{T8.referrerNoteLbl}</label>
+            <label>{T9.referrerNoteLbl}</label>
             <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} />
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -227,7 +227,7 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
               disabled={busy || partnerId === ''}
               onClick={() => void submit()}
             >
-              {T8.saveReferrer}
+              {T9.saveReferrer}
             </button>
             <button
               type="button"
@@ -235,14 +235,14 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
               disabled={busy}
               onClick={() => setAdding(false)}
             >
-              {T7.cancel}
+              {T8.cancel}
             </button>
           </div>
         </div>
       ) : (
         <div style={{ marginTop: 10 }}>
           <button type="button" className="btn soft sm" onClick={() => setAdding(true)}>
-            {T8.addReferrer}
+            {T9.addReferrer}
           </button>
         </div>
       )}

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { type Member } from '../api/admin';
 import { fetchLeads, type LeadSummary, updateLead } from '../api/records';
 import { personName } from '../lib/format';
-import { T9 } from '../lib/strings';
+import { T10 } from '../lib/strings';
 
 // Admin-only lead reassignment. Leads stay attached to sellers who have left
 // or been reassigned, and nothing else in the app can move them -- a seller
@@ -31,7 +31,7 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
     try {
       setResults(await fetchLeads({ search: search.trim(), limit: 20 }));
     } catch {
-      setError(T9.reassignFailed);
+      setError(T10.reassignFailed);
     } finally {
       setSearching(false);
     }
@@ -47,9 +47,9 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
       setOwnerId('');
       setResults([]);
       setSearch('');
-      onDone(T9.reassignDone);
+      onDone(T10.reassignDone);
     } catch {
-      setError(T9.reassignFailed);
+      setError(T10.reassignFailed);
     } finally {
       setBusy(false);
     }
@@ -57,8 +57,8 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
 
   return (
     <div className="card card-pad anim d3">
-      <h3>{T9.reassignSection}</h3>
-      <div className="sub">{T9.reassignHint}</div>
+      <h3>{T10.reassignSection}</h3>
+      <div className="sub">{T10.reassignHint}</div>
 
       {error !== null && <div className="err">{error}</div>}
 
@@ -66,7 +66,7 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
         <div className="fld" style={{ flex: 1, minWidth: 160 }}>
           <input
             value={search}
-            placeholder={T9.reassignSearchPlaceholder}
+            placeholder={T10.reassignSearchPlaceholder}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') void runSearch();
@@ -79,7 +79,7 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
           disabled={searching || search.trim() === ''}
           onClick={() => void runSearch()}
         >
-          {T9.reassignPickLead}
+          {T10.reassignPickLead}
         </button>
       </div>
 
@@ -109,9 +109,9 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
             <b>{selected.owner === null ? '—' : personName(selected.owner)}</b>
           </div>
           <div className="fld">
-            <label>{T9.reassignPickOwner}</label>
+            <label>{T10.reassignPickOwner}</label>
             <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              <option value="">{T9.reassignPickOwner}</option>
+              <option value="">{T10.reassignPickOwner}</option>
               {members
                 // Reassigning to the current owner is a no-op that reads like
                 // it worked, so it isn't offered.
@@ -130,7 +130,7 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
               disabled={busy || ownerId === ''}
               onClick={() => void apply()}
             >
-              {T9.reassignApply}
+              {T10.reassignApply}
             </button>
             <button
               type="button"
@@ -138,7 +138,7 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
               disabled={busy}
               onClick={() => setSelected(null)}
             >
-              {T9.reassignPickLead}
+              {T10.reassignPickLead}
             </button>
           </div>
         </div>

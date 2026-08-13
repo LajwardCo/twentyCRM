@@ -87,7 +87,29 @@ async function post(url, query, variables) {
 }
 
 const gql = (query, variables) => post(META, query, variables);
-const core = (query, variables) => post(CORE, query, variables);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Twenty rate-limits to 100 requests per 60s and answers the 101st with a
+// plain error, so a 134-lead backfill cannot just loop. Pace every record call
+// and back off when the limit is hit anyway -- the backfill skips leads that
+// are already linked, so a resumed run picks up where it stopped.
+const isRateLimited = (error) => /Limit reached/i.test(error.message);
+
+const core = async (query, variables) => {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const data = await post(CORE, query, variables);
+      await sleep(650);
+      return data;
+    } catch (e) {
+      if (!isRateLimited(e) || attempt >= 5) throw e;
+      const waitMs = 62_000;
+      console.log(`  … rate limited, waiting ${waitMs / 1000}s before retrying`);
+      await sleep(waitMs);
+    }
+  }
+};
 
 async function login() {
   const a = await gql(
@@ -308,38 +330,44 @@ async function upsertExternalRole(spec, objs) {
 
 // ---- backfill ----
 
-// Reads every opportunity that still has a legacy marketer enum value and points
-// it at the matching partner record. Paginated: `first` is not clamped by the
-// server, so an oversized page silently truncates instead of erroring.
+// Points every lead still carrying a legacy marketer enum value at the matching
+// partner record.
+//
+// Queries the leads that are NOT yet linked and always reads the first page:
+// each pass links its page, those rows drop out of the filter, and the next
+// pass sees the remainder. Cursor pagination is deliberately avoided -- the
+// bulk-imported leads share identical createdAt values, and paging on a
+// non-unique sort key silently skips rows (it left 27 of 134 behind).
 async function backfillMarketers(partnerIdByEnumValue) {
-  const PAGE = 60;
-  let after = null;
-  let scanned = 0;
-  let updated = 0;
+  const PAGE = 40;
+  const values = JSON.stringify(LEGACY_MARKETERS.map((m) => m.value));
+  const unlinkedFilter = `{ and: [ { marketer: { in: ${values} } }, { marketerPartnerId: { is: NULL } } ] }`;
 
-  for (;;) {
+  let updated = 0;
+  let skipped = 0;
+
+  for (let pass = 0; pass < 200; pass += 1) {
     const data = await core(
-      `query($after: String) {
-        opportunities(
-          first: ${PAGE}
-          after: $after
-          filter: { marketer: { in: ${JSON.stringify(LEGACY_MARKETERS.map((m) => m.value))} } }
-          orderBy: [{ createdAt: AscNullsLast }]
-        ) {
-          edges { cursor node { id marketer marketerPartnerId } }
-          pageInfo { hasNextPage endCursor }
+      `query {
+        opportunities(first: ${PAGE}, filter: ${unlinkedFilter}) {
+          edges { node { id marketer } }
         }
       }`,
-      { after },
     );
 
-    const edges = data.opportunities.edges;
-    scanned += edges.length;
+    const nodes = data.opportunities.edges.map((e) => e.node);
 
-    for (const { node } of edges) {
-      if (node.marketerPartnerId) continue;
+    if (nodes.length === 0) break;
+
+    let progressed = false;
+
+    for (const node of nodes) {
       const partnerId = partnerIdByEnumValue[node.marketer];
-      if (!partnerId) continue;
+
+      if (!partnerId) {
+        skipped += 1;
+        continue;
+      }
 
       await core(
         `mutation($id: UUID!, $data: OpportunityUpdateInput!) {
@@ -348,13 +376,22 @@ async function backfillMarketers(partnerIdByEnumValue) {
         { id: node.id, data: { marketerPartnerId: partnerId } },
       );
       updated += 1;
+      progressed = true;
     }
 
-    if (!data.opportunities.pageInfo.hasNextPage) break;
-    after = data.opportunities.pageInfo.endCursor;
+    // Every remaining lead names a marketer we have no partner record for;
+    // another pass would fetch the same rows forever.
+    if (!progressed) break;
+
+    console.log(`  … ${updated} linked so far`);
   }
 
-  rec('backfill', 'opportunity.marketerPartner', 'created', `${updated} of ${scanned} leads linked`);
+  rec(
+    'backfill',
+    'opportunity.marketerPartner',
+    'created',
+    `${updated} leads linked${skipped ? `, ${skipped} skipped (unknown marketer)` : ''}`,
+  );
 }
 
 async function ensurePartnerRecords() {

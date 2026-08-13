@@ -201,31 +201,70 @@ export type PartnerLinkSupport =
   | { supported: true; partners: PartnerLink[] }
   | { supported: false };
 
-const isMissingMemberFieldError = (error: unknown): boolean =>
-  error instanceof Error &&
-  /(Cannot query field|is not defined by type|Unknown argument).*"?(member|memberId)/i.test(
-    error.message,
-  );
-
-export const fetchPartnerLinks = async (): Promise<PartnerLinkSupport> => {
+// Whether this server actually has partner.member.
+//
+// Deliberately asked of the metadata API rather than inferred from a failed
+// record query: the record API answers an unknown field with `null` rather than
+// a validation error (verified against production), so selecting `memberId` on
+// a server without the field succeeds and returns null for every partner --
+// indistinguishable from "nobody is linked yet". Offering the control in that
+// state would give an admin a dropdown whose every change silently does
+// nothing.
+const isPartnerMemberFieldProvisioned = async (): Promise<boolean> => {
   try {
-    const data = await coreQuery<{
-      partners: { edges: { node: PartnerLink }[] };
+    const data = await metadataQuery<{
+      objects: {
+        edges: {
+          node: {
+            nameSingular: string;
+            fields: { edges: { node: { name: string } }[] };
+          };
+        }[];
+      };
     }>(
-      `query PartnerLinks {
-        partners(first: 200, orderBy: [{ name: AscNullsLast }]) {
-          edges { node { id name partnerType memberId } }
+      `query PartnerMemberFieldProbe {
+        objects(paging: { first: 500 }) {
+          edges {
+            node {
+              nameSingular
+              fields(paging: { first: 500 }) { edges { node { name } } }
+            }
+          }
         }
       }`,
     );
-    return {
-      supported: true,
-      partners: data.partners.edges.map((e) => e.node),
-    };
-  } catch (error) {
-    if (isMissingMemberFieldError(error)) return { supported: false };
-    throw error;
+
+    const partner = data.objects.edges.find(
+      (edge) => edge.node.nameSingular === 'partner',
+    );
+
+    return (
+      partner?.node.fields.edges.some((f) => f.node.name === 'member') ?? false
+    );
+  } catch {
+    return false;
   }
+};
+
+export const fetchPartnerLinks = async (): Promise<PartnerLinkSupport> => {
+  if (!(await isPartnerMemberFieldProvisioned())) {
+    return { supported: false };
+  }
+
+  const data = await coreQuery<{
+    partners: { edges: { node: PartnerLink }[] };
+  }>(
+    `query PartnerLinks {
+      partners(first: 200, orderBy: [{ name: AscNullsLast }]) {
+        edges { node { id name partnerType memberId } }
+      }
+    }`,
+  );
+
+  return {
+    supported: true,
+    partners: data.partners.edges.map((e) => e.node),
+  };
 };
 
 const setPartnerMember = async (

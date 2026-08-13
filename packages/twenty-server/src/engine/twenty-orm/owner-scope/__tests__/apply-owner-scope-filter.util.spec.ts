@@ -31,14 +31,18 @@ const DEFAULT_ENTITIES: Record<string, FakeEntity> = {
   partner: { tableName: '_partner', columns: ['memberId'] },
 };
 
-const makeConnection = (entities: Record<string, FakeEntity> = DEFAULT_ENTITIES) =>
+const makeConnection = (
+  entities: Record<string, FakeEntity> = DEFAULT_ENTITIES,
+) =>
   ({
     hasMetadata: (name: string) => entities[name] !== undefined,
     getMetadata: (name: string) => ({
       schema: SCHEMA,
       tableName: entities[name]?.tableName,
       findColumnWithDatabaseName: (column: string) =>
-        entities[name]?.columns.includes(column) ? { databaseName: column } : undefined,
+        entities[name]?.columns.includes(column)
+          ? { databaseName: column }
+          : undefined,
     }),
   }) as any;
 
@@ -166,7 +170,9 @@ describe('applyOwnerScopeFilter', () => {
 
       const { sql } = qb.calls[0];
 
-      expect(sql).toContain('opportunity."ownerId" = :ownerScopeWorkspaceMemberId');
+      expect(sql).toContain(
+        'opportunity."ownerId" = :ownerScopeWorkspaceMemberId',
+      );
       expect(sql).toContain('opportunity."marketerPartnerId" IN');
       expect(sql).toContain('opportunity."referrerId" IN');
       expect(sql.split(' OR ')).toHaveLength(3);
@@ -234,7 +240,6 @@ describe('applyOwnerScopeFilter', () => {
       expect(qb.calls[0].sql).toContain('"ownerId"');
       expect(qb.calls[0].sql).not.toContain('IN (');
     });
-
   });
 
   // An object configured as scoped whose rules all fail to resolve must deny,

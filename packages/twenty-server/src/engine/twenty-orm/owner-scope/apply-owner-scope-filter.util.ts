@@ -59,7 +59,10 @@ const buildRuleSql = (
     return null;
   }
 
-  const table = resolveOwnerScopeTable(rule.targetObjectNameSingular, connection);
+  const table = resolveOwnerScopeTable(
+    rule.targetObjectNameSingular,
+    connection,
+  );
 
   if (table === null) {
     return null;

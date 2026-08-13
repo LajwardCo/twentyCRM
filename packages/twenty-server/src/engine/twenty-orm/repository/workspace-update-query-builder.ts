@@ -643,6 +643,7 @@ export class WorkspaceUpdateQueryBuilder<
       objectRecordsPermissions: this.objectRecordsPermissions,
       authContext: this.authContext,
       shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+      connection: this.connection,
     });
   }
 

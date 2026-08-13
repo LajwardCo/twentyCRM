@@ -12,7 +12,7 @@ import {
   IconSun,
   IconX,
 } from './icons';
-import { activeNavKey, NAV } from './navItems';
+import { activeNavKey, navItemsFor } from './navItems';
 
 type MobileMenuProps = {
   user: CurrentUser;
@@ -77,7 +77,7 @@ export const MobileMenu = ({
         </button>
 
         <div className="msheet-grid">
-          {NAV.map(({ key, label, icon: Icon }) => (
+          {navItemsFor(user).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               className={`msheet-tile ${active === key ? 'on' : ''}`}

@@ -1,3 +1,5 @@
+import { type CurrentUser } from '../api/auth';
+import { canSeeNavKey } from '../lib/access';
 import { T, T2, T3, T4, T7 } from '../lib/strings';
 import {
   IconCalendar,
@@ -33,7 +35,13 @@ export const NAV: readonly NavItem[] = [
   { key: 'admin', label: 'کاربران', icon: IconLeads },
 ];
 
-// The three screens a seller touches all day long.
+// The sidebar and the mobile menu both render this, filtered to what the
+// current account is allowed to open. See lib/access.ts.
+export const navItemsFor = (user: CurrentUser): readonly NavItem[] =>
+  NAV.filter((item) => canSeeNavKey(user, item.key));
+
+// The three screens a seller touches all day long. Every one of them is also
+// open to external marketers and partners, so the bottom bar needs no filter.
 export const MOBILE_TAB_KEYS = ['today', 'leads', 'tasks'] as const;
 
 export const MOBILE_TABS: readonly NavItem[] = MOBILE_TAB_KEYS.map(

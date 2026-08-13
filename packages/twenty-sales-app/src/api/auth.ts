@@ -1,4 +1,4 @@
-import { metadataQuery, saveTokens } from './client';
+import { coreQuery, metadataQuery, saveTokens } from './client';
 
 // Twenty's two-step credential login: credentials -> short-lived loginToken,
 // then loginToken -> access + refresh tokens.
@@ -50,6 +50,18 @@ export const logout = () => {
   saveTokens(null);
 };
 
+// 'external' is a marketer or referral partner: someone outside the company who
+// only ever sees the leads they brought and the tasks assigned to them. The
+// server enforces that through the owner-scope engine; the app hides what they
+// would only get empty screens for anyway.
+export type SalesRole = 'admin' | 'seller' | 'external';
+
+export type LinkedPartner = {
+  id: string;
+  name: string;
+  partnerType: string | null;
+};
+
 export type CurrentUser = {
   workspaceMemberId: string;
   firstName: string;
@@ -58,6 +70,10 @@ export type CurrentUser = {
   // True when the account can read the roles list — the same PERMISSIONS gate
   // the admin section uses. Drives admin-only UI (see-all-tasks, reassign).
   isAdmin: boolean;
+  role: SalesRole;
+  // The partner record this login is attached to, for an external user. Null
+  // for employees. Its id is what new leads are credited to.
+  partner: LinkedPartner | null;
 };
 
 // Best-effort admin probe: success on getRoles means the account holds the
@@ -68,6 +84,35 @@ const probeIsAdmin = async (): Promise<boolean> => {
     return true;
   } catch {
     return false;
+  }
+};
+
+// An account is external exactly when a partner record points at it. That link
+// is the same one an admin creates when onboarding a marketer, and the same one
+// the server's owner-scope rules read, so the UI and the data layer cannot
+// disagree about who someone is.
+//
+// Resolves to null on any failure: on a server that has not been provisioned
+// yet the `member` field does not exist and the query is a validation error,
+// which must degrade to "employee", not to a broken login.
+const fetchLinkedPartner = async (
+  workspaceMemberId: string,
+): Promise<LinkedPartner | null> => {
+  try {
+    const data = await coreQuery<{
+      partners: { edges: { node: LinkedPartner }[] };
+    }>(
+      `query MyPartnerProfile($memberId: UUID!) {
+        partners(filter: { memberId: { eq: $memberId } }, first: 1) {
+          edges { node { id name partnerType } }
+        }
+      }`,
+      { memberId: workspaceMemberId },
+    );
+
+    return data.partners.edges[0]?.node ?? null;
+  } catch {
+    return null;
   }
 };
 
@@ -98,6 +143,9 @@ export const fetchCurrentUser = async (): Promise<CurrentUser> => {
   }
 
   const isAdmin = await probeIsAdmin();
+  // An admin is never external, so skip the lookup rather than pay for it on
+  // every load of the busiest account type.
+  const partner = isAdmin ? null : await fetchLinkedPartner(member.id);
 
   return {
     workspaceMemberId: member.id,
@@ -105,5 +153,7 @@ export const fetchCurrentUser = async (): Promise<CurrentUser> => {
     lastName: member.name.lastName,
     userEmail: data.currentUser.email,
     isAdmin,
+    role: isAdmin ? 'admin' : partner ? 'external' : 'seller',
+    partner,
   };
 };

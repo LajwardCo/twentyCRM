@@ -6,6 +6,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IconBack } from './components/icons';
 import { AppShell, CmdSearch } from './components/Shell';
+import { canOpenRouteSection } from './lib/access';
 import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
@@ -156,7 +157,12 @@ export const App = () => {
   }
 
   const { user } = session;
-  const [section, param, sub] = route.parts;
+  const [rawSection, param, sub] = route.parts;
+  // An external marketer/partner typing (or bookmarking) an internal URL lands
+  // on Today rather than a screen the server will refuse to fill.
+  const section = canOpenRouteSection(user, rawSection ?? '')
+    ? rawSection
+    : 'today';
 
   const handleLogout = () => {
     logout();

@@ -338,7 +338,13 @@ export class WorkspaceRepository<
       return;
     }
 
-    const ownerColumn = OWNER_SCOPED_OBJECTS[objectMetadata.nameSingular];
+    // Only the first `column` rule is stamped on create: it is the record's
+    // own owner column. `via` rules point at partner records that the creator
+    // does not necessarily have, so they cannot be filled in here -- the app
+    // sets those explicitly (e.g. a marketer's own partner on a new lead).
+    const ownerColumn = OWNER_SCOPED_OBJECTS[objectMetadata.nameSingular]?.find(
+      (rule) => rule.kind === 'column',
+    )?.column;
 
     if (ownerColumn === undefined) {
       return;

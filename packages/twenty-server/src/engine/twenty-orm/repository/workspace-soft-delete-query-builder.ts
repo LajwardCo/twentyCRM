@@ -219,6 +219,7 @@ export class WorkspaceSoftDeleteQueryBuilder<
       objectRecordsPermissions: this.objectRecordsPermissions,
       authContext: this.authContext,
       shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+      connection: this.connection,
     });
   }
 

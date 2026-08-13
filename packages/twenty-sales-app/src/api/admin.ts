@@ -182,6 +182,122 @@ export const deleteMember = async (
   );
 };
 
+// ---------- partner <-> login links ----------
+
+// Attaching a partner record to a workspace member is what turns that account
+// into an external marketer/partner: the app reads the link to decide what to
+// show, and the server's owner-scope rules read it to decide which leads the
+// account may see at all. Provisioned by
+// tools/sales-crm/provision-external-partners.mjs; absent before that runs, in
+// which case the admin screen simply doesn't offer the control.
+export type PartnerLink = {
+  id: string;
+  name: string;
+  partnerType: string | null;
+  memberId: string | null;
+};
+
+export type PartnerLinkSupport =
+  | { supported: true; partners: PartnerLink[] }
+  | { supported: false };
+
+// Whether this server actually has partner.member.
+//
+// Deliberately asked of the metadata API rather than inferred from a failed
+// record query: the record API answers an unknown field with `null` rather than
+// a validation error (verified against production), so selecting `memberId` on
+// a server without the field succeeds and returns null for every partner --
+// indistinguishable from "nobody is linked yet". Offering the control in that
+// state would give an admin a dropdown whose every change silently does
+// nothing.
+const isPartnerMemberFieldProvisioned = async (): Promise<boolean> => {
+  try {
+    const data = await metadataQuery<{
+      objects: {
+        edges: {
+          node: {
+            nameSingular: string;
+            fields: { edges: { node: { name: string } }[] };
+          };
+        }[];
+      };
+    }>(
+      `query PartnerMemberFieldProbe {
+        objects(paging: { first: 500 }) {
+          edges {
+            node {
+              nameSingular
+              fields(paging: { first: 500 }) { edges { node { name } } }
+            }
+          }
+        }
+      }`,
+    );
+
+    const partner = data.objects.edges.find(
+      (edge) => edge.node.nameSingular === 'partner',
+    );
+
+    return (
+      partner?.node.fields.edges.some((f) => f.node.name === 'member') ?? false
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const fetchPartnerLinks = async (): Promise<PartnerLinkSupport> => {
+  if (!(await isPartnerMemberFieldProvisioned())) {
+    return { supported: false };
+  }
+
+  const data = await coreQuery<{
+    partners: { edges: { node: PartnerLink }[] };
+  }>(
+    `query PartnerLinks {
+      partners(first: 200, orderBy: [{ name: AscNullsLast }]) {
+        edges { node { id name partnerType memberId } }
+      }
+    }`,
+  );
+
+  return {
+    supported: true,
+    partners: data.partners.edges.map((e) => e.node),
+  };
+};
+
+const setPartnerMember = async (
+  partnerId: string,
+  memberId: string | null,
+): Promise<void> => {
+  await coreQuery(
+    `mutation LinkPartner($id: UUID!, $data: PartnerUpdateInput!) {
+      updatePartner(id: $id, data: $data) { id }
+    }`,
+    { id: partnerId, data: { memberId } },
+  );
+};
+
+// A member has at most one partner identity, so pointing a new partner record
+// at them releases the previous one -- otherwise two partner rows would both
+// claim the same login and both would widen what that login can see.
+export const linkPartnerToMember = async (
+  memberId: string,
+  partnerId: string | null,
+  currentPartners: PartnerLink[],
+): Promise<void> => {
+  const previous = currentPartners.find((p) => p.memberId === memberId);
+
+  if (previous && previous.id !== partnerId) {
+    await setPartnerMember(previous.id, null);
+  }
+
+  if (partnerId !== null) {
+    await setPartnerMember(partnerId, memberId);
+  }
+};
+
 // ---------- competitors ----------
 
 export type Competitor = {

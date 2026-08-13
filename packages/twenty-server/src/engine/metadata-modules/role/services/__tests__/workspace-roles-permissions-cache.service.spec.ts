@@ -344,7 +344,7 @@ describe('WorkspaceRolesPermissionsCacheService', () => {
       expect(personPermissions.canOnlyAccessOwnedRecords).toBe(true);
     });
 
-    it('should set canOnlyAccessOwnedRecords false for a non-owner-scopable object (company) even when the role enables it', async () => {
+    it('should set canOnlyAccessOwnedRecords true for company, which is scoped through its account owner', async () => {
       roleRepository.find.mockResolvedValue([
         createBaseRole({
           canOnlyAccessOwnedRecords: true,
@@ -356,7 +356,22 @@ describe('WorkspaceRolesPermissionsCacheService', () => {
       const result = await service.computeForCache(WORKSPACE_ID);
       const companyPermissions = result[ROLE_ID][COMPANY_OBJECT_METADATA_ID];
 
-      expect(companyPermissions.canOnlyAccessOwnedRecords).toBe(false);
+      expect(companyPermissions.canOnlyAccessOwnedRecords).toBe(true);
+    });
+
+    it('should set canOnlyAccessOwnedRecords false for a non-owner-scopable object (workflow) even when the role enables it', async () => {
+      roleRepository.find.mockResolvedValue([
+        createBaseRole({
+          canOnlyAccessOwnedRecords: true,
+          rolePermissionFlags: [],
+          objectPermissions: [],
+        }),
+      ]);
+
+      const result = await service.computeForCache(WORKSPACE_ID);
+      const workflowPermissions = result[ROLE_ID][WORKFLOW_OBJECT_METADATA_ID];
+
+      expect(workflowPermissions.canOnlyAccessOwnedRecords).toBe(false);
     });
 
     it('should set canOnlyAccessOwnedRecords false for person when the role does not enable owner scoping', async () => {

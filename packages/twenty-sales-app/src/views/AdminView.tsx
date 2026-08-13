@@ -7,8 +7,10 @@ import {
   deleteMember,
   fetchInvitations,
   fetchMembers,
+  fetchPartnerLinks,
   fetchRoles,
   inviteMember,
+  linkPartnerToMember,
   resendInvitation,
   updateMemberName,
   type Member,
@@ -32,12 +34,13 @@ export const AdminView = ({ user }: AdminViewProps) => {
   const [editing, setEditing] = useState<Member | null>(null);
 
   const { data, error, refresh } = useCached('admin:members-roles', async () => {
-    const [roles, members, invitations] = await Promise.all([
+    const [roles, members, invitations, partnerLinks] = await Promise.all([
       fetchRoles(),
       fetchMembers(),
       fetchInvitations(),
+      fetchPartnerLinks(),
     ]);
-    return { roles, members, invitations };
+    return { roles, members, invitations, partnerLinks };
   });
 
   const flash = (message: string, ms = 2200) => {
@@ -53,6 +56,27 @@ export const AdminView = ({ user }: AdminViewProps) => {
   const roleOfMember = (memberId: string): string | undefined =>
     data?.roles.find((r) => r.workspaceMembers.some((m) => m.id === memberId))
       ?.id;
+
+  // Partner records available to link, and the one currently attached to a
+  // member. Empty on an instance that has not been provisioned yet, which is
+  // why the control below hides rather than errors.
+  const partners =
+    data?.partnerLinks.supported === true ? data.partnerLinks.partners : [];
+  const partnerOfMember = (memberId: string): string =>
+    partners.find((p) => p.memberId === memberId)?.id ?? '';
+
+  const changePartnerLink = async (memberId: string, partnerId: string) => {
+    setBusy(memberId);
+    try {
+      await linkPartnerToMember(memberId, partnerId || null, partners);
+      await reload();
+      flash(partnerId ? 'حساب به بازاریاب وصل شد ✓' : 'اتصال برداشته شد ✓');
+    } catch (err) {
+      flash(`خطا: ${err instanceof Error ? err.message : ''}`, 3500);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const changeRole = async (memberId: string, roleId: string) => {
     setBusy(memberId);
@@ -330,6 +354,27 @@ export const AdminView = ({ user }: AdminViewProps) => {
                     </option>
                   ))}
                 </select>
+                {/* Which partner record this login belongs to. Setting it is
+                    what makes the account an external marketer/partner. */}
+                {data.partnerLinks.supported && (
+                  <select
+                    className="btn line sm"
+                    style={{ cursor: 'pointer', minWidth: 150 }}
+                    disabled={busy === m.id || m.id === user.workspaceMemberId}
+                    value={partnerOfMember(m.id)}
+                    onChange={(e) => changePartnerLink(m.id, e.target.value)}
+                    aria-label="بازاریاب یا شریک مرتبط"
+                  >
+                    <option value="">کارمند (بدون بازاریاب)</option>
+                    {partners
+                      .filter((p) => p.memberId === null || p.memberId === m.id)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                )}
                 <button
                   className="btn line sm"
                   disabled={busy === m.id}

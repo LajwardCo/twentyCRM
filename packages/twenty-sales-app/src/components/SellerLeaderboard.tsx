@@ -13,6 +13,9 @@ import { T2 } from '../lib/strings';
 type SellerLeaderboardProps = {
   leads: LeadSummary[];
   periodStartIso: string;
+  // Members that are external marketers/partners. They own the leads they
+  // bring, so they must be kept out of a ranking of the sales team.
+  externalMemberIds: Set<string>;
 };
 
 type SellerRow = {
@@ -25,7 +28,11 @@ type SellerRow = {
   tasksDone: number;
 };
 
-export const SellerLeaderboard = ({ leads, periodStartIso }: SellerLeaderboardProps) => {
+export const SellerLeaderboard = ({
+  leads,
+  periodStartIso,
+  externalMemberIds,
+}: SellerLeaderboardProps) => {
   const { data: doneTasks } = useCached(`seller-leaderboard-tasks:${periodStartIso}`, () =>
     fetchDoneTasksSince(periodStartIso),
   );
@@ -34,6 +41,7 @@ export const SellerLeaderboard = ({ leads, periodStartIso }: SellerLeaderboardPr
     const bySeller = new Map<string, { name: string; leads: LeadSummary[] }>();
     for (const lead of leads) {
       if (!lead.owner) continue;
+      if (externalMemberIds.has(lead.owner.id)) continue;
       const key = lead.owner.id;
       const entry = bySeller.get(key) ?? {
         name: `${lead.owner.name.firstName} ${lead.owner.name.lastName}`.trim(),
@@ -46,6 +54,7 @@ export const SellerLeaderboard = ({ leads, periodStartIso }: SellerLeaderboardPr
     const tasksBySeller = new Map<string, number>();
     for (const task of doneTasks ?? []) {
       if (!task.assignee) continue;
+      if (externalMemberIds.has(task.assignee.id)) continue;
       tasksBySeller.set(task.assignee.id, (tasksBySeller.get(task.assignee.id) ?? 0) + 1);
     }
 
@@ -66,7 +75,7 @@ export const SellerLeaderboard = ({ leads, periodStartIso }: SellerLeaderboardPr
         };
       })
       .sort((a, b) => b.registered - a.registered);
-  }, [leads, doneTasks]);
+  }, [leads, doneTasks, externalMemberIds]);
 
   if (rows.length === 0) {
     return <div className="empty-state">{T2.noData}</div>;

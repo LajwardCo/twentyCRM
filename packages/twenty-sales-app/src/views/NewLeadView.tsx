@@ -42,7 +42,6 @@ import { formatJalaliDateTime } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import {
-  MARKETER_LABELS,
   PARTNER_TYPE_LABELS,
   SOURCE_LABELS,
   T,
@@ -72,7 +71,7 @@ type Draft = {
   email: string;
   temperature: 'HOT' | 'WARM' | 'COLD' | null;
   leadSource: string;
-  marketer: string;
+  marketerPartnerId: string;
   referrerId: string;
   estimatedValue: string;
   currency: CurrencyCode;
@@ -99,7 +98,9 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     draft?.temperature ?? 'WARM',
   );
   const [leadSource, setLeadSource] = useState(draft?.leadSource ?? 'FIELD');
-  const [marketer, setMarketer] = useState(draft?.marketer ?? '');
+  const [marketerPartnerId, setMarketerPartnerId] = useState(
+    draft?.marketerPartnerId ?? user.partner?.id ?? '',
+  );
   const [referrerId, setReferrerId] = useState(draft?.referrerId ?? '');
   const [referrers, setReferrers] = useState<Referrer[]>([]);
   const [estimatedValue, setEstimatedValue] = useState(draft?.estimatedValue ?? '');
@@ -172,7 +173,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
         email,
         temperature,
         leadSource,
-        marketer,
+        marketerPartnerId,
         referrerId,
         estimatedValue,
         currency,
@@ -191,7 +192,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     email,
     temperature,
     leadSource,
-    marketer,
+    marketerPartnerId,
     referrerId,
     estimatedValue,
     currency,
@@ -302,7 +303,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
       contactEmail: email,
       temperature,
       leadSource,
-      marketer: marketer || null,
+      marketerPartnerId: marketerPartnerId || null,
       referrerId: referrerId || null,
       firstContactNote,
       firstContactDate: new Date(firstContactDate).toISOString(),
@@ -405,7 +406,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
               setLastName('');
               setPhone('');
               setEmail('');
-              setMarketer('');
+              setMarketerPartnerId(user.partner?.id ?? '');
               setReferrerId('');
               setEstimatedValue('');
               setFirstContactNote('');
@@ -529,18 +530,25 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
               <div className="f2">
                 <div className="fld">
                   <label htmlFor="nl-marketer">بازاریاب</label>
-                  <select
-                    id="nl-marketer"
-                    value={marketer}
-                    onChange={(e) => setMarketer(e.target.value)}
-                  >
-                    <option value="">—</option>
-                    {Object.entries(MARKETER_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
+                  {/* An external marketer always credits themselves: the field
+                      shows who they are and cannot be pointed at a colleague. */}
+                  {user.partner ? (
+                    <input id="nl-marketer" value={user.partner.name} readOnly />
+                  ) : (
+                    <select
+                      id="nl-marketer"
+                      value={marketerPartnerId}
+                      onChange={(e) => setMarketerPartnerId(e.target.value)}
+                      disabled={referrers.length === 0}
+                    >
+                      <option value="">—</option>
+                      {referrers.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="fld">
                   <label htmlFor="nl-referrer">معرف</label>

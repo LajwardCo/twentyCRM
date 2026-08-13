@@ -22,7 +22,7 @@ import {
 } from './icons';
 import { MobileMenu } from './MobileMenu';
 import { MobileNav } from './MobileNav';
-import { activeNavKey, NAV } from './navItems';
+import { activeNavKey, navItemsFor } from './navItems';
 
 // fallback dock labels when a view hasn't announced one yet
 const routeDockDefaults = (
@@ -105,7 +105,7 @@ export const AppShell = ({
         </div>
         <nav className="nav">
           <div className="nav-lbl">منو</div>
-          {NAV.map(({ key, label, icon: Icon }) => (
+          {navItemsFor(user).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               className={`nav-item ${active === key ? 'on' : ''}`}

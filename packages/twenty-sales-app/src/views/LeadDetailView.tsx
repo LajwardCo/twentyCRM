@@ -45,6 +45,7 @@ import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
+import { canSeeMoney } from '../lib/access';
 import { invalidateCache, useCached } from '../lib/cache';
 import {
   type CurrencyCode,
@@ -118,6 +119,10 @@ const RowActions = ({
 );
 
 export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
+  // External marketers and partners work the lead but never see its numbers.
+  // The server denies the money fields to them outright; this keeps the page
+  // from rendering rows and editors that could only come back empty.
+  const showMoney = canSeeMoney(user);
   const [override, setOverride] = useState<Partial<LeadSummary>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
@@ -460,7 +465,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               <option value="WARM">{TEMP_LABELS.WARM}</option>
               <option value="COLD">{TEMP_LABELS.COLD}</option>
             </select>
-            {(lead.amount?.amountMicros ?? 0) > 0 && (
+            {showMoney && (lead.amount?.amountMicros ?? 0) > 0 && (
               <span>
                 ارزش:{' '}
                 <b className="num" style={{ color: 'var(--ink)' }}>
@@ -835,23 +840,28 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           {/* deal info */}
           {/* Negotiation history. Hides itself on an instance that hasn't run
               provision-subscriptions-referrals-offers.mjs. */}
-          <LeadOffersCard
-            leadId={leadId}
-            currentUserId={user.workspaceMemberId}
-            onAgreed={() => void reload()}
-          />
+          {showMoney && (
+            <LeadOffersCard
+              leadId={leadId}
+              currentUserId={user.workspaceMemberId}
+              onAgreed={() => void reload()}
+            />
+          )}
 
           {/* Additional referrers, each with the share negotiated for this
               deal. Also hides itself when unprovisioned. */}
-          <LeadReferrersCard
-            leadId={leadId}
-            primaryReferrer={lead.referrer}
-            partners={referrers}
-          />
+          {showMoney && (
+            <LeadReferrersCard
+              leadId={leadId}
+              primaryReferrer={lead.referrer}
+              partners={referrers}
+            />
+          )}
 
           <div className="card card-pad anim d4">
             <h3>معلومات لید</h3>
             <div className="contact-rows">
+              {showMoney && (
               <div className="c-row">
                 <span>ارزش تخمینی</span>
                 {editingAmount ? (
@@ -881,9 +891,10 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   </button>
                 )}
               </div>
+              )}
               {/* Only once a price has actually been settled -- an empty row
                   here would read as "agreed on nothing". */}
-              {lead.agreedPrice?.amountMicros != null && (
+              {showMoney && lead.agreedPrice?.amountMicros != null && (
                 <div className="c-row">
                   <span>{T9.agreedPriceLbl}</span>
                   <b className="num">
@@ -942,15 +953,17 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           </div>
 
           {/* pricing: deal products + quotations */}
-          <PricingCard lead={lead} />
+          {showMoney && <PricingCard lead={lead} />}
 
           {/* What the customer pays after the deal closes, and the reviewed
               conversion that creates it from the won lead's lines. */}
-          <LeadSubscriptionsCard
-            leadId={leadId}
-            companyId={lead.company?.id ?? null}
-            isWon={CONVERTIBLE_STAGES.includes(lead.stage ?? '')}
-          />
+          {showMoney && (
+            <LeadSubscriptionsCard
+              leadId={leadId}
+              companyId={lead.company?.id ?? null}
+              isWon={CONVERTIBLE_STAGES.includes(lead.stage ?? '')}
+            />
+          )}
 
           {/* company info + other contacts */}
           {lead.company && (

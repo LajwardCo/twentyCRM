@@ -4,6 +4,7 @@ import { type CurrentUser } from '../api/auth';
 import {
   fetchAllDoneTasksSince,
   fetchAllLeads,
+  fetchExternalMemberIds,
   fetchLeadsMarketers,
 } from '../api/records';
 import { ActivityReport } from '../components/reports/ActivityReport';
@@ -21,6 +22,10 @@ type ReportsViewProps = {
 
 type Period = 'week' | 'month' | 'quarter';
 type Scope = 'me' | 'team';
+// Stable identity so the leaderboard's memo does not re-run on every render
+// while the team-scope fetch is still in flight.
+const EMPTY_MEMBER_IDS: Set<string> = new Set();
+
 type Tab = 'overview' | 'sellers' | 'marketers' | 'products' | 'activity';
 
 const periodStart = (period: Period): Date => {
@@ -72,12 +77,18 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
       const inPeriodIds = leadPage.items
         .filter((l) => new Date(l.createdAt) >= start)
         .map((l) => l.id);
-      const marketerMap =
-        scope === 'team' ? await fetchLeadsMarketers(inPeriodIds) : {};
+      const [marketerMap, externalMemberIds] =
+        scope === 'team'
+          ? await Promise.all([
+              fetchLeadsMarketers(inPeriodIds),
+              fetchExternalMemberIds(),
+            ])
+          : [{}, new Set<string>()];
       return {
         leads: leadPage.items,
         doneTasks: doneTasks.items,
         marketerMap,
+        externalMemberIds,
         truncated: leadPage.truncated || doneTasks.truncated,
       };
     },
@@ -85,6 +96,7 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
 
   const leads = data?.leads ?? null;
   const marketerMap = data?.marketerMap ?? {};
+  const externalMemberIds = data?.externalMemberIds ?? EMPTY_MEMBER_IDS;
   const hasMarketerData = Object.values(marketerMap).some(
     (v) => v !== null && v !== undefined,
   );
@@ -175,7 +187,11 @@ export const ReportsView = ({ user }: ReportsViewProps) => {
       {activeTab === 'sellers' && (
         <div className="card card-pad anim d2">
           <h3>{T2.sellerPerformance}</h3>
-          <SellerLeaderboard leads={inPeriodLeads} periodStartIso={startIso} />
+          <SellerLeaderboard
+            leads={inPeriodLeads}
+            periodStartIso={startIso}
+            externalMemberIds={externalMemberIds}
+          />
         </div>
       )}
 

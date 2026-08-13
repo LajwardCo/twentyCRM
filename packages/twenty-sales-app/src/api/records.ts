@@ -1,4 +1,5 @@
 import { type LinePriceOverridesPayload } from '../lib/dealLinePricing';
+import { MARKETER_LABELS } from '../lib/strings';
 import {
   parsePriceBook,
   type PricingFactor,
@@ -749,7 +750,7 @@ export type NewLeadInput = {
   contactEmail: string;
   temperature: 'HOT' | 'WARM' | 'COLD' | null;
   leadSource: string | null;
-  marketer: string | null; // SELECT value (e.g. ALAVI) or null
+  marketerPartnerId: string | null; // partner record credited as the marketer
   referrerId: string | null; // partner relation id or null
   firstContactNote: string;
   firstContactDate: string; // ISO
@@ -838,11 +839,13 @@ export const registerLead = async (
   const opportunityId = oppData.createOpportunity.id;
   const target = { opportunityId, companyId };
 
-  // Marketer is a production-only SELECT field; set it best-effort so a lead
-  // still registers on environments where the field doesn't exist.
-  if (input.marketer) {
+  // marketerPartner only exists once provision-external-partners.mjs has run;
+  // set it best-effort so a lead still registers on environments without it.
+  if (input.marketerPartnerId) {
     try {
-      await updateLead(opportunityId, { marketer: input.marketer });
+      await updateLead(opportunityId, {
+        marketerPartnerId: input.marketerPartnerId,
+      });
     } catch {
       // field absent on this env — ignore
     }
@@ -1193,27 +1196,122 @@ export const fetchReferrers = async (): Promise<Referrer[]> => {
   }
 };
 
-// Marketer is a production-only SELECT field on Opportunity.
+// Workspace members that are external marketers/partners rather than employees.
+//
+// Reports use this to keep the seller leaderboard a leaderboard of sellers: an
+// external marketer owns the leads they register, so without this they would
+// rank alongside the sales team. Empty set on environments without the
+// partner.member link, which restores the previous behaviour exactly.
+export const fetchExternalMemberIds = async (): Promise<Set<string>> => {
+  try {
+    const data = await coreQuery<{
+      partners: { edges: { node: { memberId: string | null } }[] };
+    }>(
+      `query PartnerLinkedMembers {
+        partners(first: 200) { edges { node { memberId } } }
+      }`,
+    );
+    return new Set(
+      data.partners.edges
+        .map((e) => e.node.memberId)
+        .filter((id): id is string => id !== null),
+    );
+  } catch {
+    return new Set();
+  }
+};
+
+// The marketer credited on a lead, as a display name.
+//
+// Reads the partner relation and falls back to the legacy SELECT, so an
+// environment that has not run provision-external-partners.mjs (or a lead
+// created before the backfill) still shows a name instead of a blank.
 export const fetchLeadMarketer = async (
   opportunityId: string,
 ): Promise<string | null> => {
   try {
-    const data = await coreQuery<{ opportunity: { marketer: string | null } }>(
+    const data = await coreQuery<{
+      opportunity: { marketerPartner: { name: string } | null } | null;
+    }>(
       `query LeadMarketer($id: UUID!) {
+        opportunity(filter: { id: { eq: $id } }) { marketerPartner { name } }
+      }`,
+      { id: opportunityId },
+    );
+    const name = data.opportunity?.marketerPartner?.name ?? null;
+    if (name !== null) return name;
+  } catch {
+    // relation absent on this env — fall through to the legacy field
+  }
+
+  return fetchLegacyLeadMarketer(opportunityId);
+};
+
+const fetchLegacyLeadMarketer = async (
+  opportunityId: string,
+): Promise<string | null> => {
+  try {
+    const data = await coreQuery<{ opportunity: { marketer: string | null } }>(
+      `query LegacyLeadMarketer($id: UUID!) {
         opportunity(filter: { id: { eq: $id } }) { marketer }
       }`,
       { id: opportunityId },
     );
-    return data.opportunity.marketer;
+    return data.opportunity.marketer
+      ? MARKETER_LABELS[data.opportunity.marketer] ?? data.opportunity.marketer
+      : null;
   } catch {
     return null;
   }
 };
 
-// Bulk variant for reports: one marketer per lead id, in a single request.
-// Same defensive try/catch as fetchLeadMarketer — the field doesn't exist on
-// every environment (e.g. local dev), so callers must treat {} as "no data".
+// Bulk variant for reports: one marketer display name per lead id. Same
+// relation-then-legacy fallback as fetchLeadMarketer; callers must treat {} as
+// "no marketer data on this environment".
 export const fetchLeadsMarketers = async (
+  ids: string[],
+): Promise<Record<string, string | null>> => {
+  if (ids.length === 0) return {};
+
+  try {
+    const data = await coreQuery<{
+      opportunities: {
+        edges: {
+          node: { id: string; marketerPartner: { name: string } | null };
+        }[];
+      };
+    }>(
+      `query LeadsMarketers($ids: [UUID!]!, $limit: Int!) {
+        opportunities(filter: { id: { in: $ids } }, first: $limit) {
+          edges { node { id marketerPartner { name } } }
+        }
+      }`,
+      { ids, limit: ids.length },
+    );
+
+    const byId = Object.fromEntries(
+      data.opportunities.edges.map((e) => [
+        e.node.id,
+        e.node.marketerPartner?.name ?? null,
+      ]),
+    );
+
+    // A half-backfilled workspace still has leads carrying only the old enum;
+    // fill those in rather than under-reporting every marketer's numbers.
+    if (Object.values(byId).some((name) => name === null)) {
+      const legacy = await fetchLegacyLeadsMarketers(
+        Object.keys(byId).filter((id) => byId[id] === null),
+      );
+      return { ...byId, ...legacy };
+    }
+
+    return byId;
+  } catch {
+    return fetchLegacyLeadsMarketers(ids);
+  }
+};
+
+const fetchLegacyLeadsMarketers = async (
   ids: string[],
 ): Promise<Record<string, string | null>> => {
   if (ids.length === 0) return {};
@@ -1221,7 +1319,7 @@ export const fetchLeadsMarketers = async (
     const data = await coreQuery<{
       opportunities: { edges: { node: { id: string; marketer: string | null } }[] };
     }>(
-      `query LeadsMarketers($ids: [UUID!]!, $limit: Int!) {
+      `query LegacyLeadsMarketers($ids: [UUID!]!, $limit: Int!) {
         opportunities(filter: { id: { in: $ids } }, first: $limit) {
           edges { node { id marketer } }
         }
@@ -1229,7 +1327,10 @@ export const fetchLeadsMarketers = async (
       { ids, limit: ids.length },
     );
     return Object.fromEntries(
-      data.opportunities.edges.map((e) => [e.node.id, e.node.marketer]),
+      data.opportunities.edges.map((e) => [
+        e.node.id,
+        e.node.marketer ? MARKETER_LABELS[e.node.marketer] ?? e.node.marketer : null,
+      ]),
     );
   } catch {
     return {};

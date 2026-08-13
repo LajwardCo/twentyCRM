@@ -204,15 +204,18 @@ const EXTERNAL_ROLES = [
 // scoped -- catalog, quotations, subscriptions, competitors, reports and daily
 // reports are all internal.
 const EXTERNAL_READ_WRITE = ['opportunity', 'person', 'company', 'task', 'note'];
-// Join rows carrying no content of their own. They stay unscoped (there is no
-// owner column that would survive a seller linking a task to a marketer's lead),
-// so a determined user could enumerate ids through them -- but the note bodies
-// and task titles behind those ids are still owner-scoped, so nothing readable
-// leaks. Without these, lead detail cannot list its own notes and tasks at all.
-const EXTERNAL_JOIN_ROWS = ['noteTarget', 'taskTarget'];
+// noteTarget, taskTarget and attachment are SYSTEM objects: Twenty rejects a
+// per-object permission on them ("Cannot add object permission on system
+// object") because access to them follows the record they attach to. They are
+// therefore deliberately absent from the grant below -- granting note and task
+// is what lets lead detail list its own notes and tasks. They are also absent
+// from OWNER_SCOPED_OBJECTS for the join rows, which carry no content of their
+// own; the note bodies and task titles behind them are owner-scoped, and
+// attachment is scoped by its author.
+//
 // Their own partner row, so the app can resolve "which partner am I". Scoped by
 // partner.member, so this is not a view of the partner list.
-const EXTERNAL_READ_ONLY = ['partner', 'attachment'];
+const EXTERNAL_READ_ONLY = ['partner'];
 const EXTERNAL_SOFT_DELETABLE = new Set(['task', 'note']);
 
 async function upsertExternalRole(spec, objs) {
@@ -260,13 +263,6 @@ async function upsertExternalRole(spec, objs) {
       canReadObjectRecords: true,
       canUpdateObjectRecords: true,
       canSoftDeleteObjectRecords: EXTERNAL_SOFT_DELETABLE.has(n),
-      canDestroyObjectRecords: false,
-    })),
-    ...EXTERNAL_JOIN_ROWS.filter(present).map((n) => ({
-      objectMetadataId: objs[n].id,
-      canReadObjectRecords: true,
-      canUpdateObjectRecords: true,
-      canSoftDeleteObjectRecords: true,
       canDestroyObjectRecords: false,
     })),
     ...EXTERNAL_READ_ONLY.filter(present).map((n) => ({

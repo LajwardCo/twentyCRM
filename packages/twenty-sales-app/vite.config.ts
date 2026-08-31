@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 
 // The app is served under /sales/ on the same domain as the Twenty server in
@@ -20,6 +21,21 @@ export default defineConfig(({ mode }) => {
   return {
     base: '/sales/',
     plugins: [react()],
+    resolve: {
+      // This package sits deliberately outside the yarn workspace and CI only
+      // runs `npm ci` here, so `twenty-shared`'s package exports (which point
+      // at dist/) are not resolvable during a deploy build. Aliasing the one
+      // source file we need keeps a single phone normalizer shared with the
+      // server without coupling this app to the monorepo's install or build.
+      alias: {
+        '@shared/phone': fileURLToPath(
+          new URL(
+            '../twenty-shared/src/utils/phone/normalizePhoneNumber.ts',
+            import.meta.url,
+          ),
+        ),
+      },
+    },
     server: {
       port: 3012,
       proxy: {

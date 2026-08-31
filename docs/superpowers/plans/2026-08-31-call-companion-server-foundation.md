@@ -352,6 +352,19 @@ cd packages/twenty-sales-app && npx vitest run src/lib/format.test.ts; cd ../..
 
 Expected: FAIL on the foreign-number case, which returns `+14`.
 
+**Deviation recorded during execution.** A plain
+`import ... from 'twenty-shared/utils'` breaks this package's deploy. It sits
+deliberately outside the yarn workspace with its own lockfile, and
+`.github/workflows/deploy-hamagan-sales-app.yaml` runs `npm ci` only inside
+`packages/twenty-sales-app` — so the root `node_modules` symlink never exists in
+CI, and `twenty-shared`'s exports map points at a `dist/` CI never builds.
+
+Instead, a narrow alias points at the one shared **source** file: an
+`@shared/phone` entry in `vite.config.ts` `resolve.alias` and a matching
+`paths` entry plus `include` entry in `tsconfig.json`. That keeps exactly one
+implementation without coupling this app to the monorepo's install or build.
+Vendoring a copy was rejected — it would recreate the drift the spec forbids.
+
 - [ ] **Step 3: Replace the implementation**
 
 In `packages/twenty-sales-app/src/api/records.ts`, replace the whole
@@ -377,10 +390,10 @@ export const normalizePhone = (
 };
 ```
 
-Add the import beside the other imports at the top of the file:
+Add the import at the top of the file:
 
 ```ts
-import { normalizePhoneNumber } from 'twenty-shared/utils';
+import { normalizePhoneNumber } from '@shared/phone';
 ```
 
 - [ ] **Step 4: Run the tests to verify they pass**

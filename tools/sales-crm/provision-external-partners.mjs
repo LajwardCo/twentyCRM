@@ -96,6 +96,12 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // are already linked, so a resumed run picks up where it stopped.
 const isRateLimited = (error) => /Limit reached/i.test(error.message);
 
+// The legacy enum is expected to be deactivated once everything is linked.
+const isMissingMarketerField = (error) =>
+  /doesn't have any .?marketer.? field|Cannot query field .?marketer.?|marketer.*not.*defined/i.test(
+    error.message,
+  );
+
 const core = async (query, variables) => {
   for (let attempt = 0; ; attempt += 1) {
     try {
@@ -343,13 +349,33 @@ async function backfillMarketers(partnerIdByEnumValue) {
   let skipped = 0;
 
   for (let pass = 0; pass < 200; pass += 1) {
-    const data = await core(
-      `query {
-        opportunities(first: ${PAGE}, filter: ${unlinkedFilter}) {
-          edges { node { id marketer } }
-        }
-      }`,
-    );
+    let data;
+
+    try {
+      data = await core(
+        `query {
+          opportunities(first: ${PAGE}, filter: ${unlinkedFilter}) {
+            edges { node { id marketer } }
+          }
+        }`,
+      );
+    } catch (e) {
+      // Once the legacy `marketer` SELECT is retired, filtering on it is a hard
+      // error -- and that is the success case, not a failure: a field nobody can
+      // write can no longer drift out of sync with the relation.
+      if (isMissingMarketerField(e)) {
+        rec(
+          'backfill',
+          'opportunity.marketerPartner',
+          'skip',
+          'legacy marketer field retired — nothing can drift',
+        );
+
+        return;
+      }
+
+      throw e;
+    }
 
     const nodes = data.opportunities.edges.map((e) => e.node);
 

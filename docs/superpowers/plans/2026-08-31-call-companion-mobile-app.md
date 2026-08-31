@@ -1651,3 +1651,69 @@ git add -A && git commit -m "feat: call sync pass draining the persisted queue"
   the screen that turns one into a Person or an additional phone on an existing
   Person is not built here.
 - **iOS.** See Scope.
+
+
+---
+
+## Execution log
+
+Executed 2026-08-31 in `/Users/rashid/Development/UsystemsMobile/usystems_sales_mobile`.
+
+**Done (8 commits, 39 tests passing across 5 suites, typecheck clean):**
+
+| Task | State |
+| --- | --- |
+| 1 Scaffold | done (found already committed by an earlier session) |
+| 2 Session storage | done (already committed; 4 tests) |
+| 3 Sign-in + API client | done (already committed) |
+| 4 Sign-in screen + WebView shell | done |
+| 5 Call filtering | done, 7 tests |
+| 6 Recording matching | done, 8 tests |
+| 7 Upload queue reducer | done, 10 tests |
+| 10 Queue persistence | done |
+| 8/9 Native module (Kotlin + TS face) | **written, not verified** — needs a native build on a handset |
+| 11 Sync pass | **written, not verified** — same |
+
+Plus the vendored normalizer and its 10 tests, which pass unchanged in this repo.
+
+### Deviations from the plan as written
+
+1. **Expo SDK 57, not 54.** The scaffold used the current template: SDK 57,
+   React Native 0.86.3, TypeScript 6, and a `src/app/` router directory rather
+   than `app/`. All paths in Tasks 1-4 shift accordingly; `services/` and `lib/`
+   stayed at the repo root.
+
+2. **`expo-file-system` has no `documentDirectory` in SDK 57.** The legacy
+   `FileSystem.documentDirectory` / `readAsStringAsync` / `writeAsStringAsync`
+   helpers this plan's Task 10 was written against are gone. Rewritten against
+   the `File` / `Paths` API (`new File(Paths.document, ...)`, `exists` as a
+   property, synchronous `write()` and `textSync()`), verified against
+   https://docs.expo.dev/versions/v57.0.0/sdk/filesystem/ as the repo's
+   AGENTS.md requires.
+
+3. **`created` is not `succeeded`.** The ingest endpoint returns
+   `created | duplicate | unmatched`; the queue reducer's events are
+   `succeeded | duplicate | unmatched | ...`. The plan passed `result.status`
+   straight into `reduce`, which does not compile. The drain loop now maps
+   `created -> succeeded` explicitly.
+
+4. **`example/` left in place.** The scaffold's untracked example app references
+   components the template cleanup deleted, so it broke `tsc`. It is excluded in
+   `tsconfig.json` rather than deleted — it is untracked, and deleting untracked
+   files is unrecoverable.
+
+5. **Task 6 gained a filename-substring check.** Matching `fileDigits.includes(
+   callSuffix)` rather than prefix/suffix equality, since OEM names embed the
+   number mid-string (`Call_790123456_20260831_090000.m4a`).
+
+### Not verified
+
+Everything requiring a handset: Tasks 8, 9 and 11. `adb devices` shows none
+attached, so the Kotlin has never been compiled or run. Specifically unproven:
+
+- That the module builds and links (`npx expo run:android --port 8083`).
+- That `READ_CALL_LOG` returns real rows once granted at runtime.
+- That the SAF folder grant persists and lists recordings.
+- **The OEM filename patterns in `lib/recordingMatch.ts` are still guesses.**
+  Collect real filenames from each handset model and add them as fixtures before
+  trusting the matcher in the field.

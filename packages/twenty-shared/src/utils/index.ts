@@ -169,6 +169,11 @@ export { fastDeepEqual } from './json/fast-deep-equal';
 export { getAppPath } from './navigation/getAppPath';
 export { getSettingsPath } from './navigation/getSettingsPath';
 export { parseJson } from './parseJson';
+export type { NormalizedPhoneNumber } from './phone/normalizePhoneNumber';
+export {
+  normalizePhoneNumber,
+  phoneMatchKey,
+} from './phone/normalizePhoneNumber';
 export { removePropertiesFromRecord } from './removePropertiesFromRecord';
 export { removeUndefinedFields } from './removeUndefinedFields';
 export { resolveRichTextVariables } from './rich-text-variable-resolver';

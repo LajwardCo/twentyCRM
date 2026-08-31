@@ -237,6 +237,22 @@ Android revokes a permission — **cannot be automated** and requires real
 handsets. This is stated explicitly so it is planned for rather than
 discovered.
 
+## Prior art found in the codebase
+
+Twenty ships a **`callRecording` standard object** (`transcript`, `audio`,
+`video`, `summaryBlocknote`, `summaryMarkdown`, `externalBotId`,
+`recordingRequestStatus`, a `SCHEDULED` lifecycle). It backs the meeting-bot
+feature: a bot joins a video meeting and records and transcribes it.
+
+It does **not** replace `CallActivity`. It has no direction, no phone number,
+no agent link, no duration source and no device call id, and a bot cannot join
+a GSM or WhatsApp call — the entire subject of this spec. The two model
+different things and both should exist.
+
+It is recorded here because it matters for **P3**: its transcript and summary
+fields, and whatever pipeline populates them, should be examined before a
+second transcription path is built alongside it.
+
 ## Out of scope for P1
 
 - AI, transcription and summarization (P3).

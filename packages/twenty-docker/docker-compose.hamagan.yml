@@ -50,6 +50,27 @@ services:
       # (not just Google/Microsoft OAuth) -- needed for the Contact Request
       # reply workflow's SEND_EMAIL step to have a connected account to send from.
       IS_IMAP_SMTP_CALDAV_ENABLED: ${IS_IMAP_SMTP_CALDAV_ENABLED:-false}
+      # Call recordings would otherwise fill the droplet volume that also holds
+      # the database, so attachments move to DigitalOcean Spaces. A bucket
+      # lifecycle rule expires audio after 180 days; the CallActivity record
+      # and its transcript stay in the DB indefinitely.
+      #
+      # STORAGE_TYPE is env-gated with a LOCAL default on purpose: pinning S_3
+      # here would make the server fail config validation at boot on any box
+      # where the bucket secrets are not set yet. Flip it in the box .env only
+      # after the bucket and keys exist.
+      #
+      # STORAGE_S3_REGION must satisfy Twenty's @IsAWSRegion validator
+      # (/^[a-z]{2}-[a-z]+-\d$/), which DigitalOcean's own region slugs like
+      # 'fra1' do not match. The region is a formality for an S3-compatible
+      # endpoint, so a valid-shaped placeholder is used and the real location
+      # comes from STORAGE_S3_ENDPOINT.
+      STORAGE_TYPE: ${STORAGE_TYPE:-LOCAL}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_NAME: ${STORAGE_S3_NAME:-}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-}
+      STORAGE_S3_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-}
+      STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-}
 
   worker:
     dns:
@@ -72,3 +93,24 @@ services:
       # to LOCAL only when NODE_ENV=development; production needs it explicit.
       LOGIC_FUNCTION_TYPE: ${LOGIC_FUNCTION_TYPE:-LOCAL}
       IS_IMAP_SMTP_CALDAV_ENABLED: ${IS_IMAP_SMTP_CALDAV_ENABLED:-false}
+      # Call recordings would otherwise fill the droplet volume that also holds
+      # the database, so attachments move to DigitalOcean Spaces. A bucket
+      # lifecycle rule expires audio after 180 days; the CallActivity record
+      # and its transcript stay in the DB indefinitely.
+      #
+      # STORAGE_TYPE is env-gated with a LOCAL default on purpose: pinning S_3
+      # here would make the server fail config validation at boot on any box
+      # where the bucket secrets are not set yet. Flip it in the box .env only
+      # after the bucket and keys exist.
+      #
+      # STORAGE_S3_REGION must satisfy Twenty's @IsAWSRegion validator
+      # (/^[a-z]{2}-[a-z]+-\d$/), which DigitalOcean's own region slugs like
+      # 'fra1' do not match. The region is a formality for an S3-compatible
+      # endpoint, so a valid-shaped placeholder is used and the real location
+      # comes from STORAGE_S3_ENDPOINT.
+      STORAGE_TYPE: ${STORAGE_TYPE:-LOCAL}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION:-us-east-1}
+      STORAGE_S3_NAME: ${STORAGE_S3_NAME:-}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-}
+      STORAGE_S3_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-}
+      STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-}

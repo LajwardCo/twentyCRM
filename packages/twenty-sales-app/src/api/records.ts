@@ -1,3 +1,4 @@
+import { normalizePhoneNumber } from '@shared/phone';
 import { type LinePriceOverridesPayload } from '../lib/dealLinePricing';
 import { MARKETER_LABELS } from '../lib/strings';
 import {
@@ -713,30 +714,20 @@ export const createNoteForLead = async (input: {
   return created.createNote.id;
 };
 
-// Sellers type local numbers like "0764993011"; Twenty validates against the
-// calling code, so normalize to +93 without the trunk zero. International
-// numbers entered with "+" keep their own code.
+// Sellers type local numbers like "0764993011"; Twenty stores a calling code
+// and a subscriber number separately. The parsing itself lives in
+// twenty-shared so the mobile Call Companion, this app and the server all
+// derive identical keys -- see the Call Companion design spec.
 export const normalizePhone = (
   raw: string,
 ): { primaryPhoneCallingCode: string; primaryPhoneNumber: string } | null => {
-  const cleaned = raw.replace(/[\s\-()]/g, '');
-  if (cleaned === '') return null;
-  if (cleaned.startsWith('+93')) {
-    return {
-      primaryPhoneCallingCode: '+93',
-      primaryPhoneNumber: cleaned.slice(3).replace(/^0/, ''),
-    };
-  }
-  if (cleaned.startsWith('+')) {
-    // Unknown foreign code: let the server validate the split.
-    return {
-      primaryPhoneCallingCode: cleaned.slice(0, 3),
-      primaryPhoneNumber: cleaned.slice(3),
-    };
-  }
+  const normalized = normalizePhoneNumber(raw);
+
+  if (normalized === null) return null;
+
   return {
-    primaryPhoneCallingCode: '+93',
-    primaryPhoneNumber: cleaned.replace(/^0/, ''),
+    primaryPhoneCallingCode: normalized.callingCode,
+    primaryPhoneNumber: normalized.nationalNumber,
   };
 };
 

@@ -149,3 +149,57 @@ Verify the same way this session did: create one real test Opportunity in the
 UI (or via a GraphQL mutation), confirm it gets an owner assigned within a few
 seconds, then delete the test record. Full verification method is documented
 inline in `tools/sales-crm/provision-round-robin-workflow.mjs`.
+
+## Call Companion (Plan A)
+
+Design: `docs/superpowers/specs/2026-08-31-call-companion-design.md`
+Plan: `docs/superpowers/plans/2026-08-31-call-companion-server-foundation.md`
+
+### 1. Provision the CallActivity object
+
+```bash
+TWENTY_META=https://crm.hamagan.com/metadata \
+TWENTY_ORIGIN=https://crm.hamagan.com \
+TWENTY_EMAIL=... TWENTY_PASSWORD=... \
+node tools/sales-crm/provision-call-activity.mjs
+```
+
+Idempotent — safe to rerun. A clean rerun reports `0 created, 14 skipped,
+0 failed`.
+
+### 2. Attachment storage (manual, needs the DigitalOcean console)
+
+Call audio at roughly 20 agents x 15 calls/day x 4 minutes is about 0.5 GB/day,
+so it must not land on the droplet volume that also holds the database.
+
+1. Create a Spaces bucket in `fra1` and generate an access key pair.
+2. Add a lifecycle rule expiring objects after **180 days**.
+3. Add to the box `.env` and to the GitHub Actions secrets CI upserts from:
+
+   ```
+   STORAGE_TYPE=S_3
+   STORAGE_S3_NAME=<bucket name>
+   STORAGE_S3_ENDPOINT=https://fra1.digitaloceanspaces.com
+   STORAGE_S3_ACCESS_KEY_ID=<key>
+   STORAGE_S3_SECRET_ACCESS_KEY=<secret>
+   ```
+
+`STORAGE_TYPE` defaults to `LOCAL` in `docker-compose.hamagan.yml` on purpose:
+setting it to `S_3` before the bucket exists makes the server fail config
+validation at boot. Set it only once the values above are in place.
+
+Leave `STORAGE_S3_REGION` alone. It defaults to `us-east-1` because Twenty
+validates it against `/^[a-z]{2}-[a-z]+-\d$/`, which DigitalOcean's own slugs
+(`fra1`, `ams3`) do not match. The real location comes from the endpoint; the
+region is a formality for an S3-compatible service.
+
+**Existing attachments are not migrated by this switch.** Anything already
+uploaded lives on the droplet's local volume and stays there; only new uploads
+go to Spaces. Copy the old files into the bucket first if historical
+attachments must keep resolving.
+
+### 3. Endpoints this adds
+
+- `GET  /rest/sales/phone-index` — the device's match index.
+- `POST /rest/sales/call-activities` — idempotent ingest on `deviceCallId`.
+- `GET  /rest/sales/call-activity-report?from=&to=` — per-agent daily totals.

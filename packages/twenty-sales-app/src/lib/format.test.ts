@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { normalizePhone } from '../api/records';
 import {
   formatMoney,
   formatMoneyCompact,
@@ -109,5 +110,26 @@ describe('formatMoneyTotals', () => {
     expect(
       formatMoneyTotals({ AFN: micros(1_200_000), USD: micros(2500) }, { compact: true }),
     ).toBe('۱٫۲م ؋ + $۲٫۵هزار');
+  });
+});
+
+describe('normalizePhone (adapter over the shared normalizer)', () => {
+  it('splits a local Afghan number for Twenty', () => {
+    expect(normalizePhone('0790123456')).toEqual({
+      primaryPhoneCallingCode: '+93',
+      primaryPhoneNumber: '790123456',
+    });
+  });
+
+  it('splits a foreign number on the real calling code, not the first 3 chars', () => {
+    expect(normalizePhone('+14155550132')).toEqual({
+      primaryPhoneCallingCode: '+1',
+      primaryPhoneNumber: '4155550132',
+    });
+  });
+
+  it('returns null for unusable input', () => {
+    expect(normalizePhone('')).toBeNull();
+    expect(normalizePhone('abc')).toBeNull();
   });
 });

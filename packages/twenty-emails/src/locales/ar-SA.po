@@ -89,6 +89,26 @@ msgid "Update your subscription"
 msgstr "تحديث الاشتراك"
 
 #. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Confirm your new email address"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Confirm your email address"
+msgstr "تأكد من عنوان بريدك الإلكتروني"
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Confirm new email"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Verify Email"
+msgstr "تحقق من البريد الإلكتروني"
+
+#. js-lingui-explicit-id
 #: src/emails/send-invite-link.email.tsx
 msgid "Join your team on Twenty"
 msgstr "انضم إلى فريقك في Twenty"
@@ -147,26 +167,6 @@ msgstr "تعيين"
 #: src/emails/password-reset-link.email.tsx
 msgid "This link is only valid for the next {duration}. If the link does not work, you can use the login verification link directly:"
 msgstr "هذا الرابط صالح فقط للمدة {duration} القادمة. إذا لم يعمل الرابط، يمكنك استخدام رابط التحقق من تسجيل الدخول مباشرة:"
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Confirm your new email address"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Confirm your email address"
-msgstr "تأكد من عنوان بريدك الإلكتروني"
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Confirm new email"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/emails/send-email-verification-link.email.tsx
-msgid "Verify Email"
-msgstr "تحقق من البريد الإلكتروني"
 
 #. js-lingui-explicit-id
 #: src/components/WhatIsTwenty.tsx

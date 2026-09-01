@@ -167,85 +167,53 @@ node tools/sales-crm/provision-call-activity.mjs
 Idempotent — safe to rerun. A clean rerun reports `0 created, 14 skipped,
 0 failed`.
 
-### 2. Attachment storage — Spaces (BLOCKED on credentials, 2026-09-01)
+### 2. Attachment storage — Spaces ✅ DONE 2026-09-01
 
-**Status:** the compose change is deployed and inert. `twenty-server-1` runs
-with `STORAGE_TYPE=local`, `STORAGE_S3_REGION=us-east-1` and empty S3 vars,
-exactly as intended — the server cannot fail config validation before a bucket
-exists. Nothing else is done.
+Attachments (and, once recording pickup ships, call audio) are in
+**`hamagan-crm-storage`, region `sgp1`**. Live and verified.
 
-**Blocked because** both the DigitalOcean and Cloudflare tokens in
-`UsystemsDevOps/c.txt` return 401 (the Twenty CRM API key in that file still
-works). A Spaces bucket also needs its own access key pair, generated
-separately from the DO API token. So this needs either a regenerated DO token
-or five minutes in the DO console.
+**The bucket is in sgp1, not blr1 where the droplet is.** Spaces is not offered
+in blr1 — the endpoint resolves and accepts `ListBuckets`, but `CreateBucket`
+returns AccessDenied. sgp1 is the nearest region.
 
-**Migration is small:** the existing local attachment volume
-(`twenty_server-local-data`) holds **18 files / 2.7 MB**. Copy them into the
-bucket before flipping `STORAGE_TYPE`, or those 18 attachments 404 in the CRM.
-The box has 81 GB free, so there is no disk pressure forcing the switch — call
-audio growth is the reason to do it.
+Config in `/opt/twenty/packages/twenty-docker/.env` (backup
+`.env.bak-20260901-172953`); Spaces credentials are in `UsystemsDevOps/c.txt`
+as `spaces-crm-key` / `spaces-crm-secret`:
 
-Once a bucket and keys exist, in one SSH session:
-
-```bash
-# 1. copy the existing 18 files into the bucket (run from a host with s3 tooling)
-docker run --rm -v twenty_server-local-data:/data \
-  -e AWS_ACCESS_KEY_ID=<key> -e AWS_SECRET_ACCESS_KEY=<secret> \
-  amazon/aws-cli s3 sync /data s3://<bucket>/ --endpoint-url https://<region>.digitaloceanspaces.com
-
-# 2. add the secrets to the box .env (and the GitHub Actions secrets CI upserts from)
-#    STORAGE_TYPE=S_3
-#    STORAGE_S3_NAME=<bucket>
-#    STORAGE_S3_ENDPOINT=https://<region>.digitaloceanspaces.com
-#    STORAGE_S3_ACCESS_KEY_ID=<key>
-#    STORAGE_S3_SECRET_ACCESS_KEY=<secret>
-
-# 3. restart with the prod project name -- a bare `docker compose up` spins a
-#    colliding parallel stack (see references/prod-deploy.md)
-docker compose -p twenty up -d server worker
-
-# 4. verify: env applied, health, and a real upload round-trip
-docker exec twenty-server-1 sh -lc 'env | grep -E "^STORAGE_(TYPE|S3_NAME|S3_ENDPOINT)"'
-curl -s -o /dev/null -w "%{http_code}\n" https://crm.hamagan.com/healthz
+```
+STORAGE_TYPE=S_3
+STORAGE_S3_NAME=hamagan-crm-storage
+STORAGE_S3_ENDPOINT=https://sgp1.digitaloceanspaces.com
+STORAGE_S3_ACCESS_KEY_ID=<key>
+STORAGE_S3_SECRET_ACCESS_KEY=<secret>
 ```
 
-Then upload a file to any record in the CRM UI and confirm it appears in the
-bucket and renders back in the browser. **Leave `STORAGE_S3_REGION` alone** —
-it defaults to `us-east-1` because Twenty validates it against
-`/^[a-z]{2}-[a-z]+-\d$/`, which DigitalOcean's own slugs (`fra1`, `blr1`) do
-not match; the real location comes from the endpoint.
+**Leave `STORAGE_S3_REGION` at `us-east-1`.** Twenty validates it with
+`@IsAWSRegion` (`/^[a-z]{2}-[a-z]+-\d$/`); `sgp1` fails config validation and
+the server will not boot. The real location comes from the endpoint.
 
-### 2a. Original notes (console steps)
+The 18 files / 2.5 MB previously in the `twenty_server-local-data` volume were
+`aws s3 sync`'d to the bucket root before the flip, preserving key paths. After
+cutover an existing attachment still returns **200** through the CRM.
 
-Call audio at roughly 20 agents x 15 calls/day x 4 minutes is about 0.5 GB/day,
-so it must not land on the droplet volume that also holds the database.
+Restart uses the real project name — a bare `docker compose up` spins a
+colliding parallel stack:
 
-1. Create a Spaces bucket in `fra1` and generate an access key pair.
-2. Add a lifecycle rule expiring objects after **180 days**.
-3. Add to the box `.env` and to the GitHub Actions secrets CI upserts from:
+```bash
+cd /opt/twenty/packages/twenty-docker
+docker compose -p twenty -f docker-compose.yml -f docker-compose.hamagan.yml up -d server worker
+```
 
-   ```
-   STORAGE_TYPE=S_3
-   STORAGE_S3_NAME=<bucket name>
-   STORAGE_S3_ENDPOINT=https://fra1.digitaloceanspaces.com
-   STORAGE_S3_ACCESS_KEY_ID=<key>
-   STORAGE_S3_SECRET_ACCESS_KEY=<secret>
-   ```
+**Gotcha:** containers on this box cannot resolve DNS (daemon resolver is
+misconfigured; the compose file sets `dns: 1.1.1.1`). Any `docker run` doing
+S3 work needs `--dns 1.1.1.1 --dns 8.8.8.8` or you get a misleading
+"Could not connect to the endpoint URL".
 
-`STORAGE_TYPE` defaults to `LOCAL` in `docker-compose.hamagan.yml` on purpose:
-setting it to `S_3` before the bucket exists makes the server fail config
-validation at boot. Set it only once the values above are in place.
-
-Leave `STORAGE_S3_REGION` alone. It defaults to `us-east-1` because Twenty
-validates it against `/^[a-z]{2}-[a-z]+-\d$/`, which DigitalOcean's own slugs
-(`fra1`, `ams3`) do not match. The real location comes from the endpoint; the
-region is a formality for an S3-compatible service.
-
-**Existing attachments are not migrated by this switch.** Anything already
-uploaded lives on the droplet's local volume and stays there; only new uploads
-go to Spaces. Copy the old files into the bucket first if historical
-attachments must keep resolving.
+**⚠️ No lifecycle/retention rule is set, deliberately.** The bucket also holds
+Twenty's logic-function sources, `yarn.lock` and generated SDK zips. A
+bucket-wide 180-day expiry would silently delete code the platform needs.
+Before adding retention: capture one real call recording, find the prefix it
+lands under, and scope the rule to that prefix only.
 
 ### 3. Endpoints this adds
 

@@ -2,6 +2,9 @@
 // contact, the lead and the agent. Written by the Call Companion mobile app;
 // see docs/superpowers/specs/2026-08-31-call-companion-design.md.
 // Same pattern/idempotency as provision-daily-report-object.mjs.
+//
+// Auth: TWENTY_TOKEN bearer (API key) or TWENTY_EMAIL/TWENTY_PASSWORD.
+// Target: TWENTY_META (default http://localhost:3010/metadata).
 const META = process.env.TWENTY_META ?? 'http://localhost:3010/metadata';
 const ORIGIN = process.env.TWENTY_ORIGIN ?? 'http://localhost:3011';
 const EMAIL = process.env.TWENTY_EMAIL ?? 'tim@apple.dev';
@@ -19,6 +22,10 @@ async function gql(query, variables) {
   return json.data;
 }
 async function login() {
+  if (process.env.TWENTY_TOKEN) {
+    TOKEN = process.env.TWENTY_TOKEN.trim();
+    return;
+  }
   const a = await gql(`mutation($e:String!,$p:String!,$o:String!){getLoginTokenFromCredentials(email:$e,password:$p,origin:$o){loginToken{token}}}`, { e: EMAIL, p: PASSWORD, o: ORIGIN });
   const b = await gql(`mutation($t:String!,$o:String!){getAuthTokensFromLoginToken(loginToken:$t,origin:$o){tokens{accessOrWorkspaceAgnosticToken{token}}}}`, { t: a.getLoginTokenFromCredentials.loginToken.token, o: ORIGIN });
   TOKEN = b.getAuthTokensFromLoginToken.tokens.accessOrWorkspaceAgnosticToken.token;

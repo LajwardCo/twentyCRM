@@ -1706,14 +1706,44 @@ Plus the vendored normalizer and its 10 tests, which pass unchanged in this repo
    callSuffix)` rather than prefix/suffix equality, since OEM names embed the
    number mid-string (`Call_790123456_20260831_090000.m4a`).
 
+### Native build attempt — blocked on the machine, not the code
+
+`expo prebuild --platform android` succeeded and
+`expo-modules-autolinking search -p android` **discovers `usystems-call-log`
+correctly**, so the module's `expo-module.config.json`, `package.json` and
+gradle wiring are right.
+
+`./gradlew :usystems-call-log:compileDebugKotlin` then failed to resolve
+`com.android.tools.build:gradle:8.12.0`. The root cause is not the project: the
+**JVM on this machine cannot resolve any external hostname**, while `nslookup`
+and `curl` resolve the same hosts fine. Confirmed with a bare
+`InetAddress.getByName("github.com")`, which throws `UnknownHostException`, and
+reproduced with the sandbox disabled. Until that host-level Java networking
+issue is fixed, no Android build needing an uncached dependency can run here.
+
+`app.json` gained `android.package: af.usystems.sales` as a result — required
+for any native build, and matching the Kotlin namespace
+(`af.usystems.sales.calllog`) rather than the `com.rashid2003.*` prebuild
+generated from the local username. The generated `android/` directory was
+removed again; it is gitignored and regenerable.
+
 ### Not verified
 
-Everything requiring a handset: Tasks 8, 9 and 11. `adb devices` shows none
-attached, so the Kotlin has never been compiled or run. Specifically unproven:
+Everything requiring a compiler or a handset: Tasks 8, 9 and 11. The Kotlin has
+never been compiled, and `adb devices` shows none attached. Specifically
+unproven:
 
+- That the Kotlin compiles at all (blocked by the JVM DNS issue above).
 - That the module builds and links (`npx expo run:android --port 8083`).
 - That `READ_CALL_LOG` returns real rows once granted at runtime.
 - That the SAF folder grant persists and lists recordings.
 - **The OEM filename patterns in `lib/recordingMatch.ts` are still guesses.**
   Collect real filenames from each handset model and add them as fixtures before
   trusting the matcher in the field.
+
+
+### Repository status
+
+`usystems_sales_mobile` has **no git remote** — all 9 commits are local only.
+Create the `LajwardCo/usystems_sales_mobile` repo and push before relying on
+this work surviving the machine.

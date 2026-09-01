@@ -10,9 +10,18 @@ import { PhoneIndexService } from 'src/modules/sales-crm/call-activity/services/
 /** Shown in Twenty's "created by" column for records this endpoint writes. */
 const CREATED_BY_NAME = 'Call Companion';
 
+/**
+ * A created or duplicate result carries the lead the server resolved, so the
+ * device can offer to log the call as a Task without a second round trip and
+ * without the client having to guess which lead a number belongs to.
+ */
 export type IngestResult =
-  | { status: 'created'; callActivityId: string }
-  | { status: 'duplicate'; callActivityId: string }
+  | {
+      status: 'created' | 'duplicate';
+      callActivityId: string;
+      personId: string | null;
+      opportunityId: string | null;
+    }
   | { status: 'unmatched' };
 
 @Injectable()
@@ -49,7 +58,12 @@ export class CallActivityIngestService {
     // Retries, re-syncs and reinstalls must not double-count a call: these
     // numbers are used to evaluate people.
     if (existing !== null) {
-      return { status: 'duplicate', callActivityId: existing };
+      return {
+        status: 'duplicate',
+        callActivityId: existing.id,
+        personId: existing.personId,
+        opportunityId: existing.opportunityId,
+      };
     }
 
     const matchKey =
@@ -107,7 +121,12 @@ export class CallActivityIngestService {
         },
       })) as unknown as { id: string };
 
-      return { status: 'created' as const, callActivityId: created.id };
+      return {
+        status: 'created' as const,
+        callActivityId: created.id,
+        personId: person.id,
+        opportunityId: person.openOpportunityId,
+      };
     }, authContext);
   }
 
@@ -119,7 +138,11 @@ export class CallActivityIngestService {
     workspaceId: string;
     agentId: string;
     deviceCallId: string;
-  }): Promise<string | null> {
+  }): Promise<{
+    id: string;
+    personId: string | null;
+    opportunityId: string | null;
+  } | null> {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
@@ -132,9 +155,19 @@ export class CallActivityIngestService {
 
       const found = (await callActivityRepository.findOne({
         where: { agentId, deviceCallId },
-      })) as unknown as { id: string } | null;
+      })) as unknown as {
+        id: string;
+        personId: string | null;
+        opportunityId: string | null;
+      } | null;
 
-      return found?.id ?? null;
+      return found === null
+        ? null
+        : {
+            id: found.id,
+            personId: found.personId ?? null,
+            opportunityId: found.opportunityId ?? null,
+          };
     }, authContext);
   }
 }

@@ -167,7 +167,56 @@ node tools/sales-crm/provision-call-activity.mjs
 Idempotent — safe to rerun. A clean rerun reports `0 created, 14 skipped,
 0 failed`.
 
-### 2. Attachment storage (manual, needs the DigitalOcean console)
+### 2. Attachment storage — Spaces (BLOCKED on credentials, 2026-09-01)
+
+**Status:** the compose change is deployed and inert. `twenty-server-1` runs
+with `STORAGE_TYPE=local`, `STORAGE_S3_REGION=us-east-1` and empty S3 vars,
+exactly as intended — the server cannot fail config validation before a bucket
+exists. Nothing else is done.
+
+**Blocked because** both the DigitalOcean and Cloudflare tokens in
+`UsystemsDevOps/c.txt` return 401 (the Twenty CRM API key in that file still
+works). A Spaces bucket also needs its own access key pair, generated
+separately from the DO API token. So this needs either a regenerated DO token
+or five minutes in the DO console.
+
+**Migration is small:** the existing local attachment volume
+(`twenty_server-local-data`) holds **18 files / 2.7 MB**. Copy them into the
+bucket before flipping `STORAGE_TYPE`, or those 18 attachments 404 in the CRM.
+The box has 81 GB free, so there is no disk pressure forcing the switch — call
+audio growth is the reason to do it.
+
+Once a bucket and keys exist, in one SSH session:
+
+```bash
+# 1. copy the existing 18 files into the bucket (run from a host with s3 tooling)
+docker run --rm -v twenty_server-local-data:/data \
+  -e AWS_ACCESS_KEY_ID=<key> -e AWS_SECRET_ACCESS_KEY=<secret> \
+  amazon/aws-cli s3 sync /data s3://<bucket>/ --endpoint-url https://<region>.digitaloceanspaces.com
+
+# 2. add the secrets to the box .env (and the GitHub Actions secrets CI upserts from)
+#    STORAGE_TYPE=S_3
+#    STORAGE_S3_NAME=<bucket>
+#    STORAGE_S3_ENDPOINT=https://<region>.digitaloceanspaces.com
+#    STORAGE_S3_ACCESS_KEY_ID=<key>
+#    STORAGE_S3_SECRET_ACCESS_KEY=<secret>
+
+# 3. restart with the prod project name -- a bare `docker compose up` spins a
+#    colliding parallel stack (see references/prod-deploy.md)
+docker compose -p twenty up -d server worker
+
+# 4. verify: env applied, health, and a real upload round-trip
+docker exec twenty-server-1 sh -lc 'env | grep -E "^STORAGE_(TYPE|S3_NAME|S3_ENDPOINT)"'
+curl -s -o /dev/null -w "%{http_code}\n" https://crm.hamagan.com/healthz
+```
+
+Then upload a file to any record in the CRM UI and confirm it appears in the
+bucket and renders back in the browser. **Leave `STORAGE_S3_REGION` alone** —
+it defaults to `us-east-1` because Twenty validates it against
+`/^[a-z]{2}-[a-z]+-\d$/`, which DigitalOcean's own slugs (`fra1`, `blr1`) do
+not match; the real location comes from the endpoint.
+
+### 2a. Original notes (console steps)
 
 Call audio at roughly 20 agents x 15 calls/day x 4 minutes is about 0.5 GB/day,
 so it must not land on the droplet volume that also holds the database.

@@ -130,6 +130,35 @@ export class CallActivityIngestService {
     }, authContext);
   }
 
+  /** Stores a transcript on an existing call. */
+  async saveTranscript({
+    workspaceId,
+    callActivityId,
+    transcript,
+    language,
+  }: {
+    workspaceId: string;
+    callActivityId: string;
+    transcript: string;
+    language: string | null;
+  }): Promise<void> {
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const callActivityRepository =
+        await this.globalWorkspaceOrmManager.getRepository(
+          workspaceId,
+          'callActivity',
+          { shouldBypassPermissionChecks: true },
+        );
+
+      await callActivityRepository.update(callActivityId, {
+        transcript,
+        transcriptLanguage: language,
+      });
+    }, authContext);
+  }
+
   private async findExisting({
     workspaceId,
     agentId,

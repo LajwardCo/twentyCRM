@@ -31,6 +31,11 @@ services:
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
       # AI assistant (Claude). Key comes from box .env (CI-injected secret).
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Speech-to-text for call recordings. No Anthropic model accepts audio
+      # input (verified against the Models API: image_input and pdf_input only),
+      # so transcription is the one OpenAI dependency in the sales stack.
+      # Unset simply disables transcription; the endpoint returns 503.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       # transactional email (invites, password reset, notifications)
       # NOTE: pinned literals (not ${VAR:-}) so a stale box .env can't override
       # them; only the password comes from .env (CI-injected secret).
@@ -80,6 +85,11 @@ services:
       APP_VERSION: ${APP_VERSION:-0.2.1}
       IS_MULTIWORKSPACE_ENABLED: ${IS_MULTIWORKSPACE_ENABLED:-false}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Speech-to-text for call recordings. No Anthropic model accepts audio
+      # input (verified against the Models API: image_input and pdf_input only),
+      # so transcription is the one OpenAI dependency in the sales stack.
+      # Unset simply disables transcription; the endpoint returns 503.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       EMAIL_FROM_ADDRESS: crm-auto@hamagan.com
       EMAIL_FROM_NAME: Hamagan CRM
       EMAIL_DRIVER: smtp

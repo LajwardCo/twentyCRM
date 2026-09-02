@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { detectAfghanLanguage } from 'src/modules/sales-crm/utils/detect-afghan-language.util';
+
 export type TranscriptionResult = {
   text: string;
   /** Language the provider detected, when it reports one. */
@@ -97,9 +99,11 @@ export class CallTranscriptionService {
       language?: string;
     };
 
-    return {
-      text: (json.text ?? '').trim(),
-      language: json.language ?? null,
-    };
+    const text = (json.text ?? '').trim();
+
+    // gpt-4o-transcribe never returns a language: it rejects verbose_json, and
+    // only whisper-1 reports one — and whisper is worse on Afghan speech. So
+    // the label is inferred from the script rather than downgrading the model.
+    return { text, language: json.language ?? detectAfghanLanguage(text) };
   }
 }

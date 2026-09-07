@@ -36,10 +36,11 @@ import {
   IconTrash,
   IconWhatsApp,
 } from '../components/icons';
+import { AttachmentChip } from '../components/AttachmentChip';
 import { AttachmentUploadModal } from '../components/AttachmentUploadModal';
 import { invalidateCache, useCached } from '../lib/cache';
 import { formatMoney, fullPhone, personName, toLocalInputValue } from '../lib/format';
-import { formatJalaliDateTime, relativeDueLabel } from '../lib/jalali';
+import { relativeDueLabel } from '../lib/jalali';
 import { leadContextText, SUMMARIZE_SYSTEM_PROMPT } from '../lib/leadContext';
 import { goBackOr, navigate } from '../lib/router';
 import {
@@ -441,9 +442,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                   افزودن فایل
                 </button>
                 {(data?.attachments ?? []).map((a: TaskAttachment) => (
-                  <span key={a.id} className="pill stage" title={formatJalaliDateTime(a.createdAt)}>
-                    🎙 {a.name ?? a.file?.[0]?.label ?? 'فایل'}
-                  </span>
+                  <AttachmentChip key={a.id} attachment={a} />
                 ))}
               </div>
             </div>

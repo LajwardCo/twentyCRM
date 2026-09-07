@@ -18,6 +18,7 @@ import { LeadDetailView } from './views/LeadDetailView';
 import { ContactsView } from './views/ContactsView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
+import { PartnersView } from './views/PartnersView';
 import { CalendarView } from './views/CalendarView';
 import { CatalogView } from './views/CatalogView';
 import { PackageCatalogDetailView, ProductCatalogDetailView } from './views/CatalogDetailViews';
@@ -249,6 +250,8 @@ export const App = () => {
     bar = backButton;
   } else if (section === 'catalog') {
     view = <CatalogView />;
+  } else if (section === 'partners') {
+    view = <PartnersView />;
   } else if (section === 'admin') {
     view = <AdminView user={user} />;
   } else {

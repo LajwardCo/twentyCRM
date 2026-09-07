@@ -3,11 +3,21 @@ import { coreQuery, loadTokens, metadataQuery } from './client';
 // Upload flow: uploadFilesFieldFile (multipart, needs the FieldMetadata id of
 // attachment.file) -> createAttachment record linked to the task/lead.
 
+export type AttachmentFile = {
+  fileId: string;
+  label: string | null;
+  extension: string | null;
+  // Signed, absolute download URL minted per read by the server
+  // (FilesFieldQueryResultGetterHandler). It expires, so it must be read from a
+  // fresh query rather than cached or stored anywhere.
+  url: string | null;
+};
+
 export type TaskAttachment = {
   id: string;
   name: string | null;
   createdAt: string;
-  file: { fileId: string; label: string; extension: string | null }[] | null;
+  file: AttachmentFile[] | null;
 };
 
 let attachmentFileFieldId: string | null = null;
@@ -210,7 +220,7 @@ export const fetchTaskAttachments = async (
             id
             name
             createdAt
-            file { fileId label extension }
+            file { fileId label extension url }
           }
         }
       }

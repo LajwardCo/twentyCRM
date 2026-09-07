@@ -9,12 +9,14 @@ import {
   fetchLeadPricing,
   fetchProducts,
   LEAD_SOURCES,
-  updateLead,
+  saveLeadMarketer,
+  type CompanyContact,
   type LeadSummary,
   type ProductOption,
   type Referrer,
 } from '../api/records';
 import { setLeadPrimaryContact } from '../api/contacts';
+import { phoneEntries } from '../lib/phones';
 import {
   fetchDiscountRules,
   fetchPackagesForProduct,
@@ -33,7 +35,6 @@ import {
   type CurrencyTotals,
   formatMoney,
   formatMoneyTotals,
-  fullPhone,
   personName,
   totalsAreEmpty,
 } from '../lib/format';
@@ -48,8 +49,12 @@ import {
   T2,
   T6,
   T8,
+  T13,
 } from '../lib/strings';
 import { AddContactModal } from './AddContactModal';
+import { CompanyAddressModal } from './CompanyAddressModal';
+import { ContactPhoneLines } from './ContactPhoneLines';
+import { ContactPhonesModal } from './ContactPhonesModal';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
 import { ModalSheet } from './ModalSheet';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
@@ -75,6 +80,8 @@ export const CompanyCard = ({
   const [adding, setAdding] = useState(false);
   const [promoting, setPromoting] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [managingPhones, setManagingPhones] = useState<CompanyContact | null>(null);
 
   const { data, refresh } = useCached(`company:${companyId}`, async () => {
     const [info, extras, contacts] = await Promise.all([
@@ -94,6 +101,19 @@ export const CompanyCard = ({
   }
 
   const { info, extras, contacts } = data;
+
+  // Street, city, state, country -- in the order someone would read an address
+  // aloud, skipping whatever is blank. Postcode is left out of the summary line
+  // and lives only in the edit form.
+  const addressLines = [
+    info.address?.addressStreet1,
+    info.address?.addressStreet2,
+    info.address?.addressCity,
+    info.address?.addressState,
+    info.address?.addressCountry,
+  ]
+    .map((part) => part?.trim() ?? '')
+    .filter((part) => part !== '');
 
   const flash = (message: string) => {
     setNotice(message);
@@ -141,16 +161,26 @@ export const CompanyCard = ({
             </b>
           </div>
         )}
-        {(info.address?.addressCity || info.address?.addressStreet1) && (
-          <div className="c-row">
-            <span>{T2.addressLbl}</span>
-            <b>
-              {[info.address?.addressCity, info.address?.addressStreet1]
-                .filter(Boolean)
-                .join('، ')}
+        <div className="c-row">
+          <span>{T2.addressLbl}</span>
+          <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <b style={{ textAlign: 'start' }}>
+              {addressLines.length > 0 ? (
+                addressLines.join('، ')
+              ) : (
+                <span className="muted">{T13.noAddress}</span>
+              )}
             </b>
-          </div>
-        )}
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => setEditingAddress(true)}
+              title={addressLines.length > 0 ? T13.editAddress : T13.addAddress}
+            >
+              <IconEdit size={14} />
+            </button>
+          </span>
+        </div>
         {extras.businessType && (
           <div className="c-row">
             <span>{T2.businessType}</span>
@@ -195,8 +225,8 @@ export const CompanyCard = ({
             </div>
           )}
           {contacts.map((c) => {
-            const phone = fullPhone(c.phones);
             const isPrimary = primaryContactId === c.id;
+            const lines = phoneEntries(c.phones, c.phoneApps);
             return (
               <div
                 key={c.id}
@@ -212,10 +242,10 @@ export const CompanyCard = ({
                     {personName(c)}
                     {isPrimary && <span className="pill stage">{T8.contactPrimaryBadge}</span>}
                   </div>
-                  <div className="t-sub num">
+                  <div className="t-sub">
                     {c.jobTitle ? `${c.jobTitle} · ` : ''}
-                    {phone ? toPersianDigits(phone) : '—'}
                   </div>
+                  <ContactPhoneLines entries={lines} />
                 </div>
                 {leadId && !isPrimary && (
                   <button
@@ -226,16 +256,15 @@ export const CompanyCard = ({
                     {T8.contactMakePrimary}
                   </button>
                 )}
-                {phone && (
-                  <button
-                    className="icon-btn"
-                    style={{ width: 30, height: 30 }}
-                    onClick={() => (window.location.href = `tel:${phone}`)}
-                    aria-label="تماس"
-                  >
-                    <IconPhone size={14} />
-                  </button>
-                )}
+                <button
+                  className="icon-btn"
+                  style={{ width: 30, height: 30 }}
+                  onClick={() => setManagingPhones(c)}
+                  aria-label={T13.managePhones}
+                  title={T13.managePhones}
+                >
+                  <IconPhone size={14} />
+                </button>
               </div>
             );
           })}
@@ -252,6 +281,32 @@ export const CompanyCard = ({
 
       {notice !== null && (
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>{notice}</div>
+      )}
+
+      {managingPhones !== null && (
+        <ContactPhonesModal
+          personId={managingPhones.id}
+          personName={personName(managingPhones)}
+          onClose={() => setManagingPhones(null)}
+          onSaved={(message) => {
+            setManagingPhones(null);
+            flash(message);
+            void refresh();
+          }}
+        />
+      )}
+
+      {editingAddress && (
+        <CompanyAddressModal
+          companyId={companyId}
+          address={info.address}
+          onClose={() => setEditingAddress(false)}
+          onSaved={(message) => {
+            setEditingAddress(false);
+            flash(message);
+            void refresh();
+          }}
+        />
       )}
 
       {adding && (
@@ -405,10 +460,29 @@ export const MetaCard = ({
       : []),
   ];
 
-  const marketerOptions: MetaOption[] = [
-    { value: '', label: '—' },
-    ...Object.entries(MARKETER_LABELS).map(([value, label]) => ({ value, label })),
-  ];
+  // The marketer is a partner, same list the referrer picks from. The legacy
+  // MARKETER_LABELS codes are kept as options only on instances that never got
+  // the partner relation -- there `marketer` is still a free-text field and
+  // those codes are the only values it ever held.
+  const marketerOptions: MetaOption[] =
+    referrers.length > 0
+      ? [
+          { value: '', label: '—' },
+          ...referrers.map((r) => ({ value: r.id, label: referrerLabelFor(r) })),
+        ]
+      : [
+          { value: '', label: '—' },
+          ...Object.entries(MARKETER_LABELS).map(([value, label]) => ({
+            value,
+            label,
+          })),
+        ];
+
+  // `marketer` comes back as the partner's *name* (fetchLeadMarketer resolves
+  // the relation), but the select needs its id -- otherwise the row opens on
+  // "—" and saving would clear a marketer nobody meant to touch.
+  const currentMarketerId =
+    referrers.find((r) => r.name === marketer)?.id ?? (referrers.length > 0 ? '' : (marketer ?? ''));
 
   const referrerDisplay = lead.referrer ? (
     <>
@@ -456,12 +530,12 @@ export const MetaCard = ({
         <EditableMetaRow
           label={T2.marketerLbl}
           display={marketer ? (MARKETER_LABELS[marketer] ?? marketer) : '—'}
-          currentValue={marketer ?? ''}
+          currentValue={currentMarketerId}
           options={marketerOptions}
-          editable={canEdit}
+          editable={canEdit && marketerOptions.length > 1}
           onSave={async (value) => {
             try {
-              await updateLead(lead.id, { marketer: value || null });
+              await saveLeadMarketer(lead.id, value || null);
             } finally {
               await refreshMarketer();
             }

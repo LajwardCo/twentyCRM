@@ -159,6 +159,14 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     | null
   >(null);
 
+  const reloadReferrers = useCallback(
+    () =>
+      fetchReferrers().then((list) => {
+        setReferrers(list);
+      }),
+    [],
+  );
+
   useEffect(() => {
     let active = true;
     void fetchReferrers().then((list) => {
@@ -855,6 +863,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               leadId={leadId}
               primaryReferrer={lead.referrer}
               partners={referrers}
+              onPartnersChanged={reloadReferrers}
             />
           )}
 

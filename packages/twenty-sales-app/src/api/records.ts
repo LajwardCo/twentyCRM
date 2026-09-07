@@ -7,6 +7,7 @@ import {
   type ProductPriceBook,
 } from './catalog';
 import { coreQuery } from './client';
+import { isPhoneAppsFieldProvisioned } from './phoneAppsSupport';
 
 // ---------- shared types ----------
 
@@ -842,6 +843,11 @@ export const registerLead = async (
     }
   }
 
+  // The first call is logged once, as a completed task on the timeline. It is
+  // deliberately not mirrored into a note: what the seller typed here is the
+  // record of a call, and duplicating it made every new lead open with a notes
+  // panel that only repeated its own timeline. Notes are for what gets written
+  // afterwards.
   if (input.firstContactNote.trim() !== '') {
     onProgress('ثبت تماس اول…');
     await createTaskForLead({
@@ -850,11 +856,6 @@ export const registerLead = async (
       status: 'DONE',
       dueAt: input.firstContactDate,
       assigneeId: input.workspaceMemberId,
-      target,
-    });
-    await createNoteForLead({
-      title: `تماس اول — ${input.companyName.trim()}`,
-      bodyMarkdown: input.firstContactNote.trim(),
       target,
     });
   }
@@ -965,15 +966,21 @@ export const softDeleteNote = async (
 
 // ---------- company panel (info + other contacts) ----------
 
+export type CompanyAddress = {
+  addressStreet1: string | null;
+  addressStreet2: string | null;
+  addressCity: string | null;
+  addressState: string | null;
+  addressPostcode: string | null;
+  addressCountry: string | null;
+};
+
 export type CompanyInfo = {
   id: string;
   name: string;
   employees: number | null;
   domainName: { primaryLinkUrl: string | null } | null;
-  address: {
-    addressCity: string | null;
-    addressStreet1: string | null;
-  } | null;
+  address: CompanyAddress | null;
   createdAt: string;
 };
 
@@ -984,8 +991,14 @@ export type CompanyContact = {
   phones: {
     primaryPhoneCallingCode: string | null;
     primaryPhoneNumber: string | null;
+    // Every other number this contact answers on. RAW_JSON, so typed loosely
+    // and parsed by lib/phones.
+    additionalPhones?: unknown;
   } | null;
   emails: { primaryEmail: string | null } | null;
+  // JSON map of number -> messaging apps. Absent on instances that have not
+  // run provision-contact-phone-apps.mjs.
+  phoneApps?: string | null;
 };
 
 export const fetchCompanyInfo = async (
@@ -998,13 +1011,50 @@ export const fetchCompanyInfo = async (
         name
         employees
         domainName { primaryLinkUrl }
-        address { addressCity addressStreet1 }
+        address {
+          addressStreet1
+          addressStreet2
+          addressCity
+          addressState
+          addressPostcode
+          addressCountry
+        }
         createdAt
       }
     }`,
     { id: companyId },
   );
   return data.company;
+};
+
+// Only the subfields present in the input are written (formatCompositeField
+// skips `undefined`), so the address's lat/lng survive an edit from a form that
+// has never heard of them. All six text subfields are sent every time so that
+// clearing a line actually clears it, as '' rather than null -- the composite
+// stores '' for a blank subfield, and mixing the two makes "is it set?" checks
+// inconsistent between records.
+export const updateCompanyAddress = async (
+  companyId: string,
+  address: CompanyAddress,
+): Promise<void> => {
+  await coreQuery(
+    `mutation UpdateCompanyAddress($id: UUID!, $data: CompanyUpdateInput!) {
+      updateCompany(id: $id, data: $data) { id }
+    }`,
+    {
+      id: companyId,
+      data: {
+        address: {
+          addressStreet1: address.addressStreet1?.trim() ?? '',
+          addressStreet2: address.addressStreet2?.trim() ?? '',
+          addressCity: address.addressCity?.trim() ?? '',
+          addressState: address.addressState?.trim() ?? '',
+          addressPostcode: address.addressPostcode?.trim() ?? '',
+          addressCountry: address.addressCountry?.trim() ?? '',
+        },
+      },
+    },
+  );
 };
 
 // Fields that only exist on some instances (added ad hoc in production);
@@ -1027,25 +1077,34 @@ export const fetchCompanyExtras = async (
   }
 };
 
+const COMPANY_CONTACT_FIELDS = `
+  id
+  name { firstName lastName }
+  jobTitle
+  phones {
+    primaryPhoneCallingCode
+    primaryPhoneNumber
+    additionalPhones
+  }
+  emails { primaryEmail }`;
+
+const companyContactsQuery = (withPhoneApps: boolean) => `
+  query CompanyContacts($companyId: UUID!) {
+    people(filter: { companyId: { eq: $companyId } }, first: 50) {
+      edges { node { ${COMPANY_CONTACT_FIELDS}${withPhoneApps ? '\n    phoneApps' : ''} } }
+    }
+  }`;
+
 export const fetchCompanyContacts = async (
   companyId: string,
 ): Promise<CompanyContact[]> => {
-  const data = await coreQuery<{
-    people: { edges: { node: CompanyContact }[] };
-  }>(
-    `query CompanyContacts($companyId: UUID!) {
-      people(filter: { companyId: { eq: $companyId } }, first: 50) {
-        edges {
-          node {
-            id
-            name { firstName lastName }
-            jobTitle
-            phones { primaryPhoneCallingCode primaryPhoneNumber }
-            emails { primaryEmail }
-          }
-        }
-      }
-    }`,
+  type Result = { people: { edges: { node: CompanyContact }[] } };
+
+  // phoneApps only exists once provision-contact-phone-apps.mjs has run, and
+  // the record API reads an absent field as null rather than refusing it, so
+  // the metadata probe is the only honest way to ask.
+  const data = await coreQuery<Result>(
+    companyContactsQuery(await isPhoneAppsFieldProvisioned()),
     { companyId },
   );
   return data.people.edges.map((e) => e.node);
@@ -1801,27 +1860,41 @@ export type PersonDetail = {
   phones: {
     primaryPhoneCallingCode: string | null;
     primaryPhoneNumber: string | null;
+    additionalPhones?: unknown;
   } | null;
   emails: { primaryEmail: string | null } | null;
   company: { id: string; name: string } | null;
   createdAt: string;
+  phoneApps?: string | null;
 };
 
+const PERSON_DETAIL_FIELDS = `
+  id
+  name { firstName lastName }
+  jobTitle
+  phones {
+    primaryPhoneCallingCode
+    primaryPhoneNumber
+    additionalPhones
+  }
+  emails { primaryEmail }
+  company { id name }
+  createdAt`;
+
 export const fetchPerson = async (id: string): Promise<PersonDetail> => {
+  // phoneApps needs provision-contact-phone-apps.mjs; without it the person
+  // still loads and simply carries no messaging-app tags.
+  const withPhoneApps = await isPhoneAppsFieldProvisioned();
+
   const data = await coreQuery<{ person: PersonDetail }>(
     `query PersonDetail($id: UUID!) {
       person(filter: { id: { eq: $id } }) {
-        id
-        name { firstName lastName }
-        jobTitle
-        phones { primaryPhoneCallingCode primaryPhoneNumber }
-        emails { primaryEmail }
-        company { id name }
-        createdAt
+        ${PERSON_DETAIL_FIELDS}${withPhoneApps ? '\n        phoneApps' : ''}
       }
     }`,
     { id },
   );
+
   return data.person;
 };
 
@@ -1850,3 +1923,28 @@ export const createQuickTask = async (input: {
   return created.createTask.id;
 };
 
+
+// ---------- lead marketer ----------
+//
+// The marketer moved from a free-text `marketer` field to a `marketerPartner`
+// relation when external partners were provisioned. Reads already prefer the
+// relation (see fetchLeadMarketer); writes did not, so an edit landed on the
+// legacy field and the screen kept showing the relation -- the change looked
+// like it had been swallowed. Writes now follow reads.
+export const saveLeadMarketer = async (
+  opportunityId: string,
+  partnerId: string | null,
+): Promise<void> => {
+  try {
+    await updateLead(opportunityId, { marketerPartnerId: partnerId });
+    return;
+  } catch (error) {
+    if (missingProductFieldFromError(error, ['marketerPartnerId']) === undefined) {
+      throw error;
+    }
+  }
+
+  // Instances that predate provision-external-partners.mjs keep the text field.
+  // Nothing there can resolve a partner id, so the legacy write stores the name.
+  await updateLead(opportunityId, { marketer: partnerId });
+};

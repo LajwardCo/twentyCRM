@@ -721,7 +721,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
               </li>
               <li>
                 <span className={`st ${firstContactNote.trim() !== '' ? '' : 'off'}`}>✓</span>
-                <span>گزارش تماس اول + یادداشت</span>
+                <span>گزارش تماس اول (در تایم‌لاین)</span>
               </li>
               <li>
                 <span className={`st ${selectedProduct ? '' : 'off'}`}>✓</span>

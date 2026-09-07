@@ -13,6 +13,7 @@ import {
   fetchAllLeads,
   fetchLead,
   fetchProducts,
+  registerLead,
   softDeleteLead,
   softDeleteNote,
 } from './records';
@@ -183,16 +184,34 @@ describe('soft delete', () => {
   });
 });
 
-// "Everything is soft deleted, no hard delete at all" is a property of the
-// whole API layer, not of one call site — so it is asserted over the source.
-describe('no hard delete anywhere in the API layer', () => {
+// "Everything is soft deleted, no hard delete at all" is a property of the whole
+// app, not of one call site — so it is asserted over the source, across every
+// file rather than just the API layer. A view that reached for destroy<Object>
+// directly would bypass records.ts entirely and this is what catches it.
+//
+// The server denies destroy to every role as well (see
+// tools/sales-crm/provision-no-hard-delete.mjs); this test is the near half of
+// that pair, and fails in CI long before anything reaches an instance.
+describe('no hard delete anywhere in the app', () => {
+  const sourceFilesUnder = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return sourceFilesUnder(full);
+      return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)
+        ? [full]
+        : [];
+    });
+
+  // Matches a destroy *selection* -- `destroyOpportunity(id: ...)` -- rather
+  // than the bare word, so code that merely knows the name of the mutation (the
+  // audit log classifies one if it ever sees it) is not a false positive.
+  const DESTROY_SELECTION = /\bdestroy[A-Z]\w*\s*\(/;
+
   it('contains no destroy mutation', () => {
-    const apiDir = join(import.meta.dirname, '.');
-    const offenders = readdirSync(apiDir)
-      .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
-      .filter((file) =>
-        /destroy[A-Z]/.test(readFileSync(join(apiDir, file), 'utf8')),
-      );
+    const srcDir = join(import.meta.dirname, '..');
+    const offenders = sourceFilesUnder(srcDir)
+      .filter((file) => DESTROY_SELECTION.test(readFileSync(file, 'utf8')))
+      .map((file) => file.slice(srcDir.length + 1));
 
     expect(offenders).toEqual([]);
   });
@@ -238,5 +257,63 @@ describe('fetchLead optional-field tolerance', () => {
     mockedCoreQuery.mockRejectedValue(new Error('Network request failed'));
 
     await expect(fetchLead('l1')).rejects.toThrow('Network request failed');
+  });
+});
+
+// The first call is an activity, not a document. It used to be written twice --
+// once as the DONE task that logs the call, and again as a standalone note --
+// so every freshly registered lead opened with a notes panel echoing its own
+// timeline. The task is the record of the call; the notes panel is for what the
+// seller writes later.
+describe('registerLead first-contact handling', () => {
+  beforeEach(() => {
+    mockedCoreQuery.mockReset();
+    let n = 0;
+    mockedCoreQuery.mockImplementation(async () => {
+      n += 1;
+      return {
+        createCompany: { id: `c${n}` },
+        createPerson: { id: `p${n}` },
+        createOpportunity: { id: `o${n}` },
+        createTask: { id: `t${n}` },
+        createNote: { id: `n${n}` },
+        createTaskTarget: { id: `tt${n}` },
+        createNoteTarget: { id: `nt${n}` },
+      };
+    });
+  });
+
+  const input = {
+    companyName: 'شرکت نمونه',
+    contactFirstName: '',
+    contactLastName: '',
+    contactPhone: '',
+    contactEmail: '',
+    temperature: null,
+    leadSource: 'FIELD',
+    marketerPartnerId: null,
+    referrerId: null,
+    firstContactNote: 'تماس گرفتیم، علاقه‌مند بودند',
+    firstContactDate: '2026-01-01T09:00:00.000Z',
+    followUpNote: '',
+    followUpDate: null,
+    estimatedAmount: null,
+    estimatedCurrency: 'AFN' as const,
+    workspaceMemberId: 'wm-1',
+  };
+
+  const mutationsUsed = () =>
+    mockedCoreQuery.mock.calls.map(([query]) => String(query));
+
+  it('logs the first contact as a completed task', async () => {
+    await registerLead(input, () => undefined);
+
+    expect(mutationsUsed().some((q) => /createTask\b/.test(q))).toBe(true);
+  });
+
+  it('does not also copy the first contact into a note', async () => {
+    await registerLead(input, () => undefined);
+
+    expect(mutationsUsed().some((q) => /createNote\b/.test(q))).toBe(false);
   });
 });

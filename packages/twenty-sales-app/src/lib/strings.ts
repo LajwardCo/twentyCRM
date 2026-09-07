@@ -993,3 +993,52 @@ export const T14 = {
   stageFilterOverridesOpen:
     'فیلتر مرحله فعال است — نمایش «باز / همه مراحل» موقتاً غیرفعال شده.',
 };
+
+// Record change log (timelineActivity). See lib/auditLog.ts.
+export const T15 = {
+  changeLog: 'تغییرات',
+  changeLogTitle: 'سابقهٔ تغییرات',
+  changeLogHint: 'هر تغییری که روی این رکورد ثبت شده، با نام کاربر و زمان آن.',
+  noChanges: 'تغییری ثبت نشده',
+  changeLogFailed: 'بارگیری سابقهٔ تغییرات ناموفق بود',
+  createdAction: 'ایجاد شد',
+  updatedAction: 'ویرایش شد',
+  deletedAction: 'حذف شد',
+  restoredAction: 'بازیابی شد',
+  changeArrow: '←',
+  byActor: 'توسط',
+  showFullHistory: 'نمایش کامل سابقه',
+
+  // --- editing a lead's identity (LeadEditModal) ---
+  editLead: 'ویرایش لید',
+  editLeadTitle: 'ویرایش مشخصات لید',
+  leadNameLbl: 'نام لید',
+  contactSectionHint: 'مشخصات شخص تماس این لید',
+  jobTitleLbl: 'سمت',
+  noContactToEdit: 'برای این لید شخص تماسی ثبت نشده — از بخش «شرکت» اضافه کنید.',
+  phonesEditedElsewhere: 'شماره‌های تماس از بخش شخص تماس ویرایش می‌شوند.',
+};
+
+// What the change log calls each object, so a row reads "لید ایجاد شد" rather
+// than "opportunity ایجاد شد".
+export const AUDIT_OBJECT_LABELS: Record<string, string> = {
+  opportunity: 'لید',
+  company: 'شرکت',
+  person: 'شخص تماس',
+  task: 'وظیفه',
+  note: 'یادداشت',
+  dealProduct: 'محصول لید',
+  quotation: 'پیشنهاد قیمت',
+  subscription: 'اشتراک',
+  leadOffer: 'آفر',
+  leadReferrer: 'معرف',
+  partner: 'همکار',
+  product: 'محصول',
+  competitor: 'رقیب',
+  competitorProduct: 'محصول رقیب',
+  competitorUpdate: 'خبر رقیب',
+  competitorUsage: 'استفاده از رقیب',
+  dailyReport: 'گزارش روزانه',
+  attachment: 'پیوست',
+  callActivity: 'تماس',
+};

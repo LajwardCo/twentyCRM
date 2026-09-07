@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { login } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
 import { T } from '../lib/strings';
+import { recordSignInFailure } from '../lib/audit';
 
 type LoginViewProps = {
   onLoggedIn: () => void;
@@ -22,7 +23,11 @@ export const LoginView = ({ onLoggedIn }: LoginViewProps) => {
       await login(email.trim(), password);
       onLoggedIn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : T.loginFailed);
+      const message = err instanceof Error ? err.message : T.loginFailed;
+      // Failed sign-ins are the one audit event with no signed-in actor, and
+      // the one a password-guessing attempt is made of.
+      recordSignInFailure(email.trim(), message);
+      setError(message);
     } finally {
       setBusy(false);
     }

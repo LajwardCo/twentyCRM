@@ -3,10 +3,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchCurrentUser, logout, type CurrentUser } from './api/auth';
 import { loadTokens, setSessionExpiredHandler } from './api/client';
 import { CommandPalette } from './components/CommandPalette';
+import { AuditWatermark } from './components/AuditWatermark';
 import { InstallPrompt } from './components/InstallPrompt';
 import { IconBack } from './components/icons';
 import { AppShell, CmdSearch } from './components/Shell';
 import { canOpenRouteSection } from './lib/access';
+import { isWatermarkedSection } from './lib/auditEvent';
+import { recordSignOut, startAudit } from './lib/audit';
 import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
@@ -18,6 +21,7 @@ import { LeadDetailView } from './views/LeadDetailView';
 import { ContactsView } from './views/ContactsView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
+import { AuditLogView } from './views/AuditLogView';
 import { PartnersView } from './views/PartnersView';
 import { CalendarView } from './views/CalendarView';
 import { CatalogView } from './views/CatalogView';
@@ -82,6 +86,9 @@ export const App = () => {
     }
     try {
       const user = await fetchCurrentUser();
+      // Identify the actor before anything else runs, so the first
+      // screen they land on is already attributed to them.
+      startAudit(user);
       setSession({ status: 'ready', user });
     } catch {
       setSession({ status: 'anonymous' });
@@ -90,6 +97,7 @@ export const App = () => {
 
   useEffect(() => {
     setSessionExpiredHandler(() => {
+      recordSignOut('session-expired');
       invalidateCache();
       setSession({ status: 'anonymous' });
     });
@@ -168,6 +176,7 @@ export const App = () => {
     : 'today';
 
   const handleLogout = () => {
+    recordSignOut('user');
     logout();
     invalidateCache();
     setSession({ status: 'anonymous' });
@@ -252,6 +261,8 @@ export const App = () => {
     view = <CatalogView />;
   } else if (section === 'partners') {
     view = <PartnersView />;
+  } else if (section === 'audit') {
+    view = <AuditLogView user={user} />;
   } else if (section === 'admin') {
     view = <AdminView user={user} />;
   } else {
@@ -268,6 +279,8 @@ export const App = () => {
       onOpenPalette={() => setPaletteOpen(true)}
     >
       {view}
+      {/* Any screenshot of a customer-data screen carries who took it. */}
+      <AuditWatermark user={user} active={isWatermarkedSection(section)} />
       <InstallPrompt />
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {searchToast !== null && (

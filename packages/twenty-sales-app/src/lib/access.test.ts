@@ -84,3 +84,17 @@ describe('canSeeMoney', () => {
     expect(canSeeMoney(admin)).toBe(true);
   });
 });
+
+describe('canSeeNavKey — audit log', () => {
+  it('shows the security log to admins only', () => {
+    expect(canSeeNavKey(admin, 'audit')).toBe(true);
+    expect(canSeeNavKey(seller, 'audit')).toBe(false);
+    expect(canSeeNavKey(marketer, 'audit')).toBe(false);
+  });
+
+  it('leaves every other nav key deciding as before', () => {
+    expect(canSeeNavKey(seller, 'reports')).toBe(true);
+    expect(canSeeNavKey(marketer, 'reports')).toBe(false);
+    expect(canSeeNavKey(marketer, 'leads')).toBe(true);
+  });
+});

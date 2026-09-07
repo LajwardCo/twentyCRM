@@ -371,3 +371,10 @@ export const IconContacts = ({ size }: IconProps) => (
     <path d="M17 4.5a3.5 3.5 0 0 1 0 6.8M21 20v-1.5a4 4 0 0 0-3-3.8" />
   </svg>
 );
+
+export const IconShield = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M12 3 4.5 6v5.5c0 4.4 3.1 8.4 7.5 9.5 4.4-1.1 7.5-5.1 7.5-9.5V6Z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);

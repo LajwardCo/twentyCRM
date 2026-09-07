@@ -92,6 +92,36 @@ export const setSessionExpiredHandler = (handler: () => void) => {
   onSessionExpired = handler;
 };
 
+// Every call the app makes passes through gqlRequest, which makes it the one
+// place that sees all reads and all writes. The audit trail subscribes here
+// rather than being imported, so this module keeps no dependency on it and an
+// audit failure can never break an API call. See lib/audit.ts.
+export type RequestObservation = {
+  endpoint: '/graphql' | '/metadata';
+  query: string;
+  variables?: Record<string, unknown>;
+  durationMs: number;
+  ok: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
+let requestObserver: ((observation: RequestObservation) => void) | null = null;
+
+export const setRequestObserver = (
+  observer: ((observation: RequestObservation) => void) | null,
+) => {
+  requestObserver = observer;
+};
+
+const observe = (observation: RequestObservation) => {
+  try {
+    requestObserver?.(observation);
+  } catch {
+    // Observing must never be able to fail a request.
+  }
+};
+
 let renewPromise: Promise<boolean> | null = null;
 
 const tryRenewTokens = async (): Promise<boolean> => {
@@ -145,23 +175,45 @@ export const gqlRequest = async <TData>(
   variables?: Record<string, unknown>,
 ): Promise<TData> => {
   const tokens = loadTokens();
+  const startedAt = Date.now();
+  const report = (ok: boolean, error?: unknown) =>
+    observe({
+      endpoint,
+      query,
+      variables,
+      durationMs: Date.now() - startedAt,
+      ok,
+      errorCode: error instanceof ApiError ? error.code : undefined,
+      errorMessage: error instanceof Error ? error.message : undefined,
+    });
+
   try {
-    return await rawRequest<TData>(
+    const data = await rawRequest<TData>(
       endpoint,
       query,
       variables,
       tokens?.accessToken ?? null,
     );
+    report(true);
+    return data;
   } catch (error) {
     if (isAuthError(error) && (await tryRenewTokens())) {
       const renewed = loadTokens();
-      return rawRequest<TData>(
-        endpoint,
-        query,
-        variables,
-        renewed?.accessToken ?? null,
-      );
+      try {
+        const data = await rawRequest<TData>(
+          endpoint,
+          query,
+          variables,
+          renewed?.accessToken ?? null,
+        );
+        report(true);
+        return data;
+      } catch (retryError) {
+        report(false, retryError);
+        throw retryError;
+      }
     }
+    report(false, error);
     if (isAuthError(error)) {
       saveTokens(null);
       onSessionExpired?.();

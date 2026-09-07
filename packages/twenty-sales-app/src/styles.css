@@ -3773,6 +3773,143 @@ table.leads tbody tr:hover {
     width: 100%;
   }
 }
+
+/* ---------- record change log (RecordHistory) ---------- */
+
+.audit-changes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 2px;
+}
+
+.audit-change {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.audit-field {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.audit-field::after {
+  content: ':';
+}
+
+/* The old value is context, not the news -- it recedes so the eye lands on
+   what the field became. */
+.audit-before {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  opacity: 0.75;
+}
+
+.audit-arrow {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.audit-after {
+  font-weight: 600;
+}
+
+/* Long free-text values wrap instead of stretching the timeline rail. */
+.audit-before,
+.audit-after {
+  overflow-wrap: anywhere;
+}
+
+/* ---- audit watermark ----------------------------------------------------
+   Attribution layer for sensitive screens. Never interactive, never printed
+   away: the print rule below keeps it in a print-to-PDF export, which is one
+   of the capture paths it exists to mark. */
+.audit-watermark {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  opacity: 0.055;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--txt, #111);
+}
+.audit-watermark-row {
+  display: flex;
+  gap: 42px;
+  transform: rotate(-24deg);
+  justify-content: space-around;
+}
+@media print {
+  .audit-watermark {
+    opacity: 0.16;
+    position: fixed;
+  }
+}
+
+/* ---- audit log ---------------------------------------------------------- */
+.audit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line, #e6e6ea);
+}
+.audit-row:last-child { border-bottom: 0; }
+.audit-sev {
+  width: 6px;
+  align-self: stretch;
+  border-radius: 3px;
+  flex: 0 0 6px;
+  background: var(--line, #ddd);
+}
+.audit-sev.critical { background: #e5484d; }
+.audit-sev.sensitive { background: #f5a524; }
+.audit-sev.notice { background: #7aa2f7; }
+.audit-sev.info { background: var(--line, #ddd); }
+.audit-main { flex: 1; min-width: 0; }
+.audit-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.audit-sub {
+  font-size: 12px;
+  opacity: 0.68;
+  margin-top: 3px;
+  word-break: break-word;
+}
+.audit-when {
+  font-size: 11.5px;
+  opacity: 0.6;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+.audit-skew {
+  color: #e5484d;
+  font-weight: 600;
+}
+.audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 /* ============ report library ============ */
 
 .rpt-dash-card {
@@ -3999,4 +4136,129 @@ table.leads tbody tr:hover {
   color: var(--lapis-600);
   background: var(--lapis-50);
   font-weight: 700;
+}
+
+/* ---- audit actor picker -------------------------------------------------
+   A searchable replacement for a <select>: the member list is far larger than
+   any dropdown could hold, so every keystroke queries the server. */
+.actor-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.actor-picker-input {
+  min-width: 170px;
+  text-align: inherit;
+}
+.actor-picker-clear {
+  position: absolute;
+  inset-inline-end: 8px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.55;
+  padding: 2px 4px;
+  color: inherit;
+}
+.actor-picker-clear:hover { opacity: 1; }
+.actor-picker-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-start: 0;
+  z-index: 40;
+  min-width: 260px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #e6e6ea);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+  padding: 4px;
+}
+.actor-picker-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  text-align: start;
+  font-size: 13px;
+  color: inherit;
+}
+.actor-picker-option.on { background: var(--hover, rgba(120, 130, 160, 0.14)); }
+.actor-picker-email { opacity: 0.6; font-size: 11.5px; }
+.actor-picker-empty {
+  padding: 10px;
+  font-size: 12.5px;
+  opacity: 0.65;
+}
+
+/* ---- audit actor picker -------------------------------------------------
+   Searchable replacement for a <select>: a workspace can hold thousands of
+   members, so the list is resolved by the server per keystroke rather than
+   rendered from a page that happens to be loaded. */
+.actor-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.actor-picker-input {
+  min-width: 190px;
+  text-align: inherit;
+}
+.actor-picker-clear {
+  position: absolute;
+  inset-inline-end: 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0.55;
+  color: inherit;
+  padding: 2px 4px;
+}
+.actor-picker-clear:hover { opacity: 1; }
+.actor-picker-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-start: 0;
+  z-index: 40;
+  min-width: 240px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #e6e6ea);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+  padding: 4px;
+}
+.actor-picker-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  text-align: inherit;
+  border: 0;
+  background: none;
+  color: inherit;
+  border-radius: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.actor-picker-option.on { background: var(--soft, #eef1f8); }
+.actor-picker-email { opacity: 0.6; font-size: 11.5px; }
+.actor-picker-empty {
+  padding: 10px 9px;
+  font-size: 12.5px;
+  opacity: 0.65;
 }

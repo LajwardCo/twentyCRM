@@ -1,5 +1,6 @@
 import { type CurrentUser } from '../api/auth';
 import { canSeeNavKey } from '../lib/access';
+import { TAUDIT } from '../lib/auditStrings';
 import { T, T2, T3, T4, T7, T13 } from '../lib/strings';
 import {
   IconCalendar,
@@ -10,6 +11,7 @@ import {
   IconFlame,
   IconLeads,
   IconPackage,
+  IconShield,
   IconTasks,
 } from './icons';
 
@@ -34,6 +36,7 @@ export const NAV: readonly NavItem[] = [
   { key: 'catalog', label: T4.catalog, icon: IconPackage },
   { key: 'partners', label: T13.partners, icon: IconContacts },
   { key: 'admin', label: 'کاربران', icon: IconLeads },
+  { key: 'audit', label: TAUDIT.auditNav, icon: IconShield },
 ];
 
 // The sidebar and the mobile menu both render this, filtered to what the

@@ -44,7 +44,9 @@ import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
+import { LeadEditModal } from '../components/LeadEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
+import { RecordHistory } from '../components/RecordHistory';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { canSeeMoney, isExternalUser } from '../lib/access';
 import { invalidateCache, useCached } from '../lib/cache';
@@ -79,6 +81,7 @@ import {
   T9,
   T11,
   T14,
+  T15,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -91,7 +94,7 @@ type TimelineEntry =
   | { kind: 'task'; at: string; task: Task }
   | { kind: 'note'; at: string; note: Note };
 
-type TimelineFilter = 'all' | 'tasks' | 'notes';
+type TimelineFilter = 'all' | 'tasks' | 'notes' | 'changes';
 
 const CallIcon = () => <IconPhone size={16} />;
 
@@ -154,6 +157,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   // Quick edit / delete for the lead and for anything on its timeline.
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editingLead, setEditingLead] = useState(false);
   const [deleting, setDeleting] = useState<
     | { kind: 'lead' }
     | { kind: 'task'; task: Task }
@@ -497,6 +501,15 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           </div>
         </div>
         <div className="hero-actions">
+          <button
+            className="btn line sm"
+            type="button"
+            aria-label={T15.editLead}
+            title={T15.editLead}
+            onClick={() => setEditingLead(true)}
+          >
+            <IconEdit size={13} /> {T15.editLead}
+          </button>
           <select
             className="btn line sm"
             value={lead.stage ?? ''}
@@ -618,8 +631,18 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 >
                   یادداشت‌ها
                 </button>
+                <button
+                  className={tlFilter === 'changes' ? 'on' : ''}
+                  onClick={() => setTlFilter('changes')}
+                >
+                  {T15.changeLog}
+                </button>
               </div>
             </div>
+            {tlFilter === 'changes' ? (
+              <RecordHistory target={{ kind: 'opportunity', id: leadId }} />
+            ) : (
+              <>
             {timeline.length === 0 && <div className="empty-state">{T.noActivity}</div>}
             {timeline.map((entry) =>
               entry.kind === 'task' ? (
@@ -683,6 +706,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   />
                 </div>
               ),
+            )}
+              </>
             )}
           </div>
 
@@ -1015,6 +1040,18 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           personId={lead.pointOfContact.id}
           opportunityId={lead.id}
           onClose={() => setShowWhatsApp(false)}
+        />
+      )}
+
+      {editingLead && (
+        <LeadEditModal
+          lead={lead}
+          onClose={() => setEditingLead(false)}
+          onSaved={() => {
+            invalidateCache('leads:');
+            void reload();
+            showToast('ذخیره شد ✓');
+          }}
         />
       )}
 

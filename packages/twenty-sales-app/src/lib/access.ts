@@ -31,10 +31,18 @@ const EXTERNAL_ROUTE_SECTIONS = new Set([
 export const isExternalUser = (user: CurrentUser): boolean =>
   user.role === 'external';
 
+// The security log names, by person, everything everyone did. Sellers seeing
+// each other's movements is a different product; it is admins only, and the
+// object permissions set by provision-audit-log.mjs enforce the same thing on
+// the server so hiding the link is not the only barrier.
+const ADMIN_ONLY_NAV_KEYS = new Set(['audit']);
+
 // Employees keep the nav they have always had -- the admin screen still gates
 // itself on the PERMISSIONS probe, which is unchanged.
-export const canSeeNavKey = (user: CurrentUser, key: string): boolean =>
-  isExternalUser(user) ? EXTERNAL_NAV_KEYS.has(key) : true;
+export const canSeeNavKey = (user: CurrentUser, key: string): boolean => {
+  if (ADMIN_ONLY_NAV_KEYS.has(key)) return user.isAdmin;
+  return isExternalUser(user) ? EXTERNAL_NAV_KEYS.has(key) : true;
+};
 
 export const canOpenRouteSection = (
   user: CurrentUser,

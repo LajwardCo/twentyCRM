@@ -10,8 +10,11 @@ import {
 import { FilterBar } from '../components/FilterBar';
 import { IconKanban, IconPlus, IconTable } from '../components/icons';
 import { useCached } from '../lib/cache';
-import { buildGraphQLFilter } from '../lib/filters';
-import { leadFilterFields } from '../lib/screenFilters';
+import { buildGraphQLFilter, isFilterActive } from '../lib/filters';
+import {
+  effectiveOpenOnly as openOnlyFor,
+  leadFilterFields,
+} from '../lib/screenFilters';
 import { useFilters } from '../lib/useFilters';
 import {
   formatMoney,
@@ -24,7 +27,7 @@ import {
 import { loadPrefs, savePref } from '../lib/prefs';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate, useRoute } from '../lib/router';
-import { SOURCE_LABELS, STAGE_LABELS, T, T7, TEMP_LABELS } from '../lib/strings';
+import { SOURCE_LABELS, STAGE_LABELS, T, T7, T14, TEMP_LABELS } from '../lib/strings';
 
 type LeadsViewProps = {
   user: CurrentUser;
@@ -104,15 +107,24 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
     [fields, filters.state],
   );
 
+  // The open-only toggle is sticky and defaults on, and it used to be AND'ed
+  // onto the filter sheet's own clause. Asking for a closed stage -- "از دست
+  // رفته" or "مشتری فعال" -- therefore produced `stage IN (open) AND stage IN
+  // (lost)`, which matches nothing: lost leads simply could not be found. An
+  // explicit stage filter is the more specific instruction, so it wins, and the
+  // toggle is shown as overridden rather than silently ignored.
+  const stageFilterActive = isFilterActive(filters.state.stage);
+  const effectiveOpenOnly = openOnlyFor(openOnly, filters.state);
+
   const { data, error } = useCached(
-    `leads:${user.workspaceMemberId}:${mineOnly}:${openOnly}:${debouncedSearch}:${JSON.stringify(
+    `leads:${user.workspaceMemberId}:${mineOnly}:${effectiveOpenOnly}:${debouncedSearch}:${JSON.stringify(
       serverFilter ?? null,
     )}`,
     () =>
       fetchLeads({
         search: debouncedSearch || undefined,
         ownerId: mineOnly ? user.workspaceMemberId : undefined,
-        openOnly,
+        openOnly: effectiveOpenOnly,
         limit: 200,
         extraFilter: serverFilter,
       }),
@@ -141,7 +153,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
   );
 
   const kanbanCols = useMemo(() => {
-    const stages = openOnly
+    const stages = effectiveOpenOnly
       ? OPEN_STAGES
       : [...OPEN_STAGES, 'ACTIVE_CUSTOMER', 'LOST_MISSED'];
     return stages
@@ -150,7 +162,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
         return { stage, items, value: sumByCurrency(items) };
       })
       .filter((col) => col.items.length > 0);
-  }, [leads, openOnly]);
+  }, [leads, effectiveOpenOnly]);
 
   return (
     <main className="page">
@@ -181,11 +193,23 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
             {T.allLeads}
           </button>
         </div>
-        <div className="seg">
-          <button className={openOnly ? 'on' : ''} onClick={() => setOpenOnly(true)}>
+        <div
+          className="seg"
+          title={stageFilterActive ? T14.stageFilterOverridesOpen : undefined}
+          style={stageFilterActive ? { opacity: 0.45 } : undefined}
+        >
+          <button
+            className={effectiveOpenOnly ? 'on' : ''}
+            disabled={stageFilterActive}
+            onClick={() => setOpenOnly(true)}
+          >
             باز
           </button>
-          <button className={!openOnly ? 'on' : ''} onClick={() => setOpenOnly(false)}>
+          <button
+            className={!effectiveOpenOnly ? 'on' : ''}
+            disabled={stageFilterActive}
+            onClick={() => setOpenOnly(false)}
+          >
             همه مراحل
           </button>
         </div>

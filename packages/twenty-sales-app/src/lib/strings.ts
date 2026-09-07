@@ -890,3 +890,26 @@ export const BILLING_PERIOD_LABELS: Record<string, string> = {
   MONTHLY: 'ماهانه',
   ANNUAL: 'سالانه',
 };
+
+// Lead ↔ competitor: the competitors this lead already buys from, recorded
+// from the lead screen where the seller actually learns it.
+export const T14 = {
+  leadCompetitorsSection: 'رقبای این لید',
+  leadCompetitorsHint:
+    'سیستم‌هایی که این لید همین حالا استفاده می‌کند یا در حال بررسی آن است.',
+  noLeadCompetitors: 'رقیبی برای این لید ثبت نشده',
+  addLeadCompetitor: 'افزودن رقیب',
+  competitorLbl: 'رقیب',
+  pickCompetitor: 'انتخاب رقیب…',
+  competitorProductLbl: 'محصول رقیب',
+  leadCompetitorSaved: 'رقیب ثبت شد ✓',
+  leadCompetitorRemoved: 'رقیب حذف شد ✓',
+  leadCompetitorSaveFailed: 'ثبت رقیب ناموفق بود',
+  leadCompetitorLoadFailed: 'بارگیری رقبا ناموفق بود',
+  confirmRemoveCompetitor: 'این رقیب از لید حذف شود؟',
+  openCompetitor: 'صفحهٔ رقیب',
+  competitorAlreadyLinked: 'این رقیب قبلاً برای این لید ثبت شده است.',
+  stageChangeFailed: 'تغییر مرحله ناموفق بود',
+  stageFilterOverridesOpen:
+    'فیلتر مرحله فعال است — نمایش «باز / همه مراحل» موقتاً غیرفعال شده.',
+};

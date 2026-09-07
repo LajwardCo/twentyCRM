@@ -4,6 +4,7 @@ import { buildGraphQLFilter, type FilterState } from './filters';
 import {
   contactFilterFields,
   distinctOptions,
+  effectiveOpenOnly,
   leadFilterFields,
   memberOptions,
 } from './screenFilters';
@@ -123,5 +124,47 @@ describe('memberOptions', () => {
     expect(memberOptions(members)).toEqual([
       { value: 'u1', label: 'رشید احمدی' },
     ]);
+  });
+});
+
+describe('effectiveOpenOnly', () => {
+  it('keeps the open-pipeline toggle when no stage filter is set', () => {
+    expect(effectiveOpenOnly(true, {})).toBe(true);
+    expect(effectiveOpenOnly(false, {})).toBe(false);
+  });
+
+  it('ignores a stage filter that is open but empty', () => {
+    expect(
+      effectiveOpenOnly(true, { stage: { kind: 'multiEnum', values: [] } }),
+    ).toBe(true);
+  });
+
+  // The regression: `stage IN (open stages) AND stage IN (LOST_MISSED)` matches
+  // nothing, so lost leads were unreachable from the leads screen.
+  it('lets an explicit closed-stage filter override the toggle', () => {
+    expect(
+      effectiveOpenOnly(true, {
+        stage: { kind: 'multiEnum', values: ['LOST_MISSED'] },
+      }),
+    ).toBe(false);
+    expect(
+      effectiveOpenOnly(true, {
+        stage: { kind: 'multiEnum', values: ['ACTIVE_CUSTOMER'] },
+      }),
+    ).toBe(false);
+  });
+
+  it('also stands down for an open-stage filter, which the toggle would only duplicate', () => {
+    expect(
+      effectiveOpenOnly(true, {
+        stage: { kind: 'multiEnum', values: ['NEW_LEAD'] },
+      }),
+    ).toBe(false);
+  });
+
+  it('is unaffected by filters on other fields', () => {
+    expect(
+      effectiveOpenOnly(true, { temp: { kind: 'multiEnum', values: ['HOT'] } }),
+    ).toBe(true);
   });
 });

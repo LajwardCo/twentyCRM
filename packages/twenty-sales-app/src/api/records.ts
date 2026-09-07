@@ -175,7 +175,7 @@ const leadGroupsWithoutMissing = (
   return remaining.length === groups.length ? undefined : remaining;
 };
 
-const withOptionalLeadFields = async <TResult>(
+export const withOptionalLeadFields = async <TResult>(
   run: (fields: string) => Promise<TResult>,
 ): Promise<TResult> => {
   let groups = OPTIONAL_LEAD_FIELD_GROUPS;
@@ -197,13 +197,13 @@ const withOptionalLeadFields = async <TResult>(
 // `first` as given, so a lone `first: 300` silently returns a truncated set --
 // which is how the reports came to describe only part of the pipeline. Anything
 // that aggregates rather than previews goes through the connection cursor.
-const PAGE_SIZE = 200;
+export const PAGE_SIZE = 200;
 
 // 10k rows. Past this the caller wants a data export, not a report, and the
 // request budget (100 req/60s) is better spent elsewhere.
 const MAX_PAGES = 50;
 
-type Connection<TNode> = {
+export type Connection<TNode> = {
   edges: { node: TNode }[];
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
 };
@@ -212,7 +212,7 @@ type Connection<TNode> = {
 // a cap reads exactly like a complete one, which is the bug this replaces.
 export type PagedResult<TNode> = { items: TNode[]; truncated: boolean };
 
-const fetchAllPages = async <TNode>(
+export const fetchAllPages = async <TNode>(
   runPage: (after: string | null) => Promise<Connection<TNode>>,
 ): Promise<PagedResult<TNode>> => {
   const items: TNode[] = [];

@@ -10,9 +10,11 @@ import { startBackgroundSearch } from '../lib/backgroundSearch';
 import { Highlight } from './Highlight';
 import { navigate } from '../lib/router';
 import { loadPrefs, savePref } from '../lib/prefs';
+import { RT, searchReports } from '../lib/reports';
 import { STAGE_LABELS, T } from '../lib/strings';
 import {
   IconBuilding,
+  IconChart,
   IconDashboard,
   IconLeads,
   IconNote,
@@ -155,6 +157,23 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
     },
   ].filter((a) => query.trim() === '' || a.label.includes(query.trim()));
 
+  // The report library is 17 screens deep, so it is reachable by name here
+  // rather than only by walking the catalog. Only on a typed query: listing
+  // every report on an empty palette would bury the four actions above.
+  const reportActions: Item[] =
+    query.trim() === ''
+      ? []
+      : searchReports(query.trim())
+          .slice(0, 5)
+          .map((report) => ({
+            key: `report:${report.id}`,
+            label: report.title,
+            desc: report.description,
+            hint: RT.reportCount,
+            icon: <IconChart size={16} />,
+            run: () => go(`/reports/${report.id}`),
+          }));
+
   const resultItems: Item[] = deep
     ? hits.map((hit) => ({
         key: `${hit.objectNameSingular}:${hit.recordId}`,
@@ -184,7 +203,7 @@ export const CommandPalette = ({ onClose }: CommandPaletteProps) => {
         run: () => go(`/lead/${lead.id}`),
       }));
 
-  const items: Item[] = [...resultItems, ...actions];
+  const items: Item[] = [...resultItems, ...actions, ...reportActions];
   const clampedActive = Math.min(active, Math.max(0, items.length - 1));
 
   const onKeyDown = (e: React.KeyboardEvent) => {

@@ -3773,3 +3773,230 @@ table.leads tbody tr:hover {
     width: 100%;
   }
 }
+/* ============ report library ============ */
+
+.rpt-dash-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: start;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-family: inherit;
+  color: inherit;
+}
+
+.rpt-dash-card:hover {
+  border-color: var(--lapis-500);
+}
+
+.rpt-dash-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  background: var(--lapis-100);
+  color: var(--lapis-600);
+  flex: none;
+}
+
+.rpt-dash-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.rpt-dash-text small,
+.rpt-card-body small {
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+
+.rpt-search {
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.rpt-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 20px 2px 10px;
+}
+
+.rpt-group-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.rpt-group-head span {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.rpt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.rpt-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  text-align: start;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.rpt-card:hover {
+  border-color: var(--lapis-500);
+  transform: translateY(-1px);
+}
+
+.rpt-card-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  background: var(--lapis-50);
+  color: var(--lapis-600);
+  flex: none;
+}
+
+.rpt-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rpt-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 0;
+  padding: 0 0 4px;
+  color: var(--lapis-600);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.rpt-crumb:hover {
+  text-decoration: underline;
+}
+
+.rpt-select {
+  height: 32px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12.5px;
+  padding: 0 8px;
+}
+
+.rpt-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.rpt-table th {
+  white-space: nowrap;
+  padding: 0;
+}
+
+.rpt-table td {
+  white-space: nowrap;
+}
+
+.rpt-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 10px 12px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rpt-sort.on {
+  color: var(--lapis-600);
+}
+
+.rpt-caret {
+  display: inline-flex;
+  transition: transform 0.15s ease;
+}
+
+.rpt-caret.up {
+  transform: rotate(180deg);
+}
+
+.rpt-clickable {
+  cursor: pointer;
+}
+
+.rpt-good {
+  color: var(--ok);
+}
+
+.rpt-bad {
+  color: var(--hot);
+}
+
+.rpt-warn {
+  color: var(--warm);
+}
+
+.rpt-muted {
+  color: var(--ink-3);
+}
+
+/* Reports sub-menu in the desktop sidebar */
+.nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 6px;
+  padding-inline-start: 26px;
+}
+
+.nav-sub button {
+  background: none;
+  border: 0;
+  text-align: start;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.nav-sub button:hover {
+  background: var(--line-soft);
+}
+
+.nav-sub button.on {
+  color: var(--lapis-600);
+  background: var(--lapis-50);
+  font-weight: 700;
+}

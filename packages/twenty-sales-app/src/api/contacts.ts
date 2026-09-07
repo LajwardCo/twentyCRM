@@ -5,6 +5,7 @@ import {
   toPhonesValue,
 } from '../lib/phones';
 import { coreQuery } from './client';
+import { isPhoneAppsFieldProvisioned } from './phoneAppsSupport';
 import { normalizePhone, type CompanyContact } from './records';
 
 // Extra contacts on a lead.
@@ -147,48 +148,35 @@ export type PersonPhones = {
   appsSupported: boolean;
 };
 
-const isMissingPhoneApps = (error: unknown): boolean =>
-  error instanceof Error &&
-  /(Cannot query field|is not defined by type|Unknown argument).*"?phoneApps/i.test(
-    error.message,
-  );
+const PERSON_PHONES_SELECTION = `
+  phones {
+    primaryPhoneCallingCode
+    primaryPhoneNumber
+    primaryPhoneCountryCode
+    additionalPhones
+  }`;
 
 export const fetchPersonPhones = async (
   personId: string,
 ): Promise<PersonPhones> => {
-  const selection = `
-    phones {
-      primaryPhoneCallingCode
-      primaryPhoneNumber
-      primaryPhoneCountryCode
-      additionalPhones
-    }`;
+  const appsSupported = await isPhoneAppsFieldProvisioned();
 
-  try {
-    const data = await coreQuery<{
-      person: { phones: PhonesValue; phoneApps: string | null };
-    }>(
-      `query PersonPhones($id: UUID!) {
-        person(filter: { id: { eq: $id } }) { ${selection} phoneApps }
-      }`,
-      { id: personId },
-    );
-    return {
-      phones: data.person.phones,
-      phoneApps: data.person.phoneApps,
-      appsSupported: true,
-    };
-  } catch (error) {
-    if (!isMissingPhoneApps(error)) throw error;
-  }
-
-  const data = await coreQuery<{ person: { phones: PhonesValue } }>(
-    `query PersonPhonesOnly($id: UUID!) {
-      person(filter: { id: { eq: $id } }) { ${selection} }
+  const data = await coreQuery<{
+    person: { phones: PhonesValue; phoneApps?: string | null };
+  }>(
+    `query PersonPhones($id: UUID!) {
+      person(filter: { id: { eq: $id } }) {
+        ${PERSON_PHONES_SELECTION}${appsSupported ? '\n        phoneApps' : ''}
+      }
     }`,
     { id: personId },
   );
-  return { phones: data.person.phones, phoneApps: null, appsSupported: false };
+
+  return {
+    phones: data.person.phones,
+    phoneApps: appsSupported ? (data.person.phoneApps ?? null) : null,
+    appsSupported,
+  };
 };
 
 // Saves the numbers and their app tags together. If the instance lacks
@@ -200,27 +188,24 @@ export const savePersonPhones = async (
   entries: PhoneEntry[],
 ): Promise<{ appsSaved: boolean }> => {
   const phones = toPhonesValue(entries);
-  const phoneApps = serializePhoneApps(entries);
+  const appsSupported = await isPhoneAppsFieldProvisioned();
 
-  try {
-    await coreQuery(
-      `mutation SavePersonPhones($id: UUID!, $data: PersonUpdateInput!) {
-        updatePerson(id: $id, data: $data) { id }
-      }`,
-      { id: personId, data: { phones, phoneApps } },
-    );
-    return { appsSaved: true };
-  } catch (error) {
-    if (!isMissingPhoneApps(error)) throw error;
-  }
-
+  // An unknown field in the mutation INPUT is a real validation error, unlike
+  // an unknown selected field -- so writing phoneApps blindly on a server
+  // without it would fail the whole update and lose the numbers with it.
   await coreQuery(
-    `mutation SavePersonPhonesOnly($id: UUID!, $data: PersonUpdateInput!) {
+    `mutation SavePersonPhones($id: UUID!, $data: PersonUpdateInput!) {
       updatePerson(id: $id, data: $data) { id }
     }`,
-    { id: personId, data: { phones } },
+    {
+      id: personId,
+      data: appsSupported
+        ? { phones, phoneApps: serializePhoneApps(entries) }
+        : { phones },
+    },
   );
-  return { appsSaved: false };
+
+  return { appsSaved: appsSupported };
 };
 
 // ---------- editing the lead's contact person ----------

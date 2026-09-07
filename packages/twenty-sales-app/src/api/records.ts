@@ -7,6 +7,7 @@ import {
   type ProductPriceBook,
 } from './catalog';
 import { coreQuery } from './client';
+import { isPhoneAppsFieldProvisioned } from './phoneAppsSupport';
 
 // ---------- shared types ----------
 
@@ -1099,28 +1100,13 @@ export const fetchCompanyContacts = async (
 ): Promise<CompanyContact[]> => {
   type Result = { people: { edges: { node: CompanyContact }[] } };
 
-  // phoneApps only exists once provision-contact-phone-apps.mjs has run.
-  // Asking for it and retrying without costs one failed request on such an
-  // instance, and keeps the contact list working there.
-  try {
-    const data = await coreQuery<Result>(companyContactsQuery(true), {
-      companyId,
-    });
-    return data.people.edges.map((e) => e.node);
-  } catch (error) {
-    if (
-      !(error instanceof Error) ||
-      !/(Cannot query field|is not defined by type).*"?phoneApps/i.test(
-        error.message,
-      )
-    ) {
-      throw error;
-    }
-  }
-
-  const data = await coreQuery<Result>(companyContactsQuery(false), {
-    companyId,
-  });
+  // phoneApps only exists once provision-contact-phone-apps.mjs has run, and
+  // the record API reads an absent field as null rather than refusing it, so
+  // the metadata probe is the only honest way to ask.
+  const data = await coreQuery<Result>(
+    companyContactsQuery(await isPhoneAppsFieldProvisioned()),
+    { companyId },
+  );
   return data.people.edges.map((e) => e.node);
 };
 
@@ -1896,32 +1882,20 @@ const PERSON_DETAIL_FIELDS = `
   createdAt`;
 
 export const fetchPerson = async (id: string): Promise<PersonDetail> => {
-  const run = (withPhoneApps: boolean) =>
-    coreQuery<{ person: PersonDetail }>(
-      `query PersonDetail($id: UUID!) {
-        person(filter: { id: { eq: $id } }) {
-          ${PERSON_DETAIL_FIELDS}${withPhoneApps ? '\n          phoneApps' : ''}
-        }
-      }`,
-      { id },
-    );
-
   // phoneApps needs provision-contact-phone-apps.mjs; without it the person
   // still loads and simply carries no messaging-app tags.
-  try {
-    return (await run(true)).person;
-  } catch (error) {
-    if (
-      !(error instanceof Error) ||
-      !/(Cannot query field|is not defined by type).*"?phoneApps/i.test(
-        error.message,
-      )
-    ) {
-      throw error;
-    }
-  }
+  const withPhoneApps = await isPhoneAppsFieldProvisioned();
 
-  return (await run(false)).person;
+  const data = await coreQuery<{ person: PersonDetail }>(
+    `query PersonDetail($id: UUID!) {
+      person(filter: { id: { eq: $id } }) {
+        ${PERSON_DETAIL_FIELDS}${withPhoneApps ? '\n        phoneApps' : ''}
+      }
+    }`,
+    { id },
+  );
+
+  return data.person;
 };
 
 // --- restored (required by QuickTaskModal.tsx) ---

@@ -24,6 +24,10 @@
 // "simplify" it into sending only the audit entry -- that would silently strip
 // every permission provision-permissions.mjs set up.
 
+// Auth: set TWENTY_TOKEN to a workspace API key (Settings > APIs & Webhooks) to
+// skip the password login entirely -- preferable against production, where you
+// don't want an admin password in your shell history. Otherwise it logs in with
+// TWENTY_EMAIL / TWENTY_PASSWORD (local dev defaults below).
 const META = process.env.TWENTY_META ?? 'http://localhost:3010/metadata';
 const ORIGIN = process.env.TWENTY_ORIGIN ?? 'http://localhost:3011';
 const EMAIL = process.env.TWENTY_EMAIL ?? 'tim@apple.dev';
@@ -47,7 +51,7 @@ const ADMIN_ROLE_LABELS = new Set(['Admin', 'Administrator']);
 const isAdminRole = (role) =>
   role.canUpdateAllSettings === true || ADMIN_ROLE_LABELS.has(role.label);
 
-let TOKEN = null;
+let TOKEN = process.env.TWENTY_TOKEN ?? null;
 
 async function gql(query, variables) {
   const res = await fetch(META, {
@@ -224,8 +228,12 @@ async function provisionPermissions(auditObjectId) {
 }
 
 async function main() {
-  await login();
-  console.log('authenticated.\n');
+  if (TOKEN) {
+    console.log('using TWENTY_TOKEN (API key).\n');
+  } else {
+    await login();
+    console.log(`authenticated as ${EMAIL}.\n`);
+  }
   let objs = await fetchObjects();
 
   console.log('== object ==');

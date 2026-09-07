@@ -28,6 +28,8 @@ import { CompanyView, NoteView, PersonView } from './views/EntityViews';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
 import { PublicUploadView } from './views/PublicUploadView';
+import { ReportRunnerView } from './views/ReportRunnerView';
+import { ReportsCatalogView } from './views/ReportsCatalogView';
 import { ReportsView } from './views/ReportsView';
 import { SearchResultsView } from './views/SearchResultsView';
 import { TasksView } from './views/TasksView';
@@ -217,8 +219,16 @@ export const App = () => {
     bar = backButton;
   } else if (section === 'search' && param) {
     view = <SearchResultsView searchId={param} />;
-  } else if (section === 'reports') {
+  } else if (section === 'reports' && param === 'dashboard') {
     view = <ReportsView user={user} />;
+  } else if (section === 'reports' && param) {
+    // Keyed on the report id: filters, grouping and sort are per-report state,
+    // and without a remount they would follow you from one report to the next.
+    view = <ReportRunnerView key={param} reportId={param} user={user} />;
+  } else if (section === 'reports') {
+    // The section index is the report library, not the dashboard: the
+    // dashboard is one entry in it (/reports/dashboard).
+    view = <ReportsCatalogView />;
   } else if (section === 'daily-report') {
     view = <DailyReportView user={user} />;
   } else if (section === 'competitor' && param) {

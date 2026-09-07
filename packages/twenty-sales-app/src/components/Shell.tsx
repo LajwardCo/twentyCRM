@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { type CurrentUser } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
 import { jalaliToday } from '../lib/jalali';
+import { reportNavItems } from '../lib/reports';
 import { goBackOr, navigate, useRoute } from '../lib/router';
 import { T, T2, T3, T4 } from '../lib/strings';
 import {
@@ -106,14 +107,32 @@ export const AppShell = ({
         <nav className="nav">
           <div className="nav-lbl">منو</div>
           {navItemsFor(user).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              className={`nav-item ${active === key ? 'on' : ''}`}
-              onClick={() => navigate(`/${key}`)}
-            >
-              <Icon size={18} />
-              {label}
-            </button>
+            <div key={key}>
+              <button
+                className={`nav-item ${active === key ? 'on' : ''}`}
+                onClick={() => navigate(`/${key}`)}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+              {/* Reports is a section rather than a screen, so its entries are
+                  listed here once you are inside it. */}
+              {key === 'reports' && active === 'reports' && (
+                <div className="nav-sub">
+                  {reportNavItems().map((item) => (
+                    <button
+                      key={item.route}
+                      className={
+                        `/${route.path}` === item.route ? 'on' : undefined
+                      }
+                      onClick={() => navigate(item.route)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
         <div className="side-user">

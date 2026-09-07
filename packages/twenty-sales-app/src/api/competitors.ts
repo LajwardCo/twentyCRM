@@ -292,3 +292,62 @@ export const deleteCompetitorUpdate = (id: string) =>
 
 export const deleteCompetitorUsage = (id: string) =>
   deleteRecord('deleteCompetitorUsage', id);
+
+// ---------- lead side: which competitors this lead is a customer of ----------
+//
+// The competitorUsage row is the same join the competitor screen writes; the
+// difference is only which end you start from. A seller learns "they already
+// run <competitor>" during the visit, not while doing competitor research, so
+// the lead has to be able to record it -- otherwise the intel only ever lands
+// for leads someone remembered to go back and file.
+//
+// Hides itself on an instance that has not run provision-competitor-intel.mjs.
+
+export type CompetitorUsageSupport<TValue> =
+  | { supported: true; value: TValue }
+  | { supported: false };
+
+const USAGE_UNSUPPORTED = { supported: false } as const;
+
+const isUsageUnsupported = (error: unknown): boolean =>
+  error instanceof Error &&
+  /(Cannot query field|is not defined by type|Unknown type|Unknown argument).*"?(competitorUsage|competitorUsages|CompetitorUsage)/i.test(
+    error.message,
+  );
+
+export type LeadCompetitorUsage = CompetitorUsage & {
+  competitor: { id: string; name: string; threatLevel: string | null } | null;
+};
+
+const LEAD_COMPETITOR_USAGE_FIELDS = `
+  ${COMPETITOR_USAGE_FIELDS}
+  competitor { id name threatLevel }
+`;
+
+export const fetchLeadCompetitorUsages = async (
+  opportunityId: string,
+): Promise<CompetitorUsageSupport<LeadCompetitorUsage[]>> => {
+  try {
+    const data = await coreQuery<{
+      competitorUsages: { edges: { node: LeadCompetitorUsage }[] };
+    }>(
+      `query LeadCompetitorUsages($id: UUID!) {
+        competitorUsages(
+          filter: { opportunityId: { eq: $id } }
+          orderBy: [{ createdAt: AscNullsLast }]
+          first: 50
+        ) {
+          edges { node { ${LEAD_COMPETITOR_USAGE_FIELDS} } }
+        }
+      }`,
+      { id: opportunityId },
+    );
+    return {
+      supported: true,
+      value: data.competitorUsages.edges.map((edge) => edge.node),
+    };
+  } catch (error) {
+    if (isUsageUnsupported(error)) return USAGE_UNSUPPORTED;
+    throw error;
+  }
+};

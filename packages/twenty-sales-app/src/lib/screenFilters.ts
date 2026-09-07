@@ -7,8 +7,10 @@ import {
 } from '../api/records';
 import { type CatalogProduct } from '../api/catalog';
 import {
+  isFilterActive,
   type FilterField,
   type FilterOption,
+  type FilterState,
   type FilterValue,
 } from './filters';
 import {
@@ -82,6 +84,16 @@ export const distinctOptions = <TRow>(
 };
 
 // ---------- leads (server-side) ----------
+
+// The leads screen carries a sticky "open pipeline only" toggle alongside the
+// filter sheet. Both narrow `stage`, so ANDing them turns any request for a
+// closed stage -- "از دست رفته" or "مشتری فعال" -- into `stage IN (open) AND
+// stage IN (lost)`, which matches nothing. An explicit stage filter is the more
+// specific instruction, so it wins over the toggle.
+export const effectiveOpenOnly = (
+  openOnly: boolean,
+  state: FilterState,
+): boolean => openOnly && !isFilterActive(state.stage);
 
 export const leadFilterFields = (
   members: Member[],

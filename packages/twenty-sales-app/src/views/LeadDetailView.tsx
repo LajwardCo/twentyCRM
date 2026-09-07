@@ -40,12 +40,13 @@ import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadOffersCard } from '../components/LeadOffersCard';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
+import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
-import { canSeeMoney } from '../lib/access';
+import { canSeeMoney, isExternalUser } from '../lib/access';
 import { invalidateCache, useCached } from '../lib/cache';
 import {
   type CurrencyCode,
@@ -77,6 +78,7 @@ import {
   T6,
   T9,
   T11,
+  T14,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -231,10 +233,17 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const changeStage = async (stage: string) => {
     if (!lead) return;
     setOverride((prev) => ({ ...prev, stage }));
+    setActionError(null);
     try {
       await updateLead(lead.id, { stage });
       showToast(`${T.stage}: ${STAGE_LABELS[stage] ?? stage} ✓`);
-    } catch {
+    } catch (err) {
+      // A rejected stage change used to revert with no explanation, which reads
+      // exactly like the control doing nothing -- the reason it looked broken
+      // when a seller tried to close a lead out.
+      setActionError(
+        `${T14.stageChangeFailed}: ${err instanceof Error ? err.message : ''}`.trim(),
+      );
       void reload();
     }
   };
@@ -865,6 +874,13 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               partners={referrers}
               onPartnersChanged={reloadReferrers}
             />
+          )}
+
+          {/* Which competitors this lead already buys from. Employee-only: the
+              competitor objects are outside the external roles' grant, so an
+              external user would get a permission error rather than a card. */}
+          {!isExternalUser(user) && (
+            <LeadCompetitorsCard leadId={leadId} leadName={lead.name} />
           )}
 
           <div className="card card-pad anim d4">

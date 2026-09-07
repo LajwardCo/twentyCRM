@@ -13,7 +13,7 @@ import { findManyOperationFactory } from 'test/integration/graphql/utils/find-ma
 import { makeGraphqlAPIRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { updateWorkspaceMemberRole } from 'test/integration/graphql/utils/update-workspace-member-role.util';
 import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
-import { FieldMetadataType } from 'twenty-shared/types';
+import { FieldMetadataType, RelationType } from 'twenty-shared/types';
 
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 
@@ -184,7 +184,7 @@ describe('ownerScopedRecordsViaPartner', () => {
         label: 'Login Account',
         type: FieldMetadataType.RELATION,
         relationCreationPayload: {
-          type: 'MANY_TO_ONE',
+          type: RelationType.MANY_TO_ONE,
           targetObjectMetadataId: workspaceMemberObjectMetadataId,
           targetFieldLabel: 'Partner Profile',
           targetFieldIcon: 'IconUsersGroup',
@@ -202,7 +202,7 @@ describe('ownerScopedRecordsViaPartner', () => {
         label: 'Marketer',
         type: FieldMetadataType.RELATION,
         relationCreationPayload: {
-          type: 'MANY_TO_ONE',
+          type: RelationType.MANY_TO_ONE,
           targetObjectMetadataId: partnerObjectMetadataId,
           targetFieldLabel: 'Leads Brought',
           targetFieldIcon: 'IconTargetArrow',

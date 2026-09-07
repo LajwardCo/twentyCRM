@@ -12,7 +12,9 @@ type PersonPhoneFields = {
   phones?: PhonesCompositeValue;
 };
 
-const composeE164 = (value: PhonesCompositeValue | undefined): string | null => {
+const composeE164 = (
+  value: PhonesCompositeValue | undefined,
+): string | null => {
   if (!isNonEmptyString(value?.primaryPhoneNumber)) {
     return null;
   }
@@ -39,5 +41,4 @@ const composeE164 = (value: PhonesCompositeValue | undefined): string | null => 
 
 export const resolveWhatsappRecipientPhone = (
   person: PersonPhoneFields,
-): string | null =>
-  composeE164(person.whatsapp) ?? composeE164(person.phones);
+): string | null => composeE164(person.whatsapp) ?? composeE164(person.phones);

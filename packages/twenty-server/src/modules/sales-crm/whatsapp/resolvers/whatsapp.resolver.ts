@@ -6,6 +6,8 @@ import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filt
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
+import { CustomPermissionGuard } from 'src/engine/guards/custom-permission.guard';
+import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { SendWhatsappMessageOutputDTO } from 'src/modules/sales-crm/whatsapp/dtos/send-whatsapp-message-output.dto';
 import { SendWhatsappMessageInput } from 'src/modules/sales-crm/whatsapp/dtos/send-whatsapp-message.input';
@@ -25,7 +27,10 @@ export class WhatsappResolver {
     private readonly whatsappCloudApiClientService: WhatsappCloudApiClientService,
   ) {}
 
+  // Sends only ever go out for the caller's own workspace -- the id comes from
+  // the token, never the input -- so that scoping is the check.
   @Mutation(() => SendWhatsappMessageOutputDTO)
+  @UseGuards(CustomPermissionGuard)
   async sendWhatsappMessage(
     @Args('input') input: SendWhatsappMessageInput,
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -58,7 +63,10 @@ export class WhatsappResolver {
     }
   }
 
+  // Reads the server's own Cloud API template list, which carries no workspace
+  // data; any signed-in member may list it.
   @Query(() => [WhatsappTemplateDTO])
+  @UseGuards(NoPermissionGuard)
   async whatsappTemplates(): Promise<WhatsappTemplateDTO[]> {
     return this.whatsappCloudApiClientService.listTemplates();
   }

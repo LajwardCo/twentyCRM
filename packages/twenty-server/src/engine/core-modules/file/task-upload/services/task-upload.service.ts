@@ -254,9 +254,7 @@ export class TaskUploadService {
     }, buildSystemAuthContext(payload.workspaceId));
   }
 
-  private async verifyUploadToken(
-    token: string,
-  ): Promise<VerifiedUploadToken> {
+  private async verifyUploadToken(token: string): Promise<VerifiedUploadToken> {
     let verified: unknown;
 
     try {

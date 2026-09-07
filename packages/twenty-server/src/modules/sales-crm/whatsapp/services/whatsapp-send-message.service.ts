@@ -63,7 +63,11 @@ export class WhatsappSendMessageService {
         });
 
         if (!isDefined(person)) {
-          return { success: false, waMessageId: null, error: 'Person not found' };
+          return {
+            success: false,
+            waMessageId: null,
+            error: 'Person not found',
+          };
         }
 
         const toPhone = resolveWhatsappRecipientPhone(person);

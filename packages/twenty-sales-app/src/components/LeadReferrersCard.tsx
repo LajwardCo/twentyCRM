@@ -10,7 +10,8 @@ import {
 } from '../api/leadReferrers';
 import { type Referrer } from '../api/records';
 import { toPersianDigits } from '../lib/jalali';
-import { REFERRER_ROLE_LABELS, T9, T10 } from '../lib/strings';
+import { createPartner } from '../api/partners';
+import { REFERRER_ROLE_LABELS, T9, T10, T13 } from '../lib/strings';
 
 // Additional referrers credited on a lead, each with the commission share
 // negotiated for THIS deal. The primary referrer (opportunity.referrer) is
@@ -25,11 +26,19 @@ type Props = {
   // The lead's primary referrer, so the total reflects the whole commitment.
   primaryReferrer: Referrer | null;
   partners: Referrer[];
+  // Refetches the partner list after one is created here, so the new name is
+  // selectable straight away rather than after a reload.
+  onPartnersChanged?: () => void | Promise<void>;
 };
 
 const ROLES: ReferrerRole[] = ['FINDER', 'INTRODUCER', 'CLOSER', 'OTHER'];
 
-export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) => {
+export const LeadReferrersCard = ({
+  leadId,
+  primaryReferrer,
+  partners,
+  onPartnersChanged,
+}: Props) => {
   const [entries, setEntries] = useState<LeadReferrer[]>([]);
   const [supported, setSupported] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -41,6 +50,43 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
   const [role, setRole] = useState<ReferrerRole>('FINDER');
   const [commissionInput, setCommissionInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
+
+  // Creating a referrer without leaving the lead. Every picker here reads the
+  // partner list, so a referral for someone not already in it was previously
+  // impossible to record at the moment the seller actually learned about it.
+  const [newPartnerName, setNewPartnerName] = useState<string | null>(null);
+
+  const createAndSelect = async () => {
+    const name = newPartnerName?.trim() ?? '';
+    if (name === '') return;
+    setBusy(true);
+    setError(null);
+    try {
+      const existing = partners.find(
+        (partner) => partner.name.trim().toLowerCase() === name.toLowerCase(),
+      );
+      if (existing !== undefined) {
+        setPartnerId(existing.id);
+      } else {
+        const result = await createPartner({
+          name,
+          partnerType: 'PARTNER',
+          commissionPercent: null,
+        });
+        if (!result.supported) {
+          setError(T13.partnersUnsupported);
+          return;
+        }
+        setPartnerId(result.value.id);
+        await onPartnersChanged?.();
+      }
+      setNewPartnerName(null);
+    } catch {
+      setError(T13.partnerSaveFailed);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -192,6 +238,44 @@ export const LeadReferrersCard = ({ leadId, primaryReferrer, partners }: Props) 
               ))}
             </select>
           </div>
+
+          {newPartnerName === null ? (
+            <button
+              type="button"
+              className="btn ghost sm"
+              style={{ alignSelf: 'flex-start' }}
+              onClick={() => setNewPartnerName('')}
+            >
+              {T13.newPartnerInline}
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div className="fld" style={{ flex: 1 }}>
+                <label>{T13.partnerNameLbl}</label>
+                <input
+                  autoFocus
+                  value={newPartnerName}
+                  onChange={(e) => setNewPartnerName(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn soft sm"
+                disabled={busy || newPartnerName.trim() === ''}
+                onClick={() => void createAndSelect()}
+              >
+                {T13.savePartner}
+              </button>
+              <button
+                type="button"
+                className="btn ghost sm"
+                disabled={busy}
+                onClick={() => setNewPartnerName(null)}
+              >
+                {T9.cancel}
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div className="fld" style={{ flex: 1, minWidth: 120 }}>
               <label>{T10.referrerRoleLbl}</label>

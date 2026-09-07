@@ -9,6 +9,7 @@ import {
 import { buildPublicUploadUrl, secondsUntil } from '../lib/publicUpload';
 import { renderQrDataUrl } from '../lib/qr';
 import { toPersianDigits } from '../lib/jalali';
+import { AttachmentChip } from './AttachmentChip';
 import { IconMic, IconRefresh, IconX } from './icons';
 
 type AttachmentUploadModalProps = {
@@ -68,6 +69,7 @@ export const AttachmentUploadModal = ({
     setDeviceError(null);
     try {
       await uploadTaskAttachment({ file, taskId, opportunityId });
+      await refreshExisting();
       await onUploaded();
     } catch (err) {
       setDeviceError(err instanceof Error ? err.message : 'آپلود ناموفق بود');
@@ -119,6 +121,22 @@ export const AttachmentUploadModal = ({
 
   const expired = expiresAt !== null && secondsLeft === 0;
 
+  // Files already on the task, so the seller can open what was uploaded
+  // without leaving the modal. Refreshed after every successful upload.
+  const [existing, setExisting] = useState<TaskAttachment[]>([]);
+
+  const refreshExisting = useCallback(async () => {
+    try {
+      setExisting(await fetchTaskAttachments(taskId));
+    } catch {
+      // a failed refresh only costs the list; uploading still worked
+    }
+  }, [taskId]);
+
+  useEffect(() => {
+    void refreshExisting();
+  }, [refreshExisting]);
+
   // poll for files arriving from the phone while the mobile tab is open
   const [arrivedCount, setArrivedCount] = useState<number | null>(null);
   const baselineRef = useRef<number | null>(null);
@@ -136,6 +154,7 @@ export const AttachmentUploadModal = ({
           const delta = list.length - baselineRef.current;
           if (delta > 0) {
             setArrivedCount(delta);
+            void refreshExisting();
             void onUploaded();
           }
         }
@@ -205,6 +224,19 @@ export const AttachmentUploadModal = ({
             </label>
             {deviceError !== null && (
               <div className="error-banner">{deviceError}</div>
+            )}
+
+            {existing.length > 0 && (
+              <div>
+                <div className="sub" style={{ marginBottom: 6 }}>
+                  فایل‌های این کار
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {existing.map((a) => (
+                    <AttachmentChip key={a.id} attachment={a} />
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         ) : (

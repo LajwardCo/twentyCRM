@@ -890,3 +890,83 @@ export const BILLING_PERIOD_LABELS: Record<string, string> = {
   MONTHLY: 'ماهانه',
   ANNUAL: 'سالانه',
 };
+
+// Attachments, contact phone numbers, partner management and company address.
+export const T13 = {
+  // files
+  fileUnavailable: 'فایل در دسترس نیست',
+
+  // phone numbers + messaging apps
+  phonesSection: 'شماره‌های تماس',
+  phonesHint: 'هر شماره را جدا ثبت کنید و مشخص کنید روی کدام پیام‌رسان فعال است',
+  managePhones: 'مدیریت شماره‌ها',
+  primaryPhoneBadge: 'شماره اصلی',
+  addPhone: 'افزودن شماره',
+  removePhone: 'حذف',
+  makePrimaryPhone: 'اصلی کن',
+  phoneNumberLbl: 'شماره',
+  phoneLabelLbl: 'برچسب',
+  phoneLabelPlaceholder: 'دفتر، شخصی، واتساپ…',
+  phoneAppsLbl: 'پیام‌رسان‌ها',
+  phonesSaved: 'شماره‌ها ذخیره شد ✓',
+  phonesSaveFailed: 'ذخیره شماره‌ها ناموفق بود',
+  phoneInvalid: 'شماره معتبر نیست',
+  phoneDuplicate: 'این شماره تکراری است',
+  noPhones: 'شماره‌ای ثبت نشده',
+  callAction: 'تماس',
+  phoneAppsUnsupported:
+    'ثبت پیام‌رسان‌ها روی این نسخه فعال نیست — شماره‌ها ذخیره می‌شوند',
+
+  // partners (marketers / referrers)
+  partners: 'بازاریاب‌ها و معرف‌ها',
+  partnersHint: 'کسانی که لید می‌آورند یا معامله را معرفی می‌کنند',
+  addPartner: 'افزودن',
+  newPartnerTitle: 'بازاریاب / معرف جدید',
+  editPartnerTitle: 'ویرایش',
+  partnerNameLbl: 'نام',
+  partnerTypeLbl: 'نوع',
+  partnerCommissionLbl: 'کمیسیون پیش‌فرض ٪',
+  partnerPhoneLbl: 'شماره تماس',
+  savePartner: 'ذخیره',
+  partnerSaved: 'ذخیره شد ✓',
+  partnerSaveFailed: 'ذخیره ناموفق بود',
+  partnerNameRequired: 'نام لازم است',
+  partnerDuplicateName: 'با همین نام قبلاً ثبت شده',
+  deletePartner: 'حذف',
+  confirmDeletePartner: 'حذف شود؟ لیدهای ثبت‌شده دست‌نخورده می‌مانند.',
+  partnerDeleted: 'حذف شد ✓',
+  partnerDeleteFailed: 'حذف ناموفق بود',
+  noPartners: 'هنوز بازاریابی ثبت نشده',
+  partnersLoadFailed: 'فهرست بارگیری نشد',
+  partnerLeadsCount: 'لید',
+  newPartnerInline: '+ ثبت معرف جدید',
+  partnersUnsupported:
+    'این بخش روی این نسخه فعال نیست — اسکریپت provision-external-partners اجرا نشده',
+
+  // shared actions
+  save: 'ذخیره',
+  savingLbl: 'در حال ذخیره…',
+
+  // company address
+  editAddress: 'ویرایش آدرس',
+  addressTitle: 'آدرس شرکت',
+  addressStreet1Lbl: 'نشانی',
+  addressStreet2Lbl: 'ادامه نشانی',
+  addressCityLbl: 'شهر',
+  addressStateLbl: 'ولایت / استان',
+  addressPostcodeLbl: 'کد پستی',
+  addressCountryLbl: 'کشور',
+  addressSaved: 'آدرس ذخیره شد ✓',
+  addressSaveFailed: 'ذخیره آدرس ناموفق بود',
+  noAddress: 'آدرسی ثبت نشده',
+  addAddress: 'افزودن آدرس',
+};
+
+export const PHONE_APP_LABELS: Record<string, string> = {
+  WHATSAPP: 'واتساپ',
+  TELEGRAM: 'تلگرام',
+  IMO: 'ایمو',
+  VIBER: 'وایبر',
+  SIGNAL: 'سیگنال',
+  MESSENGER: 'مسنجر',
+};

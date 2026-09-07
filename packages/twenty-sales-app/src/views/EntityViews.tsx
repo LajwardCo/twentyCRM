@@ -7,6 +7,8 @@ import {
   softDeleteNote,
   type LeadSummary,
 } from '../api/records';
+import { ContactPhoneLines } from '../components/ContactPhoneLines';
+import { ContactPhonesModal } from '../components/ContactPhonesModal';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { CompanyCard } from '../components/LeadPanels';
 import { NoteEditModal } from '../components/NoteEditModal';
@@ -25,7 +27,8 @@ import { invalidateCache, useCached } from '../lib/cache';
 import { formatMoney, fullPhone, personName } from '../lib/format';
 import { formatJalaliDateTime, toPersianDigits } from '../lib/jalali';
 import { goBackOr, navigate } from '../lib/router';
-import { STAGE_LABELS, T, T5, T6, TEMP_LABELS } from '../lib/strings';
+import { phoneEntries } from '../lib/phones';
+import { STAGE_LABELS, T, T5, T6, T13, TEMP_LABELS } from '../lib/strings';
 
 const ViewSkeleton = () => (
   <main className="page">
@@ -210,7 +213,8 @@ export const CompanyView = ({ companyId }: { companyId: string }) => {
 
 export const PersonView = ({ personId }: { personId: string }) => {
   const [showWhatsApp, setShowWhatsApp] = useState(false);
-  const { data, error } = useCached(`person:${personId}`, async () => {
+  const [managingPhones, setManagingPhones] = useState(false);
+  const { data, error, refresh } = useCached(`person:${personId}`, async () => {
     const person = await fetchPerson(personId);
     const leads = await fetchLeads({ pointOfContactId: personId, limit: 20 });
     return { person, leads };
@@ -229,6 +233,7 @@ export const PersonView = ({ personId }: { personId: string }) => {
   const { person, leads } = data;
   const phone = fullPhone(person.phones);
   const email = person.emails?.primaryEmail ?? null;
+  const phoneLines = phoneEntries(person.phones, person.phoneApps);
 
   return (
     <main className="page" style={{ maxWidth: 980 }}>
@@ -261,10 +266,20 @@ export const PersonView = ({ personId }: { personId: string }) => {
             <h3>{T.contactPerson}</h3>
             <div className="contact-rows">
               <div className="c-row">
-                <span>{T.phone}</span>
-                <b className="num" dir="ltr">
-                  {phone ?? '—'}
-                </b>
+                <span>{T13.phonesSection}</span>
+                <span
+                  style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}
+                >
+                  <ContactPhoneLines entries={phoneLines} />
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => setManagingPhones(true)}
+                    title={T13.managePhones}
+                  >
+                    <IconEdit size={14} />
+                  </button>
+                </span>
               </div>
               {email && (
                 <div className="c-row">
@@ -314,6 +329,18 @@ export const PersonView = ({ personId }: { personId: string }) => {
           personId={person.id}
           opportunityId={leads[0]?.id}
           onClose={() => setShowWhatsApp(false)}
+        />
+      )}
+
+      {managingPhones && (
+        <ContactPhonesModal
+          personId={person.id}
+          personName={personName(person)}
+          onClose={() => setManagingPhones(false)}
+          onSaved={() => {
+            setManagingPhones(false);
+            void refresh();
+          }}
         />
       )}
     </main>

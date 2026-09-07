@@ -18,6 +18,18 @@ on:
       - 'packages/twenty-front-component-renderer/**'
       - 'packages/twenty-docker/**'
       - '.github/workflows/deploy-hamagan-crm.yaml'
+      # Tests are not in the running image, so a test-only change must not
+      # spend ~90 minutes rebuilding it and restarting production for code
+      # that behaves identically. Exclusions come last: GitHub applies these
+      # patterns in order and the last match for a file decides, so a commit
+      # touching source AND its tests still matches a source pattern above
+      # and deploys as before.
+      - '!packages/twenty-server/test/**'
+      - '!**/__tests__/**'
+      - '!**/*.spec.ts'
+      - '!**/*.spec.tsx'
+      - '!**/*.test.ts'
+      - '!**/*.test.tsx'
   workflow_dispatch:
     inputs:
       reset_db:

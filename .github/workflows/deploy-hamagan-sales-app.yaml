@@ -12,6 +12,12 @@ on:
     paths:
       - 'packages/twenty-sales-app/**'
       - '.github/workflows/deploy-hamagan-sales-app.yaml'
+      # Vitest files are not in the built bundle, so a test-only change need
+      # not rebuild and re-upload it. Exclusions come last: the last pattern
+      # matching a file decides, so a commit touching a module AND its test
+      # still deploys.
+      - '!packages/twenty-sales-app/src/**/*.test.ts'
+      - '!packages/twenty-sales-app/src/**/*.test.tsx'
   workflow_dispatch:
 
 concurrency:

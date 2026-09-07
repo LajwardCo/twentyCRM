@@ -20,7 +20,20 @@ export const STANDARD_FLAT_ROLE_METADATA_BUILDERS_BY_ROLE_NAME = {
         canReadAllObjectRecords: true,
         canUpdateAllObjectRecords: true,
         canSoftDeleteAllObjectRecords: true,
-        canDestroyAllObjectRecords: true,
+        // FORK CHANGE: upstream ships this as `true`.
+        //
+        // This instance never hard-deletes. `delete<Object>` sets deletedAt and
+        // the record stays restorable from the trash; `destroy<Object>` erases
+        // it. Every other role is denied destroy by
+        // tools/sales-crm/provision-no-hard-delete.mjs, but Admin cannot be
+        // reached that way: it is a standard role with isEditable: false, so
+        // the API rejects the update with ROLE_NOT_EDITABLE, and editing the
+        // row directly would be reverted the next time the standard
+        // application reconciles drift. Changing the manifest is what makes it
+        // stick -- that same reconciliation now enforces it.
+        //
+        // Keep this false when merging upstream. See the spec beside this file.
+        canDestroyAllObjectRecords: false,
         canOnlyAccessOwnedRecords: false,
         canBeAssignedToUsers: true,
         canBeAssignedToAgents: false,

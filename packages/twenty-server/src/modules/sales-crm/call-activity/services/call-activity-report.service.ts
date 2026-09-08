@@ -35,36 +35,39 @@ export class CallActivityReportService {
   }): Promise<CallActivityDailyTotals[]> {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      const callActivityRepository =
-        await this.globalWorkspaceOrmManager.getRepository(
-          workspaceId,
-          'callActivity',
-          { shouldBypassPermissionChecks: true },
+    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      async () => {
+        const callActivityRepository =
+          await this.globalWorkspaceOrmManager.getRepository(
+            workspaceId,
+            'callActivity',
+            { shouldBypassPermissionChecks: true },
+          );
+
+        const rows = (await callActivityRepository.find({
+          where: { startedAt: Between(new Date(fromIso), new Date(toIso)) },
+        })) as unknown as {
+          agentId: string | null;
+          startedAt: Date | string;
+          durationSeconds: number | null;
+          durationSource: CallActivityRow['durationSource'];
+          opportunityId: string | null;
+        }[];
+
+        return aggregateCallActivity(
+          rows
+            .filter((row) => row.agentId !== null)
+            .map((row) => ({
+              agentId: row.agentId as string,
+              startedAt: new Date(row.startedAt).toISOString(),
+              durationSeconds: row.durationSeconds ?? 0,
+              durationSource: row.durationSource,
+              opportunityId: row.opportunityId ?? null,
+            })),
+          REPORT_TIME_ZONE,
         );
-
-      const rows = (await callActivityRepository.find({
-        where: { startedAt: Between(new Date(fromIso), new Date(toIso)) },
-      })) as unknown as {
-        agentId: string | null;
-        startedAt: Date | string;
-        durationSeconds: number | null;
-        durationSource: CallActivityRow['durationSource'];
-        opportunityId: string | null;
-      }[];
-
-      return aggregateCallActivity(
-        rows
-          .filter((row) => row.agentId !== null)
-          .map((row) => ({
-            agentId: row.agentId as string,
-            startedAt: new Date(row.startedAt).toISOString(),
-            durationSeconds: row.durationSeconds ?? 0,
-            durationSource: row.durationSource,
-            opportunityId: row.opportunityId ?? null,
-          })),
-        REPORT_TIME_ZONE,
-      );
-    }, authContext);
+      },
+      authContext,
+    );
   }
 }

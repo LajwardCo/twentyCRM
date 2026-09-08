@@ -145,18 +145,21 @@ export class PhoneIndexService {
   ): Promise<PhoneBearingPerson[]> {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      const personRepository =
-        await this.globalWorkspaceOrmManager.getRepository(
-          workspaceId,
-          'person',
-          { shouldBypassPermissionChecks: true },
-        );
+    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      async () => {
+        const personRepository =
+          await this.globalWorkspaceOrmManager.getRepository(
+            workspaceId,
+            'person',
+            { shouldBypassPermissionChecks: true },
+          );
 
-      // No `select` projection: twenty-orm rejects composite fields ('name',
-      // 'phones') in a select list, and those are exactly the ones needed here.
-      return (await personRepository.find()) as unknown as PhoneBearingPerson[];
-    }, authContext);
+        // No `select` projection: twenty-orm rejects composite fields ('name',
+        // 'phones') in a select list, and those are exactly the ones needed here.
+        return (await personRepository.find()) as unknown as PhoneBearingPerson[];
+      },
+      authContext,
+    );
   }
 
   /** personId -> id of one non-terminal Opportunity they are contact for. */
@@ -166,37 +169,40 @@ export class PhoneIndexService {
   ): Promise<Map<string, string>> {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      const opportunityRepository =
-        await this.globalWorkspaceOrmManager.getRepository(
-          workspaceId,
-          'opportunity',
-          { shouldBypassPermissionChecks: true },
-        );
+    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      async () => {
+        const opportunityRepository =
+          await this.globalWorkspaceOrmManager.getRepository(
+            workspaceId,
+            'opportunity',
+            { shouldBypassPermissionChecks: true },
+          );
 
-      const opportunities = (await opportunityRepository.find({
-        where: { pointOfContactId: In(personIds) },
-      })) as unknown as {
-        id: string;
-        stage: string | null;
-        pointOfContactId: string | null;
-      }[];
+        const opportunities = (await opportunityRepository.find({
+          where: { pointOfContactId: In(personIds) },
+        })) as unknown as {
+          id: string;
+          stage: string | null;
+          pointOfContactId: string | null;
+        }[];
 
-      const byPerson = new Map<string, string>();
+        const byPerson = new Map<string, string>();
 
-      for (const opportunity of opportunities) {
-        if (
-          opportunity.pointOfContactId === null ||
-          opportunity.stage === TERMINAL_STAGE ||
-          byPerson.has(opportunity.pointOfContactId)
-        ) {
-          continue;
+        for (const opportunity of opportunities) {
+          if (
+            opportunity.pointOfContactId === null ||
+            opportunity.stage === TERMINAL_STAGE ||
+            byPerson.has(opportunity.pointOfContactId)
+          ) {
+            continue;
+          }
+
+          byPerson.set(opportunity.pointOfContactId, opportunity.id);
         }
 
-        byPerson.set(opportunity.pointOfContactId, opportunity.id);
-      }
-
-      return byPerson;
-    }, authContext);
+        return byPerson;
+      },
+      authContext,
+    );
   }
 }

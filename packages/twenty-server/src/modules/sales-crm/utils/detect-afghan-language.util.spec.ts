@@ -12,12 +12,16 @@ describe('detectAfghanLanguage', () => {
 
   it('labels Pashto as ps on its own letters', () => {
     expect(
-      detectAfghanLanguage('سلام ښاغلیه، زه د روغتون د مدیریت سیسټم په اړه زنګ وهم.'),
+      detectAfghanLanguage(
+        'سلام ښاغلیه، زه د روغتون د مدیریت سیسټم په اړه زنګ وهم.',
+      ),
     ).toBe('ps');
   });
 
   it('labels English as en', () => {
-    expect(detectAfghanLanguage('Interested, wants a demo next week.')).toBe('en');
+    expect(detectAfghanLanguage('Interested, wants a demo next week.')).toBe(
+      'en',
+    );
   });
 
   it('calls a code-switched line Pashto when any Pashto letter appears', () => {

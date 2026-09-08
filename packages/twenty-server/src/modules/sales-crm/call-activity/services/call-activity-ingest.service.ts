@@ -82,52 +82,55 @@ export class CallActivityIngestService {
 
     const authContext = buildSystemAuthContext(workspaceId);
 
-    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      const callActivityRepository =
-        await this.globalWorkspaceOrmManager.getRepository(
-          workspaceId,
-          'callActivity',
-          { shouldBypassPermissionChecks: true },
-        );
+    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      async () => {
+        const callActivityRepository =
+          await this.globalWorkspaceOrmManager.getRepository(
+            workspaceId,
+            'callActivity',
+            { shouldBypassPermissionChecks: true },
+          );
 
-      const created = (await callActivityRepository.save({
-        deviceCallId: input.deviceCallId,
-        direction: input.direction,
-        channel: input.channel,
-        phoneNumber: matchKey,
-        contactName: input.contactName ?? null,
-        startedAt: new Date(input.startedAt),
-        durationSeconds: input.durationSeconds,
-        durationSource: input.durationSource,
-        recordingStatus: 'NONE',
-        agentId,
-        personId: person.id,
-        opportunityId: person.openOpportunityId,
-        // `createdByName`/`updatedByName` are NOT NULL with no database
-        // default, and buildSystemAuthContext does not populate the actor, so
-        // the insert must supply it. The record is created by the Call
-        // Companion app acting for the agent -- hence API, not MANUAL.
-        createdBy: {
-          source: 'API',
-          workspaceMemberId: agentId,
-          name: CREATED_BY_NAME,
-          context: {},
-        },
-        updatedBy: {
-          source: 'API',
-          workspaceMemberId: agentId,
-          name: CREATED_BY_NAME,
-          context: {},
-        },
-      })) as unknown as { id: string };
+        const created = (await callActivityRepository.save({
+          deviceCallId: input.deviceCallId,
+          direction: input.direction,
+          channel: input.channel,
+          phoneNumber: matchKey,
+          contactName: input.contactName ?? null,
+          startedAt: new Date(input.startedAt),
+          durationSeconds: input.durationSeconds,
+          durationSource: input.durationSource,
+          recordingStatus: 'NONE',
+          agentId,
+          personId: person.id,
+          opportunityId: person.openOpportunityId,
+          // `createdByName`/`updatedByName` are NOT NULL with no database
+          // default, and buildSystemAuthContext does not populate the actor, so
+          // the insert must supply it. The record is created by the Call
+          // Companion app acting for the agent -- hence API, not MANUAL.
+          createdBy: {
+            source: 'API',
+            workspaceMemberId: agentId,
+            name: CREATED_BY_NAME,
+            context: {},
+          },
+          updatedBy: {
+            source: 'API',
+            workspaceMemberId: agentId,
+            name: CREATED_BY_NAME,
+            context: {},
+          },
+        })) as unknown as { id: string };
 
-      return {
-        status: 'created' as const,
-        callActivityId: created.id,
-        personId: person.id,
-        opportunityId: person.openOpportunityId,
-      };
-    }, authContext);
+        return {
+          status: 'created' as const,
+          callActivityId: created.id,
+          personId: person.id,
+          opportunityId: person.openOpportunityId,
+        };
+      },
+      authContext,
+    );
   }
 
   /** Stores a transcript on an existing call. */
@@ -174,29 +177,32 @@ export class CallActivityIngestService {
   } | null> {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      const callActivityRepository =
-        await this.globalWorkspaceOrmManager.getRepository(
-          workspaceId,
-          'callActivity',
-          { shouldBypassPermissionChecks: true },
-        );
+    return this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      async () => {
+        const callActivityRepository =
+          await this.globalWorkspaceOrmManager.getRepository(
+            workspaceId,
+            'callActivity',
+            { shouldBypassPermissionChecks: true },
+          );
 
-      const found = (await callActivityRepository.findOne({
-        where: { agentId, deviceCallId },
-      })) as unknown as {
-        id: string;
-        personId: string | null;
-        opportunityId: string | null;
-      } | null;
+        const found = (await callActivityRepository.findOne({
+          where: { agentId, deviceCallId },
+        })) as unknown as {
+          id: string;
+          personId: string | null;
+          opportunityId: string | null;
+        } | null;
 
-      return found === null
-        ? null
-        : {
-            id: found.id,
-            personId: found.personId ?? null,
-            opportunityId: found.opportunityId ?? null,
-          };
-    }, authContext);
+        return found === null
+          ? null
+          : {
+              id: found.id,
+              personId: found.personId ?? null,
+              opportunityId: found.opportunityId ?? null,
+            };
+      },
+      authContext,
+    );
   }
 }

@@ -11,7 +11,14 @@ import {
 import { type Referrer } from '../api/records';
 import { toPersianDigits } from '../lib/jalali';
 import { createPartner } from '../api/partners';
-import { REFERRER_ROLE_LABELS, T9, T10, T13 } from '../lib/strings';
+import {
+  PARTNER_TYPE_LABELS,
+  REFERRER_ROLE_LABELS,
+  T9,
+  T10,
+  T13,
+} from '../lib/strings';
+import { SearchSelect } from './SearchSelect';
 
 // Additional referrers credited on a lead, each with the commission share
 // negotiated for THIS deal. The primary referrer (opportunity.referrer) is
@@ -229,14 +236,20 @@ export const LeadReferrersCard = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           <div className="fld">
             <label>{T10.referrerPartnerLbl}</label>
-            <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)}>
-              <option value="">{T10.referrerPickPartner}</option>
-              {selectable.map((partner) => (
-                <option key={partner.id} value={partner.id}>
-                  {partner.name}
-                </option>
-              ))}
-            </select>
+            <SearchSelect
+              value={partnerId}
+              onChange={setPartnerId}
+              options={selectable.map((partner) => ({
+                value: partner.id,
+                label: partner.name,
+                hint: partner.partnerType
+                  ? (PARTNER_TYPE_LABELS[partner.partnerType] ?? partner.partnerType)
+                  : undefined,
+              }))}
+              emptyLabel={T10.referrerPickPartner}
+              placeholder={T10.referrerPickPartner}
+              ariaLabel={T10.referrerPartnerLbl}
+            />
           </div>
 
           {newPartnerName === null ? (

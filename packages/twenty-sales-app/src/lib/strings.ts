@@ -1054,3 +1054,10 @@ export const AUDIT_OBJECT_LABELS: Record<string, string> = {
   attachment: 'پیوست',
   callActivity: 'تماس',
 };
+
+// --- searchable pickers (SearchSelect) ---
+export const T17 = {
+  searchSelectPlaceholder: 'جستجو یا انتخاب…',
+  searchSelectNoMatch: 'موردی پیدا نشد',
+  searchSelectClear: 'پاک کردن انتخاب',
+};

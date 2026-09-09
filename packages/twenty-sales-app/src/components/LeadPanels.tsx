@@ -58,6 +58,7 @@ import { ContactEditModal } from './ContactEditModal';
 import { ContactPhoneLines } from './ContactPhoneLines';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
 import { ModalSheet } from './ModalSheet';
+import { SearchSelect } from './SearchSelect';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage } from './icons';
 
 // ---------- company info + other contacts ----------
@@ -343,6 +344,7 @@ const EditableMetaRow = ({
   currentValue,
   options,
   editable,
+  searchable = false,
   onSave,
 }: {
   label: React.ReactNode;
@@ -350,6 +352,10 @@ const EditableMetaRow = ({
   currentValue: string;
   options: MetaOption[];
   editable: boolean;
+  // Partner-backed rows (referrer, marketer) pick from a list that keeps
+  // growing; the short fixed lists (source) stay on the native control, which
+  // is quicker to tap through than anything we can draw.
+  searchable?: boolean;
   onSave: (value: string) => Promise<void>;
 }) => {
   const [editing, setEditing] = useState(false);
@@ -380,22 +386,36 @@ const EditableMetaRow = ({
       <span>{label}</span>
       {editing ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-          <select
-            className="meta-edit"
-            autoFocus
-            defaultValue={currentValue}
-            disabled={saving}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setEditing(false);
-            }}
-          >
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          {searchable ? (
+            <div className="meta-edit-search">
+              <SearchSelect
+                value={currentValue}
+                onChange={(value) => void handleChange(value)}
+                onCancel={() => setEditing(false)}
+                options={options.filter((o) => o.value !== '')}
+                emptyLabel={options.find((o) => o.value === '')?.label ?? '—'}
+                disabled={saving}
+                autoFocus
+              />
+            </div>
+          ) : (
+            <select
+              className="meta-edit"
+              autoFocus
+              defaultValue={currentValue}
+              disabled={saving}
+              onChange={(e) => handleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setEditing(false);
+              }}
+            >
+              {options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          )}
           {error !== null && (
             <span style={{ fontSize: 11, color: 'var(--hot)', maxWidth: 200 }}>
               {error}
@@ -527,6 +547,7 @@ export const MetaCard = ({
           // existing referrer counts, so an empty partner list no longer makes
           // the row silently read-only.
           editable={canEdit && referrerOptions.length > 1}
+          searchable
           onSave={(value) => onSaveLead!({ referrerId: value || null })}
         />
         <EditableMetaRow
@@ -535,6 +556,7 @@ export const MetaCard = ({
           currentValue={currentMarketerId}
           options={marketerOptions}
           editable={canEdit && marketerOptions.length > 1}
+          searchable
           onSave={async (value) => {
             try {
               await saveLeadMarketer(lead.id, value || null);

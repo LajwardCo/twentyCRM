@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reveal watermark — Hamagan sales CRM</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; padding: 20px;
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: #f6f6f8; color: #16161a;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #131316; color: #ececf1; } }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 16px; opacity: .7; max-width: 62ch; }
+  #drop {
+    border: 2px dashed rgba(128,128,140,.5); border-radius: 12px;
+    padding: 28px; text-align: center; cursor: pointer; margin-bottom: 14px;
+  }
+  #drop.over { border-color: #4c8dff; background: rgba(76,141,255,.08); }
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 14px; }
+  label { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+  input[type=range] { width: 160px; }
+  canvas { max-width: 100%; border-radius: 8px; background: #808080; display: block; }
+  .hint { opacity: .7; font-size: 13px; max-width: 78ch; }
+  code { background: rgba(128,128,140,.18); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>Reveal the audit watermark</h1>
+<p class="sub">
+  Drop a leaked screenshot in. Everything happens in this page — the image is
+  never uploaded anywhere, so it is safe to use on customer data. Open this
+  file straight from the repo; it is deliberately not deployed with the app.
+</p>
+
+<div id="drop">Drop a screenshot here, or click to choose one</div>
+<input id="file" type="file" accept="image/*" hidden />
+
+<div class="controls">
+  <label>Gain <input id="gain" type="range" min="4" max="120" value="34" /><span id="gainv">34×</span></label>
+  <label>Radius <input id="radius" type="range" min="2" max="40" value="7" /><span id="radiusv">7px</span></label>
+  <label><input id="photo" type="checkbox" /> Photo of a screen</label>
+  <label><input id="mono" type="checkbox" checked /> Greyscale</label>
+</div>
+
+<canvas id="out"></canvas>
+
+<p class="hint">
+  How it works: the watermark shifts each pixel it covers by about 3 of 255
+  steps, which is far below what an eye picks up but is a real, exact
+  difference in the file. Subtracting a blurred copy of the image removes the
+  interface itself and leaves those small local differences, and the gain
+  multiplies what is left. <strong>Radius</strong> should stay a little larger
+  than the stroke width of the watermark text. <strong>Photo of a screen</strong>
+  averages neighbouring pixels first, which trades sharpness for a chance
+  against camera noise and moiré — a photo often will not give up the mark at
+  all. In an ordinary image editor the equivalent move is a Levels adjustment
+  with the input range pulled to roughly <code>246–255</code> over a flat white
+  area of the screenshot.
+</p>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const canvas = $('out'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+let source = null;
+
+const boxBlur = (src, w, h, r) => {
+  // separable box blur over a Float32 plane, mirrored at the edges
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  const span = 2 * r + 1;
+  for (let y = 0; y < h; y++) {
+    let sum = 0;
+    for (let i = -r; i <= r; i++) sum += src[y * w + Math.min(w - 1, Math.abs(i))];
+    for (let x = 0; x < w; x++) {
+      tmp[y * w + x] = sum / span;
+      const add = Math.min(w - 1, x + r + 1), sub = Math.abs(x - r);
+      sum += src[y * w + add] - src[y * w + sub];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let i = -r; i <= r; i++) sum += tmp[Math.min(h - 1, Math.abs(i)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = sum / span;
+      const add = Math.min(h - 1, y + r + 1), sub = Math.abs(y - r);
+      sum += tmp[add * w + x] - tmp[sub * w + x];
+    }
+  }
+  return out;
+};
+
+const render = () => {
+  if (!source) return;
+  const gain = +$('gain').value, radius = +$('radius').value;
+  const photo = $('photo').checked, mono = $('mono').checked;
+  const w = source.width, h = source.height;
+  canvas.width = w; canvas.height = h;
+  ctx.drawImage(source, 0, 0);
+  const img = ctx.getImageData(0, 0, w, h), d = img.data;
+
+  const planes = mono ? 1 : 3;
+  const src = [], blurred = [];
+  for (let c = 0; c < planes; c++) {
+    const plane = new Float32Array(w * h);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      plane[p] = mono ? (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) : d[i + c];
+    }
+    // Averaging first suppresses per-pixel sensor noise, which is what buries
+    // the mark in a photo; it costs sharpness, so it is opt-in.
+    src.push(photo ? boxBlur(plane, w, h, 1) : plane);
+    blurred.push(boxBlur(src[c], w, h, radius));
+  }
+
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+    for (let c = 0; c < 3; c++) {
+      const k = mono ? 0 : c;
+      d[i + c] = Math.max(0, Math.min(255, 128 + (src[k][p] - blurred[k][p]) * gain));
+    }
+    d[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+};
+
+const load = (file) => {
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  image.onload = () => { source = image; URL.revokeObjectURL(url); render(); };
+  image.src = url;
+};
+
+$('drop').onclick = () => $('file').click();
+$('file').onchange = (e) => load(e.target.files[0]);
+for (const type of ['dragenter', 'dragover']) {
+  $('drop').addEventListener(type, (e) => { e.preventDefault(); $('drop').classList.add('over'); });
+}
+for (const type of ['dragleave', 'drop']) {
+  $('drop').addEventListener(type, (e) => { e.preventDefault(); $('drop').classList.remove('over'); });
+}
+$('drop').addEventListener('drop', (e) => load(e.dataTransfer.files[0]));
+document.addEventListener('paste', (e) => {
+  const item = [...(e.clipboardData?.items ?? [])].find((i) => i.type.startsWith('image/'));
+  if (item) load(item.getAsFile());
+});
+for (const id of ['gain', 'radius', 'photo', 'mono']) $(id).addEventListener('input', render);
+$('gain').addEventListener('input', () => { $('gainv').textContent = $('gain').value + '×'; });
+$('radius').addEventListener('input', () => { $('radiusv').textContent = $('radius').value + 'px'; });
+</script>
+</body>
+</html>

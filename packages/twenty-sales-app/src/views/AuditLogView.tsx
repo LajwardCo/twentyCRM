@@ -8,7 +8,6 @@ import {
   type AuditQueryFilters,
 } from '../api/auditTrail';
 import { AuditActorPicker } from '../components/AuditActorPicker';
-import { AuditWatermark } from '../components/AuditWatermark';
 import { pendingAuditCount, recordAudit } from '../lib/audit';
 import { TAUDIT } from '../lib/auditStrings';
 import { formatDateTime } from '../lib/format';
@@ -181,8 +180,6 @@ export const AuditLogView = ({ user }: AuditLogViewProps) => {
 
   return (
     <main className="page">
-      <AuditWatermark user={user} active />
-
       <div className="page-head anim">
         <div>
           <h1>{TAUDIT.auditTitle}</h1>

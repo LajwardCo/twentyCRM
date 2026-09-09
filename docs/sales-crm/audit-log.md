@@ -49,8 +49,41 @@ customer contact details, money, or the log itself is covered by a tiled
 watermark carrying the viewer's name, email, and the time
 (`components/AuditWatermark.tsx`). It re-stamps every minute. A leaked
 screenshot therefore names who took it and roughly when — which is the outcome
-detection was wanted for. It also survives photographing the screen with
-another phone, which no detection scheme does.
+detection was wanted for.
+
+**The watermark is invisible to the viewer.** It shifts each pixel it covers
+by 2 of 255 steps (0.8%, roughly 0.7 of a CIELAB L\* step on white — under the
+just-noticeable difference for a flat field), which no one sees on a phone but
+which is an exact, recoverable difference in the captured file. The glyphs are
+large and heavy on purpose: fat strokes are low-frequency, and low frequencies
+are what a lossy re-encode keeps. `mix-blend-mode: difference` makes
+that shift unconditional — it is present over a white card, a black bar and a
+coloured button alike, in either theme — and the overlay is portalled into
+`<body>` because blending only works against the backdrop of its own stacking
+context: measured in Chromium, the same markup under an ancestor with `opacity`
+paints the text at 253/255 instead, i.e. fully visible.
+
+To read a mark back off a leaked image, open `tools/sales-crm/reveal-watermark.html`
+(a local, offline page — nothing is uploaded, and it is deliberately not
+deployed with the app) and drop the image in; it subtracts a blurred copy to
+strip the interface and amplifies what is left. In an ordinary image editor the
+equivalent is a Levels adjustment with the input range pulled to about 246–255
+over a flat area.
+
+`tools/sales-crm/verify-watermark.mjs` measures this — run it from the repo root
+after any change to the overlay. It renders the shipped CSS over white, black,
+light and dark card, accent-blue and ink-coloured backgrounds and diffs against
+the same page without the overlay: max shift 2/255 on every one, ~8% of pixels
+carrying it. It also renders the trapped-ancestor case, which shows 253/255.
+
+Recovery was checked end to end: a 390×844 capture reveals cleanly as a PNG,
+and still reads after a JPEG q80 re-encode (what a messaging app does to a
+forwarded screenshot) with photo mode on and the gain around 60.
+
+Trade-off, stated plainly: at 0.8% the mark survives every *digital* copy of
+the pixels, but not a photo of the screen taken with another camera, where
+sensor noise is larger than the mark. The old, visible-at-5% overlay was the
+reverse trade.
 
 **3. Desktop screenshot detection is partial.**
 
@@ -112,7 +145,8 @@ admin at #/audit ◀── GraphQL auditEvents ◀──────────
 | `src/lib/audit.ts` | Wiring: browser listeners, API observer, lifecycle |
 | `src/api/auditTrail.ts` | Transport: POST for writes, GraphQL for admin reads |
 | `src/views/AuditLogView.tsx` | Admin screen |
-| `src/components/AuditWatermark.tsx` | Attribution overlay |
+| `src/components/AuditWatermark.tsx` | Attribution overlay (sub-visual, portalled into `<body>`) |
+| `tools/sales-crm/reveal-watermark.html` | Offline reader that pulls the mark back out of a leaked image |
 | `twenty-server/src/modules/sales-crm/audit-log/` | Ingest endpoint, sanitizer, service |
 | `tools/sales-crm/provision-audit-log.mjs` | Object, fields, per-role deny |
 

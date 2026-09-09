@@ -3826,9 +3826,21 @@ table.leads tbody tr:hover {
 }
 
 /* ---- audit watermark ----------------------------------------------------
-   Attribution layer for sensitive screens. Never interactive, never printed
-   away: the print rule below keeps it in a print-to-PDF export, which is one
-   of the capture paths it exists to mark. */
+   Attribution layer for sensitive screens. It is tuned to sit BELOW the
+   threshold of human vision: every glyph shifts the pixels under it by 2 of
+   255 steps (0.8%), which nobody sees on a phone but which any image editor
+   recovers with a single Levels pull -- see
+   tools/sales-crm/reveal-watermark.html, and verify-watermark.mjs beside it
+   for the measurement.
+
+   `mix-blend-mode: difference` is what makes that shift unconditional: the
+   result is |backdrop - 2| per channel, so the mark is present over a white
+   card, a black bar and a coloured button alike, in either theme. Plain low
+   opacity cannot promise that -- over a background the same colour as the ink
+   it disappears entirely.
+
+   Never interactive, never printed away: the print rule below keeps it in a
+   print-to-PDF export, which is one of the capture paths it exists to mark. */
 .audit-watermark {
   position: fixed;
   inset: 0;
@@ -3839,22 +3851,58 @@ table.leads tbody tr:hover {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
-  opacity: 0.055;
-  font-size: 13px;
-  font-weight: 600;
+  /* The per-channel shift, in 0-255 steps, that a capture has to carry.
+     2/255 on white is about 0.7 of a CIELAB L* step, i.e. under the
+     just-noticeable difference for a flat field, and a 30x gain in the reveal
+     tool turns it back into readable text. Raising it makes the mark tougher
+     against re-compression at the cost of eventually becoming visible; 4 is
+     roughly where a flat white card starts to look faintly textured. */
+  color: var(--wm-ink, rgb(2, 2, 2));
+  mix-blend-mode: difference;
+  /* Grey antialiasing, not subpixel: subpixel would shift the three channels
+     by different amounts and leave faint colour fringes on flat backgrounds,
+     which is exactly the thing an eye does pick up. */
+  -webkit-font-smoothing: antialiased;
+  /* Forced-colours modes repaint text in a system colour, which would blow
+     the whole thing open. Keep our own values. */
+  forced-color-adjust: none;
+  /* Big and heavy on purpose: fat strokes mean more pixels carry the full
+     shift, so the mark survives a downscale or a re-compression that would
+     average a hairline glyph away. */
+  font-size: clamp(20px, 6.5vw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
   white-space: nowrap;
-  color: var(--txt, #111);
 }
 .audit-watermark-row {
   display: flex;
-  gap: 42px;
+  gap: 26px;
   transform: rotate(-24deg);
   justify-content: space-around;
 }
+/* Each tile is the whole stamp -- name, email, time -- so a cropped
+   screenshot still carries all three. */
+.audit-watermark-tile { text-align: center; }
+/* Fallback for anything that cannot blend: a theme-coloured layer at an
+   opacity that lands on roughly the same 2/255 shift over the app's own
+   backgrounds. Weaker guarantee, same intent. */
+@supports not (mix-blend-mode: difference) {
+  .audit-watermark {
+    mix-blend-mode: normal;
+    color: var(--txt, #111);
+    opacity: 0.009;
+  }
+}
+/* Print rasterises and rescales, so give it a little more to lose. Still
+   2.4% -- invisible in a PDF viewer. */
 @media print {
   .audit-watermark {
-    opacity: 0.16;
     position: fixed;
+    --wm-ink: rgb(6, 6, 6);
+  }
+  @supports not (mix-blend-mode: difference) {
+    .audit-watermark { opacity: 0.025; }
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type CurrentUser } from '../api/auth';
 import {
@@ -22,6 +22,7 @@ import {
 } from '../components/DuplicateWarning';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { MoneyInput } from '../components/MoneyInput';
+import { SearchSelect } from '../components/SearchSelect';
 import { invalidateCache } from '../lib/cache';
 import {
   blockingMatches,
@@ -103,6 +104,20 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
   );
   const [referrerId, setReferrerId] = useState(draft?.referrerId ?? '');
   const [referrers, setReferrers] = useState<Referrer[]>([]);
+
+  // Both pickers choose from the same partner list; the type is shown as a
+  // hint so "شرکت الف (معرف)" and "شرکت الف (بازاریاب)" stay distinguishable.
+  const partnerOptions = useMemo(
+    () =>
+      referrers.map((r) => ({
+        value: r.id,
+        label: r.name,
+        hint: r.partnerType
+          ? (PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType)
+          : undefined,
+      })),
+    [referrers],
+  );
   const [estimatedValue, setEstimatedValue] = useState(draft?.estimatedValue ?? '');
   const [currency, setCurrency] = useState<CurrencyCode>(draft?.currency ?? 'AFN');
   const [firstContactNote, setFirstContactNote] = useState(
@@ -535,39 +550,28 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                   {user.partner ? (
                     <input id="nl-marketer" value={user.partner.name} readOnly />
                   ) : (
-                    <select
+                    <SearchSelect
                       id="nl-marketer"
                       value={marketerPartnerId}
-                      onChange={(e) => setMarketerPartnerId(e.target.value)}
+                      onChange={setMarketerPartnerId}
+                      options={partnerOptions}
+                      emptyLabel="—"
                       disabled={referrers.length === 0}
-                    >
-                      <option value="">—</option>
-                      {referrers.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
+                      ariaLabel="بازاریاب"
+                    />
                   )}
                 </div>
                 <div className="fld">
                   <label htmlFor="nl-referrer">معرف</label>
-                  <select
+                  <SearchSelect
                     id="nl-referrer"
                     value={referrerId}
-                    onChange={(e) => setReferrerId(e.target.value)}
+                    onChange={setReferrerId}
+                    options={partnerOptions}
+                    emptyLabel="—"
                     disabled={referrers.length === 0}
-                  >
-                    <option value="">—</option>
-                    {referrers.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                        {r.partnerType
-                          ? ` (${PARTNER_TYPE_LABELS[r.partnerType] ?? r.partnerType})`
-                          : ''}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel="معرف"
+                  />
                 </div>
               </div>
               <div className="fld" style={{ maxWidth: 360, marginBottom: 0 }}>

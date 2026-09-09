@@ -219,6 +219,7 @@ export type ContactIdentity = {
   lastName: string;
   email: string;
   jobTitle: string;
+  city: string;
 };
 
 export const fetchContactIdentity = async (
@@ -229,6 +230,7 @@ export const fetchContactIdentity = async (
       name: { firstName: string | null; lastName: string | null } | null;
       emails: { primaryEmail: string | null } | null;
       jobTitle: string | null;
+      city: string | null;
     } | null;
   }>(
     `query ContactIdentity($id: UUID!) {
@@ -236,6 +238,7 @@ export const fetchContactIdentity = async (
         name { firstName lastName }
         emails { primaryEmail }
         jobTitle
+        city
       }
     }`,
     { id: personId },
@@ -247,6 +250,7 @@ export const fetchContactIdentity = async (
     lastName: data.person.name?.lastName ?? '',
     email: data.person.emails?.primaryEmail ?? '',
     jobTitle: data.person.jobTitle ?? '',
+    city: data.person.city ?? '',
   };
 };
 
@@ -270,6 +274,7 @@ export const saveContactIdentity = async (
         },
         emails: { primaryEmail: identity.email.trim() },
         jobTitle: identity.jobTitle.trim(),
+        city: identity.city.trim(),
       },
     },
   );

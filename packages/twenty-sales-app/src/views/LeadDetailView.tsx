@@ -41,6 +41,8 @@ import { LeadOffersCard } from '../components/LeadOffersCard';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
+import { AddContactModal } from '../components/AddContactModal';
+import { ContactEditModal } from '../components/ContactEditModal';
 import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
@@ -82,6 +84,7 @@ import {
   T11,
   T14,
   T15,
+  T16,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -158,6 +161,10 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [editingLead, setEditingLead] = useState(false);
+  // The contact person: edited in full when the lead has one, added (and made
+  // the point of contact) when it doesn't.
+  const [editingContact, setEditingContact] = useState(false);
+  const [addingContact, setAddingContact] = useState(false);
   const [deleting, setDeleting] = useState<
     | { kind: 'lead' }
     | { kind: 'task'; task: Task }
@@ -759,11 +766,36 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           <div className="card card-pad anim d2">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3>{T.contactPerson}</h3>
-              {lead.pointOfContact && (
-                <span className="avatar av-26">
-                  {lead.pointOfContact.name.firstName.charAt(0)}
-                </span>
-              )}
+              <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {lead.pointOfContact && (
+                  <span className="avatar av-26">
+                    {lead.pointOfContact.name.firstName.charAt(0)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="icon-btn"
+                  style={{ width: 30, height: 30 }}
+                  disabled={!lead.pointOfContact && !lead.company}
+                  title={
+                    lead.pointOfContact
+                      ? T16.editContact
+                      : lead.company
+                        ? T16.addContactToLead
+                        : T16.noCompanyForContact
+                  }
+                  aria-label={
+                    lead.pointOfContact ? T16.editContact : T16.addContactToLead
+                  }
+                  onClick={() =>
+                    lead.pointOfContact
+                      ? setEditingContact(true)
+                      : setAddingContact(true)
+                  }
+                >
+                  <IconEdit size={14} />
+                </button>
+              </span>
             </div>
             <div className="contact-rows">
               <div className="c-row">
@@ -1040,6 +1072,35 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           personId={lead.pointOfContact.id}
           opportunityId={lead.id}
           onClose={() => setShowWhatsApp(false)}
+        />
+      )}
+
+      {editingContact && lead.pointOfContact && (
+        <ContactEditModal
+          personId={lead.pointOfContact.id}
+          personName={personName(lead.pointOfContact)}
+          companyId={lead.company?.id ?? null}
+          onClose={() => setEditingContact(false)}
+          onSaved={(message) => {
+            setEditingContact(false);
+            invalidateCache('leads:');
+            void reload();
+            showToast(message);
+          }}
+        />
+      )}
+
+      {addingContact && lead.company && (
+        <AddContactModal
+          companyId={lead.company.id}
+          promoteForLeadId={lead.id}
+          onClose={() => setAddingContact(false)}
+          onSaved={(message) => {
+            setAddingContact(false);
+            invalidateCache('leads:');
+            void reload();
+            showToast(message);
+          }}
         />
       )}
 

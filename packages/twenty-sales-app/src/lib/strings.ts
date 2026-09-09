@@ -1013,10 +1013,22 @@ export const T15 = {
   editLead: 'ویرایش لید',
   editLeadTitle: 'ویرایش مشخصات لید',
   leadNameLbl: 'نام لید',
-  contactSectionHint: 'مشخصات شخص تماس این لید',
   jobTitleLbl: 'سمت',
-  noContactToEdit: 'برای این لید شخص تماسی ثبت نشده — از بخش «شرکت» اضافه کنید.',
-  phonesEditedElsewhere: 'شماره‌های تماس از بخش شخص تماس ویرایش می‌شوند.',
+};
+
+// --- managing a lead's contact person end to end (ContactEditModal) ---
+export const T16 = {
+  editContact: 'ویرایش مخاطب',
+  editContactTitle: 'مدیریت شخص تماس',
+  contactCityLbl: 'شهر',
+  contactSaved: 'مخاطب ذخیره شد ✓',
+  contactSaveFailed: 'ذخیره مخاطب ناموفق بود',
+  addContactToLead: 'افزودن شخص تماس',
+  contactEditedFromCard:
+    'مشخصات و شماره‌های شخص تماس از دکمهٔ ویرایش در کارت «شخص تماس» تغییر می‌کند.',
+  // Shown when a lead has no contact yet and no company to hang one on --
+  // a person in Twenty belongs to a company, so there is nowhere to put them.
+  noCompanyForContact: 'برای افزودن مخاطب، ابتدا شرکت این لید را ثبت کنید.',
 };
 
 // What the change log calls each object, so a row reads "لید ایجاد شد" rather

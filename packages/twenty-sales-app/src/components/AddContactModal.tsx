@@ -4,6 +4,7 @@ import {
   attachExistingContact,
   createCompanyContact,
   searchUnlinkedPeople,
+  setLeadPrimaryContact,
 } from '../api/contacts';
 import { type CompanyContact } from '../api/records';
 import { invalidateCache } from '../lib/cache';
@@ -14,6 +15,10 @@ import { ModalSheet } from './ModalSheet';
 
 type AddContactModalProps = {
   companyId: string;
+  // When set, whoever is added becomes this lead's point of contact. Used from
+  // the lead's contact card, where "add a contact" can only mean "give this
+  // lead the person it is missing".
+  promoteForLeadId?: string;
   onClose: () => void;
   onSaved: (message: string) => void;
 };
@@ -29,7 +34,12 @@ const emptyDraft = {
   city: '',
 };
 
-export const AddContactModal = ({ companyId, onClose, onSaved }: AddContactModalProps) => {
+export const AddContactModal = ({
+  companyId,
+  promoteForLeadId,
+  onClose,
+  onSaved,
+}: AddContactModalProps) => {
   const [tab, setTab] = useState<Tab>('new');
   const [draft, setDraft] = useState(emptyDraft);
   const [search, setSearch] = useState('');
@@ -74,6 +84,17 @@ export const AddContactModal = ({ companyId, onClose, onSaved }: AddContactModal
     onSaved(message);
   };
 
+  // Promotion is a second write, and failing it must not read as "the contact
+  // was not added" -- the person is on the company either way.
+  const promoteIfAsked = async (personId: string) => {
+    if (promoteForLeadId === undefined) return;
+    try {
+      await setLeadPrimaryContact(promoteForLeadId, personId);
+    } catch {
+      /* the contact is saved; the lead simply keeps its old point of contact */
+    }
+  };
+
   const handleCreate = async () => {
     if (draft.firstName.trim() === '') {
       setError(T8.contactFirstNameRequired);
@@ -82,7 +103,8 @@ export const AddContactModal = ({ companyId, onClose, onSaved }: AddContactModal
     setBusy(true);
     setError(null);
     try {
-      await createCompanyContact(companyId, draft);
+      const created = await createCompanyContact(companyId, draft);
+      await promoteIfAsked(created.id);
       done(T8.contactAdded);
     } catch (err) {
       setError(err instanceof Error ? err.message : T8.contactSaveFailed);
@@ -96,6 +118,7 @@ export const AddContactModal = ({ companyId, onClose, onSaved }: AddContactModal
     setError(null);
     try {
       await attachExistingContact(person.id, companyId);
+      await promoteIfAsked(person.id);
       done(T8.contactAdded);
     } catch (err) {
       setError(err instanceof Error ? err.message : T8.contactSaveFailed);

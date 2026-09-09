@@ -50,14 +50,15 @@ import {
   T6,
   T8,
   T13,
+  T16,
 } from '../lib/strings';
 import { AddContactModal } from './AddContactModal';
 import { CompanyAddressModal } from './CompanyAddressModal';
+import { ContactEditModal } from './ContactEditModal';
 import { ContactPhoneLines } from './ContactPhoneLines';
-import { ContactPhonesModal } from './ContactPhonesModal';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
 import { ModalSheet } from './ModalSheet';
-import { IconBuilding, IconChevronDown, IconEdit, IconPackage, IconPhone } from './icons';
+import { IconBuilding, IconChevronDown, IconEdit, IconPackage } from './icons';
 
 // ---------- company info + other contacts ----------
 
@@ -81,7 +82,7 @@ export const CompanyCard = ({
   const [promoting, setPromoting] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [editingAddress, setEditingAddress] = useState(false);
-  const [managingPhones, setManagingPhones] = useState<CompanyContact | null>(null);
+  const [editingContact, setEditingContact] = useState<CompanyContact | null>(null);
 
   const { data, refresh } = useCached(`company:${companyId}`, async () => {
     const [info, extras, contacts] = await Promise.all([
@@ -259,11 +260,11 @@ export const CompanyCard = ({
                 <button
                   className="icon-btn"
                   style={{ width: 30, height: 30 }}
-                  onClick={() => setManagingPhones(c)}
-                  aria-label={T13.managePhones}
-                  title={T13.managePhones}
+                  onClick={() => setEditingContact(c)}
+                  aria-label={T16.editContact}
+                  title={T16.editContact}
                 >
-                  <IconPhone size={14} />
+                  <IconEdit size={14} />
                 </button>
               </div>
             );
@@ -283,13 +284,14 @@ export const CompanyCard = ({
         <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 8 }}>{notice}</div>
       )}
 
-      {managingPhones !== null && (
-        <ContactPhonesModal
-          personId={managingPhones.id}
-          personName={personName(managingPhones)}
-          onClose={() => setManagingPhones(null)}
+      {editingContact !== null && (
+        <ContactEditModal
+          personId={editingContact.id}
+          personName={personName(editingContact)}
+          companyId={companyId}
+          onClose={() => setEditingContact(null)}
           onSaved={(message) => {
-            setManagingPhones(null);
+            setEditingContact(null);
             flash(message);
             void refresh();
           }}

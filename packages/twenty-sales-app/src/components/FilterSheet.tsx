@@ -8,6 +8,7 @@ import { toPersianDigits } from '../lib/jalali';
 import { T7 } from '../lib/strings';
 import { JalaliDatePicker } from './JalaliDatePicker';
 import { ModalSheet } from './ModalSheet';
+import { NumberField } from './NumberField';
 
 type FilterSheetProps<TRow> = {
   fields: FilterField<TRow>[];
@@ -78,12 +79,6 @@ const TextEditor = ({
   />
 );
 
-const parseBound = (raw: string): number | null => {
-  if (raw.trim() === '') return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
 const NumberRangeEditor = ({
   value,
   onSet,
@@ -94,34 +89,20 @@ const NumberRangeEditor = ({
   const range = value?.kind === 'numberRange' ? value : { min: null, max: null };
   return (
     <div className="filter-range">
-      <input
+      <NumberField
         className="filter-input num"
-        type="number"
-        inputMode="numeric"
+        allowNegative
         placeholder={T7.from}
-        value={range.min ?? ''}
-        onChange={(e) =>
-          onSet({
-            kind: 'numberRange',
-            min: parseBound(e.target.value),
-            max: range.max,
-          })
-        }
+        value={range.min}
+        onChange={(min) => onSet({ kind: 'numberRange', min, max: range.max })}
       />
       <span className="filter-range-sep">—</span>
-      <input
+      <NumberField
         className="filter-input num"
-        type="number"
-        inputMode="numeric"
+        allowNegative
         placeholder={T7.to}
-        value={range.max ?? ''}
-        onChange={(e) =>
-          onSet({
-            kind: 'numberRange',
-            min: range.min,
-            max: parseBound(e.target.value),
-          })
-        }
+        value={range.max}
+        onChange={(max) => onSet({ kind: 'numberRange', min: range.min, max })}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import {
   T4,
   T5,
 } from '../../lib/strings';
+import { NumberField } from '../NumberField';
 
 // Lets the mobile action bar open this section's blank form.
 export type CompetitorSectionHandle = { openNewDraft: () => void };
@@ -148,13 +149,9 @@ export const CompetitorProductsSection = ({
             </div>
             <div className="fld">
               <label>{T5.startingPriceLbl}</label>
-              <input
-                inputMode="decimal"
-                dir="ltr"
-                value={draft.input.startingPriceAfn ?? ''}
-                onChange={(e) =>
-                  setInput({ startingPriceAfn: e.target.value === '' ? null : Number(e.target.value) })
-                }
+              <NumberField
+                value={draft.input.startingPriceAfn}
+                onChange={(startingPriceAfn) => setInput({ startingPriceAfn })}
               />
             </div>
           </div>

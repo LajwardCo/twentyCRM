@@ -287,7 +287,7 @@ export const DealLinePricingEditor = ({
                     </span>
                   </label>
                   <input
-                    inputMode="numeric"
+                    inputMode="decimal"
                     dir="ltr"
                     placeholder={T4.metricQuantityPlaceholder}
                     value={draft.metricQuantities[metricName] ?? ''}

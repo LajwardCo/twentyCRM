@@ -10,6 +10,7 @@ import {
 } from '../api/leadReferrers';
 import { type Referrer } from '../api/records';
 import { toPersianDigits } from '../lib/jalali';
+import { parseDecimalInput } from '../lib/numberInput';
 import {
   PARTNER_TYPE_LABELS,
   REFERRER_ROLE_LABELS,
@@ -104,14 +105,10 @@ export const LeadReferrersCard = ({
     setBusy(true);
     setError(null);
     try {
-      const commission = Number(commissionInput);
       const result = await addLeadReferrer({
         opportunityId: leadId,
         partnerId,
-        commissionPercent:
-          commissionInput.trim() === '' || !Number.isFinite(commission)
-            ? null
-            : commission,
+        commissionPercent: parseDecimalInput(commissionInput),
         referrerRole: role,
         note: noteInput.trim() === '' ? null : noteInput.trim(),
       });

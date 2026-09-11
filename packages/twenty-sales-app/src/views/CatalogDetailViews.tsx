@@ -19,6 +19,7 @@ import {
 import { ActionBar, type ActionBarItem } from '../components/ActionBar';
 import { IconEdit, IconMoney, IconPackage } from '../components/icons';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
+import { NumberField } from '../components/NumberField';
 import { ProductPricingFields } from '../components/ProductPricingFields';
 import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { TierScheduleEditor } from '../components/TierScheduleEditor';
@@ -300,13 +301,9 @@ export const ProductCatalogDetailView = ({ productId }: { productId: string }) =
             </div>
             <div className="fld">
               <label>{T4.maxDiscountPercentLbl}</label>
-              <input
-                inputMode="numeric"
-                dir="ltr"
-                value={editing.maxDiscountPercent ?? ''}
-                onChange={(e) =>
-                  set({ maxDiscountPercent: e.target.value === '' ? null : Number(e.target.value) })
-                }
+              <NumberField
+                value={editing.maxDiscountPercent}
+                onChange={(maxDiscountPercent) => set({ maxDiscountPercent })}
               />
             </div>
           </div>

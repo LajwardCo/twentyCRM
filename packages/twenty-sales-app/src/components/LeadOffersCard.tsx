@@ -15,6 +15,7 @@ import {
   formatMoney,
   SUPPORTED_CURRENCIES,
 } from '../lib/format';
+import { parseDecimalInput } from '../lib/numberInput';
 import { OFFER_STATUS_LABELS, T9 } from '../lib/strings';
 
 // Negotiation history on a lead: what was offered, when, by whom, and which
@@ -71,11 +72,11 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
 
   if (!supported) return null;
 
-  const amount = Number(amountInput);
-  const canSubmit = Number.isFinite(amount) && amount > 0 && !busy;
+  const amount = parseDecimalInput(amountInput);
+  const canSubmit = amount !== null && amount > 0 && !busy;
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || amount === null) return;
     setBusy(true);
     setError(null);
     try {

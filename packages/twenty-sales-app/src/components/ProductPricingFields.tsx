@@ -5,6 +5,7 @@ import {
   SUPPORTED_CURRENCIES,
 } from '../api/catalog';
 import { CURRENCY_LABELS, T4 } from '../lib/strings';
+import { NumberField } from './NumberField';
 import { ProductMetricsEditor } from './ProductMetricsEditor';
 
 // The fixed amounts + metrics half of the product editor, shared by the
@@ -61,10 +62,8 @@ export const ProductPricingFields = ({
   const setAmount = (
     currencyCode: string,
     key: 'install' | 'annual',
-    raw: string,
+    amount: number | null,
   ) => {
-    const amount = raw === '' ? null : Number(raw);
-
     if (currencyCode === primaryCurrency) {
       onChange(
         key === 'install'
@@ -77,7 +76,7 @@ export const ProductPricingFields = ({
     const book: ProductPriceBook = { ...(value.priceBook ?? {}) };
     const entry = { ...(book[currencyCode] ?? {}) };
 
-    if (amount === null || Number.isNaN(amount)) {
+    if (amount === null) {
       delete entry[key];
     } else {
       entry[key] = amount;
@@ -148,22 +147,18 @@ export const ProductPricingFields = ({
                   <label>
                     {isPerFactor ? T4.fixedInstallLbl : T4.installPriceColumn} ({symbol})
                   </label>
-                  <input
-                    inputMode="decimal"
-                    dir="ltr"
-                    value={amountFor(value, currencyCode, 'install') ?? ''}
-                    onChange={(e) => setAmount(currencyCode, 'install', e.target.value)}
+                  <NumberField
+                    value={amountFor(value, currencyCode, 'install')}
+                    onChange={(amount) => setAmount(currencyCode, 'install', amount)}
                   />
                 </div>
                 <div className="fld" style={{ marginBottom: 0 }}>
                   <label>
                     {isPerFactor ? T4.fixedAnnualLbl : T4.annualPriceColumn} ({symbol})
                   </label>
-                  <input
-                    inputMode="decimal"
-                    dir="ltr"
-                    value={amountFor(value, currencyCode, 'annual') ?? ''}
-                    onChange={(e) => setAmount(currencyCode, 'annual', e.target.value)}
+                  <NumberField
+                    value={amountFor(value, currencyCode, 'annual')}
+                    onChange={(amount) => setAmount(currencyCode, 'annual', amount)}
                   />
                 </div>
               </div>

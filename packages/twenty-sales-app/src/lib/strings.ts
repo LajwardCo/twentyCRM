@@ -476,6 +476,10 @@ export const PARTNER_TYPE_LABELS: Record<string, string> = {
   MARKETER: 'بازاریاب',
   SELLER: 'فروشنده',
   PARTNER: 'شریک',
+  // Anyone at all can introduce a lead -- a customer, a friend, a doctor met
+  // once at a clinic -- and forcing one of the three roles above on them made
+  // the type field a lie. This is the catch-all for those.
+  OTHER: 'سایر / عمومی',
 };
 
 export const LINE_STATUS_LABELS: Record<string, string> = {
@@ -937,9 +941,16 @@ export const T13 = {
   partnerDeleted: 'حذف شد ✓',
   partnerDeleteFailed: 'حذف ناموفق بود',
   noPartners: 'هنوز بازاریابی ثبت نشده',
+
+  // quick-add, from a picker that doesn't have the name it needs yet
+  addReferrerInline: 'ثبت معرف جدید',
+  addMarketerInline: 'ثبت بازاریاب جدید',
+  quickAddPartnerTitle: 'ثبت معرف / بازاریاب جدید',
+  quickAddPartnerHint: 'همین‌جا ثبت می‌شود و در فهرست معرف‌ها هم می‌آید',
+  quickAddPartnerSave: 'ثبت و انتخاب',
+  quickAddPartnerUnsupported: 'ثبت معرف روی این نسخه فعال نیست',
   partnersLoadFailed: 'فهرست بارگیری نشد',
   partnerLeadsCount: 'لید',
-  newPartnerInline: '+ ثبت معرف جدید',
   partnersUnsupported:
     'این بخش روی این نسخه فعال نیست — اسکریپت provision-external-partners اجرا نشده',
 
@@ -1060,4 +1071,5 @@ export const T17 = {
   searchSelectPlaceholder: 'جستجو یا انتخاب…',
   searchSelectNoMatch: 'موردی پیدا نشد',
   searchSelectClear: 'پاک کردن انتخاب',
+  searchSelectCreate: 'افزودن مورد جدید',
 };

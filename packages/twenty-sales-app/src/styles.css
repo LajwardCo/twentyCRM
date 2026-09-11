@@ -4442,6 +4442,30 @@ table.leads tbody tr:hover {
   font-weight: 700;
 }
 
+/* The row that creates a record instead of picking one. It sits under the
+   matches, so a rule and the accent colour keep it from being read as one more
+   name in the list. */
+.ssel-option.create {
+  color: var(--lapis-600);
+  font-weight: 650;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  margin-top: 3px;
+  padding-top: 10px;
+}
+
+.ssel-option.create > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* On the dark card --lapis-600 is barely readable, and this row is a call to
+   action rather than decoration. */
+[data-theme='dark'] .ssel-option.create {
+  color: #7c9ff7;
+}
+
 .ssel-hint {
   margin-inline-start: auto;
   color: var(--ink-3);

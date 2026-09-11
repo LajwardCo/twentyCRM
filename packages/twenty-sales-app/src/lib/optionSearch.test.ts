@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterOptions, optionMatchesQuery } from './optionSearch';
+import {
+  buildSelectRows,
+  filterOptions,
+  optionMatchesQuery,
+} from './optionSearch';
 
 const options = [
   { value: '1', label: 'احمد رضایی', hint: 'معرف' },
@@ -48,5 +52,59 @@ describe('filterOptions', () => {
 
   it('should drop options that do not match', () => {
     expect(filterOptions(options, 'حسیب').map((o) => o.value)).toEqual(['4']);
+  });
+});
+
+describe('buildSelectRows', () => {
+  const matches = [options[0], options[1]];
+
+  it('should put the clear row first and the create row last', () => {
+    const rows = buildSelectRows({
+      matches,
+      emptyLabel: '—',
+      createLabel: 'افزودن معرف جدید',
+      query: '',
+    });
+    expect(rows.map((row) => row.kind)).toEqual([
+      'clear',
+      'option',
+      'option',
+      'create',
+    ]);
+  });
+
+  it('should omit the clear and create rows when they are not offered', () => {
+    const rows = buildSelectRows({ matches, query: '' });
+    expect(rows.map((row) => row.kind)).toEqual(['option', 'option']);
+  });
+
+  it('should carry the typed name into the create row', () => {
+    const rows = buildSelectRows({
+      matches: [],
+      createLabel: 'افزودن معرف جدید',
+      query: '  نجیب الله  ',
+    });
+    expect(rows).toEqual([
+      {
+        kind: 'create',
+        label: 'افزودن معرف جدید «نجیب الله»',
+        name: 'نجیب الله',
+      },
+    ]);
+  });
+
+  // Nothing typed yet: the row still has to be reachable, it just cannot name
+  // the record it is about to create.
+  it('should keep the create row offerable with an empty query', () => {
+    const rows = buildSelectRows({
+      matches,
+      createLabel: 'افزودن معرف جدید',
+      query: '',
+    });
+    expect(rows.at(-1)).toEqual({
+      kind: 'create',
+      label: 'افزودن معرف جدید',
+      name: '',
+    });
   });
 });

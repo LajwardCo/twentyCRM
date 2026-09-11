@@ -1063,6 +1063,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             referrers={referrers}
             editable
             onSaveLead={saveLeadField}
+            onReferrersChanged={reloadReferrers}
           />
         </div>
       </div>

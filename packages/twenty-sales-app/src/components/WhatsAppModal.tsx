@@ -7,6 +7,7 @@ import {
 } from '../api/whatsapp';
 import { toPersianDigits } from '../lib/jalali';
 import { T } from '../lib/strings';
+import { SearchSelect } from './SearchSelect';
 
 type WhatsAppModalProps = {
   personId: string;
@@ -134,24 +135,24 @@ export const WhatsAppModal = ({
           <>
             <div className="fld">
               <label htmlFor="wa-template">{T.template}</label>
-              <select
+              <SearchSelect
                 id="wa-template"
                 value={templateName}
-                onChange={(e) => {
-                  setTemplateName(e.target.value);
-                  const tpl = templates?.find((t) => t.name === e.target.value);
+                onChange={(value) => {
+                  setTemplateName(value);
+                  const tpl = templates?.find((t) => t.name === value);
                   setTemplateParams(
                     Array.from({ length: tpl?.variableCount ?? 0 }, () => ''),
                   );
                 }}
-              >
-                <option value="">{T.selectTemplate}</option>
-                {templates?.map((t) => (
-                  <option key={`${t.name}-${t.language}`} value={t.name}>
-                    {t.name} ({t.language})
-                  </option>
-                ))}
-              </select>
+                options={(templates ?? []).map((t) => ({
+                  value: t.name,
+                  label: t.name,
+                  hint: t.language,
+                }))}
+                emptyLabel={T.selectTemplate}
+                ariaLabel={T.template}
+              />
             </div>
             {selectedTemplate && (
               <div className="sub" style={{ marginBottom: 12, color: 'var(--ink-3)' }}>

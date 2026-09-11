@@ -24,6 +24,7 @@ import { ActionBar, type ActionBarItem } from '../components/ActionBar';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { QuickTaskModal } from '../components/QuickTaskModal';
+import { SearchSelect } from '../components/SearchSelect';
 import {
   IconAI,
   IconCheck,
@@ -355,18 +356,19 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
             {user.isAdmin ? (
               <label className="assignee-pick">
                 مسئول:
-                <select
+                <SearchSelect
+                  className="ssel-inline"
                   value={task.assignee?.id ?? ''}
                   disabled={reassigning}
-                  onChange={(e) => reassign(e.target.value)}
-                >
-                  <option value="">بدون مسئول</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name.firstName} {m.name.lastName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => reassign(value)}
+                  options={members.map((m) => ({
+                    value: m.id,
+                    label: personName(m),
+                    hint: m.userEmail ?? '',
+                  }))}
+                  emptyLabel="بدون مسئول"
+                  ariaLabel="مسئول"
+                />
               </label>
             ) : (
               task.assignee && (

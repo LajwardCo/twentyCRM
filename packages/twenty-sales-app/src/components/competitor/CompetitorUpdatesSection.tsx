@@ -1,4 +1,4 @@
-import { useImperativeHandle, useState, type RefObject } from 'react';
+import { useImperativeHandle, useMemo, useState, type RefObject } from 'react';
 
 import {
   deleteCompetitorUpdate,
@@ -11,6 +11,7 @@ import { toLocalInputValue } from '../../lib/format';
 import { formatJalaliDate } from '../../lib/jalali';
 import { COMPETITOR_UPDATE_TYPE_LABELS, T4, T5 } from '../../lib/strings';
 import { JalaliDatePicker } from '../JalaliDatePicker';
+import { SearchSelect } from '../SearchSelect';
 import { type CompetitorSectionHandle } from './CompetitorProductsSection';
 
 type CompetitorUpdatesSectionProps = {
@@ -67,6 +68,11 @@ export const CompetitorUpdatesSection = ({
 
   const setInput = (patch: Partial<CompetitorUpdateInput>) =>
     setDraft((prev) => (prev ? { ...prev, input: { ...prev.input, ...patch } } : prev));
+
+  const productOptions = useMemo(
+    () => (products ?? []).map((product) => ({ value: product.id, label: product.name })),
+    [products],
+  );
 
   const save = async () => {
     if (!draft || draft.input.title.trim() === '') return;
@@ -165,15 +171,13 @@ export const CompetitorUpdatesSection = ({
             </div>
             <div className="fld">
               <label>{T5.relatedProductLbl}</label>
-              <select
+              <SearchSelect
                 value={draft.input.productId ?? ''}
-                onChange={(e) => setInput({ productId: e.target.value || null })}
-              >
-                <option value="">—</option>
-                {products?.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                onChange={(value) => setInput({ productId: value || null })}
+                options={productOptions}
+                emptyLabel="—"
+                ariaLabel={T5.relatedProductLbl}
+              />
             </div>
           </div>
           <div className="fld">

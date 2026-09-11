@@ -4455,6 +4455,36 @@ table.leads tbody tr:hover {
   color: var(--ink-3);
 }
 
+/* Toolbar and chip-row uses: the picker sits beside buttons rather than
+   filling a .fld, so it needs a bounded width and the smaller control metrics
+   the surrounding `.btn.sm` row is drawn at. */
+.ssel-inline {
+  width: auto;
+  min-width: 150px;
+  max-width: 100%;
+}
+
+.ssel-inline .ssel-input {
+  padding: 6px 10px;
+  padding-inline-end: 28px;
+  font-size: 12.5px;
+}
+
+.ssel-inline .ssel-caret,
+.ssel-inline .ssel-clear {
+  inset-inline-end: 6px;
+}
+
+/* The control is deliberately narrow so it fits a toolbar, but the names and
+   emails inside it are not -- pinning the list to the control's width wrapped
+   every row onto two lines. It hangs off the start edge instead. */
+.ssel-inline .ssel-list {
+  inset-inline: 0 auto;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(320px, 86vw);
+}
+
 /* The meta rows are right-aligned key/value pairs; the picker needs a real
    width there or the dropdown collapses to the width of the typed text. */
 .meta-edit-search {

@@ -28,6 +28,9 @@ type SearchSelectProps = {
   disabled?: boolean;
   autoFocus?: boolean;
   ariaLabel?: string;
+  // Extra class on the wrapper, for the inline/toolbar rows that need a
+  // narrower control than the full-width one a .fld gets.
+  className?: string;
   // Committing on select is enough for a form; the meta rows also want to know
   // the user gave up so they can drop back out of edit mode.
   onCancel?: () => void;
@@ -43,6 +46,7 @@ export const SearchSelect = ({
   disabled = false,
   autoFocus = false,
   ariaLabel,
+  className,
   onCancel,
 }: SearchSelectProps) => {
   const selected = options.find((option) => option.value === value) ?? null;
@@ -90,6 +94,14 @@ export const SearchSelect = ({
       document.removeEventListener('touchstart', onPointerDown);
     };
   }, [open, selectedLabel]);
+
+  // The list hangs below the input, and a picker near the bottom of a scrolling
+  // bottom sheet (WhatsApp templates) opened into the part of the sheet that is
+  // not on screen -- it looked like nothing happened. Nudge the container so
+  // the list is visible the moment it opens.
+  useEffect(() => {
+    if (open) listRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [open]);
 
   // Keep the keyboard-highlighted row visible when the list is longer than the
   // dropdown; arrowing off the bottom edge otherwise moves an invisible cursor.
@@ -155,7 +167,12 @@ export const SearchSelect = ({
   const listId = id === undefined ? undefined : `${id}-list`;
 
   return (
-    <div className={`ssel${disabled ? ' is-disabled' : ''}`} ref={rootRef}>
+    <div
+      className={`ssel${disabled ? ' is-disabled' : ''}${
+        className === undefined ? '' : ` ${className}`
+      }`}
+      ref={rootRef}
+    >
       <input
         id={id}
         className="ssel-input"

@@ -13,6 +13,7 @@ import {
 } from '../api/catalog';
 import { FilterBar } from '../components/FilterBar';
 import { ProductPricingFields } from '../components/ProductPricingFields';
+import { SearchSelect } from '../components/SearchSelect';
 import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { useCached } from '../lib/cache';
 import { applyFilters } from '../lib/filters';
@@ -302,6 +303,16 @@ const DiscountRulesTab = () => {
   const set = (patch: Partial<CatalogDiscountRuleInput>) =>
     setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
 
+  const productOptions = useMemo(
+    () =>
+      (products ?? []).map((product) => ({
+        value: product.id,
+        label: product.name,
+        hint: product.category ?? '',
+      })),
+    [products],
+  );
+
   // The fixed-amount discount is denominated in the applies-to product's
   // currency, and the metric-condition dropdown draws from that product's
   // defined pricing metrics.
@@ -348,17 +359,13 @@ const DiscountRulesTab = () => {
             </div>
             <div className="fld">
               <label>{T4.appliesToProductLbl} *</label>
-              <select
+              <SearchSelect
                 value={editing.appliesToProductId}
-                onChange={(e) => set({ appliesToProductId: e.target.value })}
-              >
-                <option value="">انتخاب…</option>
-                {(products ?? []).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => set({ appliesToProductId: value })}
+                options={productOptions}
+                emptyLabel="انتخاب…"
+                ariaLabel={T4.appliesToProductLbl}
+              />
             </div>
           </div>
 
@@ -394,17 +401,15 @@ const DiscountRulesTab = () => {
             {editing.conditionType === 'SIBLING_PRODUCT_PURCHASED' && (
               <div className="fld">
                 <label>{T4.conditionSiblingProductLbl}</label>
-                <select
+                <SearchSelect
                   value={editing.conditionSiblingProductId ?? ''}
-                  onChange={(e) => set({ conditionSiblingProductId: e.target.value || undefined })}
-                >
-                  <option value="">انتخاب…</option>
-                  {(products ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) =>
+                    set({ conditionSiblingProductId: value || undefined })
+                  }
+                  options={productOptions}
+                  emptyLabel="انتخاب…"
+                  ariaLabel={T4.conditionSiblingProductLbl}
+                />
               </div>
             )}
           </div>

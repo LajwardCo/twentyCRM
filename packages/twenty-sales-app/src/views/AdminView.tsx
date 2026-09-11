@@ -16,6 +16,7 @@ import {
   type Member,
 } from '../api/admin';
 import { LeadOwnerReassign } from '../components/LeadOwnerReassign';
+import { SearchSelect } from '../components/SearchSelect';
 import { invalidateCache, useCached } from '../lib/cache';
 import { toPersianDigits } from '../lib/jalali';
 import { personName } from '../lib/format';
@@ -230,19 +231,14 @@ export const AdminView = ({ user }: AdminViewProps) => {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
               />
-              <select
-                className="btn line sm"
-                style={{ cursor: 'pointer', minWidth: 150 }}
+              <SearchSelect
+                className="ssel-inline"
                 value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-              >
-                <option value="">بدون نقش…</option>
-                {data.roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setInviteRole}
+                options={data.roles.map((r) => ({ value: r.id, label: r.label }))}
+                emptyLabel="بدون نقش…"
+                ariaLabel="نقش"
+              />
               <button
                 className="btn sm"
                 disabled={busy === 'invite' || !inviteEmail.trim()}
@@ -338,42 +334,29 @@ export const AdminView = ({ user }: AdminViewProps) => {
                     {m.userEmail ?? ''}
                   </div>
                 </div>
-                <select
-                  className="btn line sm"
-                  style={{ cursor: 'pointer', minWidth: 150 }}
+                <SearchSelect
+                  className="ssel-inline"
                   disabled={busy === m.id || m.id === user.workspaceMemberId}
                   value={roleOfMember(m.id) ?? ''}
-                  onChange={(e) =>
-                    e.target.value && changeRole(m.id, e.target.value)
-                  }
-                >
-                  <option value="">بدون نقش…</option>
-                  {data.roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => value && changeRole(m.id, value)}
+                  options={data.roles.map((r) => ({ value: r.id, label: r.label }))}
+                  placeholder="بدون نقش…"
+                  ariaLabel="نقش"
+                />
                 {/* Which partner record this login belongs to. Setting it is
                     what makes the account an external marketer/partner. */}
                 {data.partnerLinks.supported && (
-                  <select
-                    className="btn line sm"
-                    style={{ cursor: 'pointer', minWidth: 150 }}
+                  <SearchSelect
+                    className="ssel-inline"
                     disabled={busy === m.id || m.id === user.workspaceMemberId}
                     value={partnerOfMember(m.id)}
-                    onChange={(e) => changePartnerLink(m.id, e.target.value)}
-                    aria-label="بازاریاب یا شریک مرتبط"
-                  >
-                    <option value="">کارمند (بدون بازاریاب)</option>
-                    {partners
+                    onChange={(value) => changePartnerLink(m.id, value)}
+                    options={partners
                       .filter((p) => p.memberId === null || p.memberId === m.id)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                  </select>
+                      .map((p) => ({ value: p.id, label: p.name }))}
+                    emptyLabel="کارمند (بدون بازاریاب)"
+                    ariaLabel="بازاریاب یا شریک مرتبط"
+                  />
                 )}
                 <button
                   className="btn line sm"

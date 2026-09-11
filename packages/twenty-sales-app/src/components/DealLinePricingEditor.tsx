@@ -25,6 +25,7 @@ import {
   T4,
 } from '../lib/strings';
 import { groupProductsByCategory } from '../lib/taxonomy';
+import { SearchSelect } from './SearchSelect';
 
 // The whole "what are we selling and at what price" form, shared by the lead
 // detail pricing card and the new-lead registration page so a seller meets the
@@ -126,6 +127,20 @@ export const DealLinePricingEditor = ({
         })
       : null;
 
+  // Flattened out of the <optgroup>s the native picker used: the category is
+  // carried as a hint so typing it still narrows the list to that group.
+  const productOptions = groupProductsByCategory(products).flatMap((group) =>
+    group.products.map((product: ProductOption) => ({
+      value: product.id,
+      label: `${product.brand ? `${product.brand} · ` : ''}${product.name}${
+        product.baseInstallPrice?.amountMicros
+          ? ` — ${formatMoney(product.baseInstallPrice.amountMicros, product.baseInstallPrice.currencyCode)}`
+          : ''
+      }`,
+      hint: group.category ?? T4.noCategory,
+    })),
+  );
+
   const setMetric = (
     key: 'metricRates' | 'metricQuantities',
     metricName: string,
@@ -137,28 +152,13 @@ export const DealLinePricingEditor = ({
       <div className="f2">
         <div className="fld" style={{ marginBottom: 8 }}>
           <label>{T2.productLbl}</label>
-          <select
+          <SearchSelect
             value={draft.productId}
-            onChange={(e) => onChange({ productId: e.target.value })}
-          >
-            <option value="">انتخاب…</option>
-            {groupProductsByCategory(products).map((group) => (
-              <optgroup
-                key={group.category ?? '__none__'}
-                label={group.category ?? T4.noCategory}
-              >
-                {group.products.map((p: ProductOption) => (
-                  <option key={p.id} value={p.id}>
-                    {p.brand ? `${p.brand} · ` : ''}
-                    {p.name}
-                    {p.baseInstallPrice?.amountMicros
-                      ? ` — ${formatMoney(p.baseInstallPrice.amountMicros, p.baseInstallPrice.currencyCode)}`
-                      : ''}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+            onChange={(value) => onChange({ productId: value })}
+            options={productOptions}
+            emptyLabel="انتخاب…"
+            ariaLabel={T2.productLbl}
+          />
         </div>
         <div className="fld" style={{ marginBottom: 8 }}>
           <label>{T2.quantityLbl}</label>
@@ -193,17 +193,16 @@ export const DealLinePricingEditor = ({
       {showPackages && draft.productId !== '' && activePackages.length > 0 && (
         <div className="fld" style={{ marginBottom: 8 }}>
           <label>{T4.packageLbl}</label>
-          <select
+          <SearchSelect
             value={draft.packageId}
-            onChange={(e) => onChange({ packageId: e.target.value })}
-          >
-            <option value="">{T4.noPackageOption}</option>
-            {activePackages.map((pkg) => (
-              <option key={pkg.id} value={pkg.id}>
-                {pkg.name}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => onChange({ packageId: value })}
+            options={activePackages.map((pkg) => ({
+              value: pkg.id,
+              label: pkg.name,
+            }))}
+            emptyLabel={T4.noPackageOption}
+            ariaLabel={T4.packageLbl}
+          />
           {draft.packageId !== '' && !activeVersion && (
             <div className="sub" style={{ marginTop: 4 }}>
               {T4.noActiveVersionNote}
@@ -368,18 +367,20 @@ export const DealLinePricingEditor = ({
       {showDiscountRules && draft.productId !== '' && eligibleRules.length > 0 && (
         <div className="fld" style={{ marginBottom: 8 }}>
           <label>{T4.discountRuleLbl}</label>
-          <select
+          <SearchSelect
             value={draft.discountRuleId}
-            onChange={(e) => onChange({ discountRuleId: e.target.value })}
-          >
-            <option value="">{T4.noDiscountOption}</option>
-            {eligibleRules.map((rule) => (
-              <option key={rule.id} value={rule.id}>
-                {rule.name} (
-                {CONDITION_TYPE_LABELS[rule.conditionType ?? ''] ?? rule.conditionType})
-              </option>
-            ))}
-          </select>
+            onChange={(value) => onChange({ discountRuleId: value })}
+            options={eligibleRules.map((rule) => ({
+              value: rule.id,
+              label: rule.name,
+              hint:
+                CONDITION_TYPE_LABELS[rule.conditionType ?? ''] ??
+                rule.conditionType ??
+                '',
+            }))}
+            emptyLabel={T4.noDiscountOption}
+            ariaLabel={T4.discountRuleLbl}
+          />
           {selectedRule && discountRuleHint(selectedRule) && (
             <div className="sub" style={{ marginTop: 4 }}>
               {discountRuleHint(selectedRule)}

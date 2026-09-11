@@ -1,0 +1,136 @@
+{
+  "template": {
+    "id": "fixture",
+    "name": "Default Sales Order",
+    "template_type": "sales_order",
+    "body_html": "<div class=\"tpl-page\" dir=\"{{#if meta.direction}}{{meta.direction}}{{else}}ltr{{/if}}\" style=\"font-family:Inter,system-ui,sans-serif;color:#0B253F;\">\n  <div data-section=\"header\" data-section-label=\"Header\" style=\"display:flex;justify-content:space-between;align-items:flex-start;gap:24px;\">\n    <div style=\"display:flex;gap:12px;align-items:flex-start;\">\n      {{#if company.logo}}<img src=\"{{company.logo}}\" alt=\"logo\" style=\"height:52px;width:auto;object-fit:contain;\" />{{/if}}\n      <div>\n        <div style=\"font-size:16px;font-weight:700;\">{{company.name}}</div>\n        {{#if company.address}}<div style=\"font-size:11px;color:#5b6b7b;\">{{company.address}}</div>{{/if}}\n        {{#if company.phone}}<div style=\"font-size:11px;color:#5b6b7b;\">{{ltr company.phone}}</div>{{/if}}\n      </div>\n    </div>\n    <div data-section=\"document\" data-section-label=\"Document\" style=\"text-align:end;\">\n      <div style=\"font-size:28px;font-weight:800;letter-spacing:2px;\">{{#if document.title}}{{document.title}}{{else}}{{t \"Sales Order\" lang=\"fa\"}}{{/if}}</div>\n      <table style=\"margin-top:8px;margin-inline-start:auto;font-size:11px;border-collapse:collapse;\">\n        <tr><td style=\"color:#5b6b7b;text-transform:uppercase;letter-spacing:1px;font-size:9px;padding:1px 10px;text-align:end;\">{{t \"Sales Order\" lang=\"fa\"}} #</td><td style=\"font-weight:600;text-align:end;padding:1px 0;\">{{ltr document.number}}</td></tr>\n        <tr><td style=\"color:#5b6b7b;text-transform:uppercase;letter-spacing:1px;font-size:9px;padding:1px 10px;text-align:end;\">{{t \"Date\" lang=\"fa\"}}</td><td style=\"font-weight:600;text-align:end;padding:1px 0;\">{{ltr (jalali document.date)}}</td></tr>\n        {{#if document.reference}}<tr><td style=\"color:#5b6b7b;text-transform:uppercase;letter-spacing:1px;font-size:9px;padding:1px 10px;text-align:end;\">{{t \"Reference\" lang=\"fa\"}}</td><td style=\"font-weight:600;text-align:end;padding:1px 0;\">{{ltr document.reference}}</td></tr>{{/if}}\n      </table>\n      {{#if document.number}}<div data-section=\"doc-barcode\" data-section-label=\"Document barcode\" style=\"margin-top:8px;\">{{barcode document.number}}</div>{{/if}}\n    </div>\n  </div>\n  <div style=\"height:2px;background:#0B253F;margin:14px 0;\"></div>\n  <div data-section=\"party\" data-section-label=\"Customer\" style=\"margin-bottom:14px;\">\n    <div style=\"font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#5b6b7b;font-weight:700;\">{{t \"Customer\" lang=\"fa\"}}</div>\n    <div style=\"font-weight:700;font-size:13px;\">{{party.name}}</div>\n    <div style=\"font-size:11px;color:#5b6b7b;\">{{#if party.code}}{{ltr party.code}}{{/if}}{{#if party.phone}} &middot; {{ltr party.phone}}{{/if}}</div>\n    {{#if party.address}}<div style=\"font-size:11px;color:#5b6b7b;\">{{party.address}}</div>{{/if}}\n    {{#if party.code}}<div data-section=\"party-barcode\" data-section-label=\"Customer barcode\" style=\"margin-top:6px;\">{{barcode party.code}}</div>{{/if}}\n  </div>\n  <table data-section=\"items\" data-section-label=\"Items\" style=\"width:100%;border-collapse:collapse;font-size:12px;\">\n    <thead><tr style=\"background:#eef2f7;\">\n      <th style=\"border-bottom:2px solid #0B253F;padding:7px 8px;text-align:start;width:28px;\">#</th>\n      <th style=\"border-bottom:2px solid #0B253F;padding:7px 8px;text-align:start;\">{{t \"Item\" lang=\"fa\"}}</th>\n      <th style=\"border-bottom:2px solid #0B253F;padding:7px 8px;text-align:end;\">{{t \"Qty\" lang=\"fa\"}}</th>\n      <th style=\"border-bottom:2px solid #0B253F;padding:7px 8px;text-align:end;\">{{t \"Rate\" lang=\"fa\"}}</th>\n      <th style=\"border-bottom:2px solid #0B253F;padding:7px 8px;text-align:end;\">{{t \"Amount\" lang=\"fa\"}}</th>\n    </tr></thead>\n    <tbody>\n      {{#each items}}\n      <tr>\n        <td style=\"border-bottom:1px solid #cbd5e1;padding:7px 8px;color:#5b6b7b;\">{{ltr (add @index 1)}}</td>\n        <td style=\"border-bottom:1px solid #cbd5e1;padding:7px 8px;\">{{this.name}}{{#if this.code}}<div style=\"font-size:10px;color:#5b6b7b;\">{{ltr this.code}}</div>{{/if}}</td>\n        <td style=\"border-bottom:1px solid #cbd5e1;padding:7px 8px;text-align:end;\">{{ltr this.quantity}} {{this.unit}}</td>\n        <td style=\"border-bottom:1px solid #cbd5e1;padding:7px 8px;text-align:end;\">{{ltr (currency this.unit_price)}}</td>\n        <td style=\"border-bottom:1px solid #cbd5e1;padding:7px 8px;text-align:end;\">{{ltr (currency this.total)}}</td>\n      </tr>\n      {{/each}}\n    </tbody>\n  </table>\n  <div data-section=\"totals\" data-section-label=\"Totals\" style=\"display:flex;justify-content:flex-end;margin-top:14px;\">\n    <table style=\"font-size:12px;min-width:260px;\">\n      <tr><td style=\"padding:3px 4px;\">{{t \"Subtotal\" lang=\"fa\"}}</td><td style=\"text-align:end;padding:3px 4px;\">{{ltr (currency totals.subtotal totals.currency_symbol)}}</td></tr>\n      {{#if totals.discount}}<tr><td style=\"padding:3px 4px;\">{{t \"Discount\" lang=\"fa\"}}</td><td style=\"text-align:end;padding:3px 4px;\">{{ltr (currency totals.discount totals.currency_symbol)}}</td></tr>{{/if}}\n      <tr style=\"font-weight:700;border-top:2px solid #0B253F;\"><td style=\"padding:6px 4px;\">{{t \"Total\" lang=\"fa\"}}</td><td style=\"text-align:end;padding:6px 4px;\">{{ltr (currency totals.total totals.currency_symbol)}}</td></tr>\n    </table>\n  </div>\n  {{#if document.valid_until}}\n  <div data-section=\"validity\" data-section-label=\"Validity\" style=\"margin-top:14px;background:{{#if document.is_expired}}#8a1c1c{{else}}#0B253F{{/if}};color:#ffffff;display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-radius:6px;\">\n    <span style=\"text-transform:uppercase;letter-spacing:1px;font-size:11px;font-weight:700;\">{{#if document.is_expired}}{{t \"Expired\" lang=\"fa\"}}{{else}}{{t \"Valid Until\" lang=\"fa\"}}{{/if}}</span>\n    <span style=\"font-weight:700;\">{{ltr (jalali document.valid_until)}}</span>\n  </div>\n  <div style=\"font-size:10px;color:#5b6b7b;margin-top:5px;\">{{t \"Prices and availability are guaranteed until the date above.\" lang=\"fa\"}}</div>\n  {{/if}}\n  {{#if document.memo}}<div style=\"font-size:11px;margin-top:14px;color:#5b6b7b;border-inline-start:3px solid #cbd5e1;padding-inline-start:10px;\">{{document.memo}}</div>{{/if}}\n  {{> footer}}\n</div>\n",
+    "page": {
+      "preset": "a4",
+      "width": 210,
+      "height": 297,
+      "unit": "mm",
+      "orientation": "portrait",
+      "margin": {
+        "top": 12,
+        "right": 12,
+        "bottom": 12,
+        "left": 12
+      },
+      "background": "#FFFFFF"
+    },
+    "format_version": 2
+  },
+  "context": {
+    "company": {
+      "name": "Lajward Trading Co.",
+      "logo": "/media/print_logos/lajward.png",
+      "phone": "+93 700 123 456",
+      "address": "Shahr-e-Naw, Kabul, Afghanistan"
+    },
+    "document": {
+      "number": "SO-2026-000118",
+      "date": "2026-09-10T09:15:00Z",
+      "valid_until": "2026-10-10",
+      "is_expired": false,
+      "title": "Sales Order",
+      "type": "sales_order",
+      "status": "pending",
+      "memo": "This offer is subject to the validity date shown above.",
+      "reference": "CRM-OPP-4471"
+    },
+    "party": {
+      "name": "Sayed Moheb Sadat",
+      "code": "C-00021",
+      "phone": "+93 744 998 877",
+      "address": "Karte Char, Kabul",
+      "net_balance": "0.000000"
+    },
+    "items": [
+      {
+        "name": "Usystems Core - Accounting Package (annual)",
+        "code": "",
+        "quantity": "1.00",
+        "unit": "license",
+        "unit_price": "48000.000000",
+        "discount": "0.000000",
+        "total": "48000.000000"
+      },
+      {
+        "name": "On-site training (3 days)",
+        "code": "",
+        "quantity": "3.00",
+        "unit": "day",
+        "unit_price": "4000.000000",
+        "discount": "0.000000",
+        "total": "12000.000000"
+      }
+    ],
+    "totals": {
+      "subtotal": "60000.000000",
+      "discount": "5000.000000",
+      "total": "55000.000000",
+      "currency_code": "AFN",
+      "currency_symbol": "AFN"
+    },
+    "meta": {
+      "direction": "ltr",
+      "language": "en"
+    }
+  },
+  "labels": {
+    "Age": "سن",
+    "Amount": "مبلغ",
+    "Balance": "بیلانس",
+    "Balance Due": "باقی‌مانده قابل پرداخت",
+    "Bill To": "صورتحساب برای",
+    "Code": "کد",
+    "Conclusion": "نتیجه‌گیری",
+    "Customer": "مشتری",
+    "Date": "تاریخ",
+    "Diagnosis": "تشخیص",
+    "Discount": "تخفیف",
+    "Dosage": "دوز مصرفی",
+    "Duration": "مدت",
+    "Expired": "منقضی شده",
+    "Expiry": "تاریخ انقضا",
+    "Findings": "یافته‌ها",
+    "Instructions": "دستورالعمل",
+    "Invoice": "فاکتور",
+    "Item": "آیتم",
+    "Label": "برچسب",
+    "Lot": "لات",
+    "Medication": "دارو",
+    "Paid": "پرداخت شده",
+    "Patient": "بیمار",
+    "Payable": "قابل پرداخت",
+    "Prices and availability are guaranteed until the date above.": "قیمت‌ها و موجودی تا تاریخ فوق تضمین می‌شود.",
+    "Purchase Order": "سفارش خرید",
+    "Qty": "تعداد",
+    "Quantity": "مقدار",
+    "Rate": "نرخ",
+    "Reference": "مرجع",
+    "Result": "نتیجه",
+    "Room": "اتاق",
+    "Sales Order": "سفارش فروش",
+    "Ship To": "ارسال به",
+    "Status": "وضعیت",
+    "Subtotal": "مجموع فرعی",
+    "Tax": "مالیه",
+    "Test": "تست",
+    "Time": "زمان",
+    "Total": "مجموع",
+    "Valid Until": "معتبر تا",
+    "Vendor": "تأمین‌کننده"
+  },
+  "language": "fa",
+  "partials": [
+    {
+      "key": "header",
+      "bodyHtml": "<header class=\"tpl-header\" style=\"display:flex;align-items:center;gap:12px;border-bottom:1px solid #d8dee9;padding-bottom:8px;margin-bottom:10px;\">\n  {{#if clinic.logo}}<img src=\"{{clinic.logo}}\" alt=\"logo\" style=\"height:48px;width:auto;object-fit:contain;\" />{{/if}}\n  {{#if company.logo}}<img src=\"{{company.logo}}\" alt=\"logo\" style=\"height:48px;width:auto;object-fit:contain;\" />{{/if}}\n  <div style=\"flex:1;\">\n    <div style=\"font-size:16px;font-weight:700;color:#0B253F;\">{{#if clinic.name}}{{clinic.name}}{{else}}{{company.name}}{{/if}}</div>\n    <div style=\"font-size:11px;color:#5b6b7b;\">{{#if clinic.address}}{{clinic.address}}{{else}}{{company.address}}{{/if}}{{#if clinic.phone}} · {{clinic.phone}}{{/if}}{{#if company.phone}} · {{company.phone}}{{/if}}</div>\n  </div>\n</header>"
+    },
+    {
+      "key": "footer",
+      "bodyHtml": "<footer class=\"tpl-footer\" style=\"border-top:1px solid #d8dee9;margin-top:12px;padding-top:6px;font-size:10px;color:#7b8794;display:flex;justify-content:space-between;\">\n  <span>{{#if meta.printed_at}}{{jalali meta.printed_at}}{{/if}}</span>\n  <span>{{#if meta.printed_by}}{{meta.printed_by}}{{/if}}</span>\n</footer>"
+    }
+  ]
+}

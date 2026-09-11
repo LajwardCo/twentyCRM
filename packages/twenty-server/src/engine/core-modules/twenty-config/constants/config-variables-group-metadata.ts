@@ -147,4 +147,11 @@ export const CONFIG_VARIABLES_GROUP_METADATA: Record<
     isHiddenOnLoad: false,
     isHiddenInAdminPanel: false,
   },
+  [ConfigVariablesGroup.USYSTEMS_SETTINGS]: {
+    position: 2300,
+    description:
+      'Usystems Core Developer API connection the Sales UI issues sales orders through',
+    isHiddenOnLoad: false,
+    isHiddenInAdminPanel: false,
+  },
 };

@@ -22,7 +22,7 @@ export const MoneyInput = ({
   <div className="money-input">
     <input
       id={id}
-      inputMode="numeric"
+      inputMode="decimal"
       dir="ltr"
       placeholder={placeholder}
       value={amount}

@@ -3,6 +3,7 @@ import {
   type ProductPriceBook,
   SUPPORTED_CURRENCIES,
 } from '../api/catalog';
+import { parseDecimalInput } from './numberInput';
 
 // Everything the deal-line form needs to know about a product, satisfied by
 // both the catalog's CatalogProduct and the picker's lighter ProductOption.
@@ -39,7 +40,6 @@ export type DealLineDraft = {
 };
 
 const MICROS_PER_UNIT = 1_000_000;
-const PERSIAN_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 
 export const emptyDealLineDraft = (): DealLineDraft => ({
   productId: '',
@@ -54,21 +54,11 @@ export const emptyDealLineDraft = (): DealLineDraft => ({
 });
 
 // Sellers type on Persian keyboards and paste grouped numbers; both have to
-// reach the pricing math as plain numbers.
-export const parseAmountInput = (raw: string | undefined): number | null => {
-  if (raw === undefined) return null;
-
-  const normalized = raw
-    .replace(/[۰-۹]/g, (digit) => String(PERSIAN_DIGITS.indexOf(digit)))
-    .replace(/[,\s٬]/g, '')
-    .trim();
-
-  if (normalized === '') return null;
-
-  const value = Number(normalized);
-
-  return Number.isFinite(value) && value >= 0 ? value : null;
-};
+// reach the pricing math as plain numbers -- including the fractional part,
+// which the Persian keyboard writes as ٫ rather than '.'. A negative price is
+// not a discount, it is a typo, so it reads as "nothing entered".
+export const parseAmountInput = (raw: string | undefined): number | null =>
+  parseDecimalInput(raw);
 
 export const productPrimaryCurrency = (
   product: PricedProduct | undefined,

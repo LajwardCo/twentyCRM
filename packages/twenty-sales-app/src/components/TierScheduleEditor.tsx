@@ -1,5 +1,6 @@
 import { type FactorTierSchedule, type TierBand } from '../api/catalog';
 import { BILLING_FREQUENCY_LABELS } from '../lib/strings';
+import { NumberField } from './NumberField';
 
 // Structured builder for PricingVersion.tierSchedule -- deliberately not a
 // raw JSON textarea: this data directly drives every deal's computed price,
@@ -104,23 +105,19 @@ export const TierScheduleEditor = ({ value, metricOptions = [], onChange }: Prop
             >
               <div className="fld" style={{ maxWidth: 90 }}>
                 <label>حداقل تعداد</label>
-                <input
-                  inputMode="numeric"
-                  dir="ltr"
+                <NumberField
+                  integer
                   value={band.minQty}
-                  onChange={(e) => updateBand(fi, bi, { minQty: Number(e.target.value) || 0 })}
+                  onChange={(minQty) => updateBand(fi, bi, { minQty: minQty ?? 0 })}
                 />
               </div>
               <div className="fld" style={{ maxWidth: 90 }}>
                 <label>حداکثر تعداد</label>
-                <input
-                  inputMode="numeric"
-                  dir="ltr"
+                <NumberField
+                  integer
                   placeholder="بدون سقف"
-                  value={band.maxQty ?? ''}
-                  onChange={(e) =>
-                    updateBand(fi, bi, { maxQty: e.target.value === '' ? null : Number(e.target.value) })
-                  }
+                  value={band.maxQty}
+                  onChange={(maxQty) => updateBand(fi, bi, { maxQty })}
                 />
               </div>
               <div className="fld" style={{ maxWidth: 130 }}>
@@ -135,11 +132,9 @@ export const TierScheduleEditor = ({ value, metricOptions = [], onChange }: Prop
               </div>
               <div className="fld" style={{ maxWidth: 110 }}>
                 <label>مبلغ</label>
-                <input
-                  inputMode="decimal"
-                  dir="ltr"
+                <NumberField
                   value={band.amount}
-                  onChange={(e) => updateBand(fi, bi, { amount: Number(e.target.value) || 0 })}
+                  onChange={(amount) => updateBand(fi, bi, { amount: amount ?? 0 })}
                 />
               </div>
               <button

@@ -39,6 +39,7 @@ import {
   productPrimaryCurrency,
 } from '../lib/dealLinePricing';
 import { type CurrencyCode, toLocalInputValue } from '../lib/format';
+import { parseDecimalInput } from '../lib/numberInput';
 import { clearDraft, loadDraft, saveDraft } from '../lib/prefs';
 import { formatJalaliDateTime } from '../lib/jalali';
 import { navigate } from '../lib/router';
@@ -311,9 +312,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
     setError(null);
     setBusy(T.saving);
 
-    const parsedValue = Number(
-      estimatedValue.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[,\s]/g, ''),
-    );
+    const parsedValue = parseDecimalInput(estimatedValue);
 
     const input: NewLeadInput = {
       companyName,
@@ -330,7 +329,7 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
       followUpNote,
       followUpDate: scheduleFollowUp ? new Date(followUpDate).toISOString() : null,
       estimatedAmount:
-        Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null,
+        parsedValue !== null && parsedValue > 0 ? parsedValue : null,
       estimatedCurrency: currency,
       workspaceMemberId: user.workspaceMemberId,
     };

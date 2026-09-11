@@ -71,6 +71,7 @@ import {
   SUMMARIZE_SYSTEM_PROMPT,
 } from '../lib/leadContext';
 import { ageTone, stageAgeDays } from '../lib/leadAge';
+import { parseDecimalInput } from '../lib/numberInput';
 import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import {
@@ -293,13 +294,9 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   };
 
   const saveAmount = async () => {
-    const parsed = Number(
-      amountInput
-        .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
-        .replace(/[,\s]/g, ''),
-    );
+    const parsed = parseDecimalInput(amountInput);
     const patch =
-      Number.isFinite(parsed) && parsed > 0
+      parsed !== null && parsed > 0
         ? {
             amount: {
               amountMicros: Math.round(parsed * 1_000_000),

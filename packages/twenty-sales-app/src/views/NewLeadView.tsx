@@ -22,6 +22,7 @@ import {
 } from '../components/DuplicateWarning';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { MoneyInput } from '../components/MoneyInput';
+import { PartnerQuickAddModal } from '../components/PartnerQuickAddModal';
 import { SearchSelect } from '../components/SearchSelect';
 import { invalidateCache } from '../lib/cache';
 import {
@@ -46,6 +47,7 @@ import {
   PARTNER_TYPE_LABELS,
   SOURCE_LABELS,
   T,
+  T13,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -104,6 +106,9 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
   );
   const [referrerId, setReferrerId] = useState(draft?.referrerId ?? '');
   const [referrers, setReferrers] = useState<Referrer[]>([]);
+  // Non-null while the "add new referrer" dialog is open, holding the name that
+  // was typed into the picker (empty if the row was clicked without typing).
+  const [newReferrerName, setNewReferrerName] = useState<string | null>(null);
 
   // Both pickers choose from the same partner list; the type is shown as a
   // hint so "شرکت الف (معرف)" and "شرکت الف (بازاریاب)" stay distinguishable.
@@ -563,14 +568,18 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
                 </div>
                 <div className="fld">
                   <label htmlFor="nl-referrer">معرف</label>
+                  {/* Never disabled on an empty list, unlike the marketer
+                      picker: an empty list is exactly when the seller needs to
+                      add the person who just introduced this lead. */}
                   <SearchSelect
                     id="nl-referrer"
                     value={referrerId}
                     onChange={setReferrerId}
                     options={partnerOptions}
                     emptyLabel="—"
-                    disabled={referrers.length === 0}
                     ariaLabel="معرف"
+                    onCreate={setNewReferrerName}
+                    createLabel={T13.addReferrerInline}
                   />
                 </div>
               </div>
@@ -777,6 +786,26 @@ export const NewLeadView = ({ user }: NewLeadViewProps) => {
           </div>
         </div>
       </form>
+
+      {newReferrerName !== null && (
+        <PartnerQuickAddModal
+          initialName={newReferrerName}
+          // Whoever introduced the lead is usually none of the working roles,
+          // so the catch-all is the right default to land on.
+          defaultType="OTHER"
+          existingNames={referrers.map((referrer) => referrer.name)}
+          onCancel={() => setNewReferrerName(null)}
+          onCreated={(partner) => {
+            // Added locally rather than refetched: the seller is mid-form and a
+            // round trip would blank the picker for as long as it takes.
+            setReferrers((prev) =>
+              [...prev, partner].sort((a, b) => a.name.localeCompare(b.name)),
+            );
+            setReferrerId(partner.id);
+            setNewReferrerName(null);
+          }}
+        />
+      )}
 
       {pendingDuplicates !== null && (
         <DuplicateConfirmDialog

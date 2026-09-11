@@ -10,7 +10,6 @@ import {
 } from '../api/leadReferrers';
 import { type Referrer } from '../api/records';
 import { toPersianDigits } from '../lib/jalali';
-import { createPartner } from '../api/partners';
 import {
   PARTNER_TYPE_LABELS,
   REFERRER_ROLE_LABELS,
@@ -18,6 +17,7 @@ import {
   T10,
   T13,
 } from '../lib/strings';
+import { PartnerQuickAddModal } from './PartnerQuickAddModal';
 import { SearchSelect } from './SearchSelect';
 
 // Additional referrers credited on a lead, each with the commission share
@@ -61,39 +61,9 @@ export const LeadReferrersCard = ({
   // Creating a referrer without leaving the lead. Every picker here reads the
   // partner list, so a referral for someone not already in it was previously
   // impossible to record at the moment the seller actually learned about it.
+  // Non-null while the picker's "add new" dialog is open, holding what was
+  // typed so the dialog starts from that name.
   const [newPartnerName, setNewPartnerName] = useState<string | null>(null);
-
-  const createAndSelect = async () => {
-    const name = newPartnerName?.trim() ?? '';
-    if (name === '') return;
-    setBusy(true);
-    setError(null);
-    try {
-      const existing = partners.find(
-        (partner) => partner.name.trim().toLowerCase() === name.toLowerCase(),
-      );
-      if (existing !== undefined) {
-        setPartnerId(existing.id);
-      } else {
-        const result = await createPartner({
-          name,
-          partnerType: 'PARTNER',
-          commissionPercent: null,
-        });
-        if (!result.supported) {
-          setError(T13.partnersUnsupported);
-          return;
-        }
-        setPartnerId(result.value.id);
-        await onPartnersChanged?.();
-      }
-      setNewPartnerName(null);
-    } catch {
-      setError(T13.partnerSaveFailed);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -249,46 +219,11 @@ export const LeadReferrersCard = ({
               emptyLabel={T10.referrerPickPartner}
               placeholder={T10.referrerPickPartner}
               ariaLabel={T10.referrerPartnerLbl}
+              onCreate={setNewPartnerName}
+              createLabel={T13.addReferrerInline}
             />
           </div>
 
-          {newPartnerName === null ? (
-            <button
-              type="button"
-              className="btn ghost sm"
-              style={{ alignSelf: 'flex-start' }}
-              onClick={() => setNewPartnerName('')}
-            >
-              {T13.newPartnerInline}
-            </button>
-          ) : (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <div className="fld" style={{ flex: 1 }}>
-                <label>{T13.partnerNameLbl}</label>
-                <input
-                  autoFocus
-                  value={newPartnerName}
-                  onChange={(e) => setNewPartnerName(e.target.value)}
-                />
-              </div>
-              <button
-                type="button"
-                className="btn soft sm"
-                disabled={busy || newPartnerName.trim() === ''}
-                onClick={() => void createAndSelect()}
-              >
-                {T13.savePartner}
-              </button>
-              <button
-                type="button"
-                className="btn ghost sm"
-                disabled={busy}
-                onClick={() => setNewPartnerName(null)}
-              >
-                {T9.cancel}
-              </button>
-            </div>
-          )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div className="fld" style={{ flex: 1, minWidth: 120 }}>
               <label>{T10.referrerRoleLbl}</label>
@@ -342,6 +277,22 @@ export const LeadReferrersCard = ({
             {T10.addReferrer}
           </button>
         </div>
+      )}
+
+      {newPartnerName !== null && (
+        <PartnerQuickAddModal
+          initialName={newPartnerName}
+          defaultType="OTHER"
+          existingNames={partners.map((partner) => partner.name)}
+          onCancel={() => setNewPartnerName(null)}
+          onCreated={async (partner) => {
+            setNewPartnerName(null);
+            setPartnerId(partner.id);
+            // The picker reads the parent's list; until it is refetched the
+            // new id has no label to show.
+            await onPartnersChanged?.();
+          }}
+        />
       )}
     </div>
   );

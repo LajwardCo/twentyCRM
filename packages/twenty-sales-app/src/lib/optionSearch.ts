@@ -52,3 +52,44 @@ export const filterOptions = (
   }
   return [...prefixed, ...rest];
 };
+
+// A row in a SearchSelect dropdown. Most are options to pick, but two are not:
+// the row that clears the selection, and the row that creates a value which
+// does not exist yet. Modelling them apart keeps them out of `options`, where
+// a magic value would eventually be selected, saved and sent to the server.
+export type SelectRow =
+  | { kind: 'option'; option: SearchOption }
+  | { kind: 'clear'; label: string }
+  | { kind: 'create'; label: string; name: string };
+
+type BuildSelectRowsInput = {
+  matches: SearchOption[];
+  // The row that clears the selection. Omit to make the field mandatory.
+  emptyLabel?: string;
+  // The row that creates a new record. Omit where creating one makes no sense.
+  createLabel?: string;
+  // What the user has typed, empty when they haven't typed anything yet.
+  query: string;
+};
+
+export const buildSelectRows = ({
+  matches,
+  emptyLabel,
+  createLabel,
+  query,
+}: BuildSelectRowsInput): SelectRow[] => {
+  const rows: SelectRow[] = [];
+  if (emptyLabel !== undefined) rows.push({ kind: 'clear', label: emptyLabel });
+  for (const option of matches) rows.push({ kind: 'option', option });
+  if (createLabel !== undefined) {
+    // Quoting what was typed shows the name carries over, so the dialog that
+    // opens isn't going to ask for it a second time.
+    const name = query.trim();
+    rows.push({
+      kind: 'create',
+      label: name === '' ? createLabel : `${createLabel} «${name}»`,
+      name,
+    });
+  }
+  return rows;
+};

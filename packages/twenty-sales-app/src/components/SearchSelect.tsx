@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { filterOptions, type SearchOption } from '../lib/optionSearch';
+import {
+  buildSelectRows,
+  filterOptions,
+  type SearchOption,
+  type SelectRow,
+} from '../lib/optionSearch';
 import { T17 } from '../lib/strings';
-import { IconChevronDown, IconX } from './icons';
+import { IconChevronDown, IconPlus, IconX } from './icons';
 
 // A <select> you can type into, for lists that a native dropdown handles badly:
 // partners and referrers grow past a hundred rows, and scrolling a native
@@ -31,6 +36,12 @@ type SearchSelectProps = {
   // Committing on select is enough for a form; the meta rows also want to know
   // the user gave up so they can drop back out of edit mode.
   onCancel?: () => void;
+  // Offers a row that creates the record instead of picking one, handing back
+  // whatever was typed so the dialog it opens can start from that name. Without
+  // it a name nobody has seeded yet is a dead end: the picker can only show
+  // what already exists.
+  onCreate?: (name: string) => void;
+  createLabel?: string;
 };
 
 export const SearchSelect = ({
@@ -44,6 +55,8 @@ export const SearchSelect = ({
   autoFocus = false,
   ariaLabel,
   onCancel,
+  onCreate,
+  createLabel,
 }: SearchSelectProps) => {
   const selected = options.find((option) => option.value === value) ?? null;
   const selectedLabel = selected?.label ?? '';
@@ -65,17 +78,28 @@ export const SearchSelect = ({
     if (!open) setQuery(selectedLabel);
   }, [selectedLabel, open]);
 
+  // Everything downstream filters and labels off what was TYPED, which is the
+  // empty string until the first keystroke -- `query` still holds the selected
+  // label before that.
+  const typedQuery = open && typing ? query : '';
+
   const matches = useMemo(
-    () => filterOptions(options, open && typing ? query : ''),
-    [options, query, open, typing],
+    () => filterOptions(options, typedQuery),
+    [options, typedQuery],
   );
 
   const rows = useMemo(
     () =>
-      emptyLabel === undefined
-        ? matches
-        : [{ value: '', label: emptyLabel }, ...matches],
-    [matches, emptyLabel],
+      buildSelectRows({
+        matches,
+        emptyLabel,
+        createLabel:
+          onCreate === undefined
+            ? undefined
+            : (createLabel ?? T17.searchSelectCreate),
+        query: typedQuery,
+      }),
+    [matches, emptyLabel, onCreate, createLabel, typedQuery],
   );
 
   useEffect(() => {
@@ -90,6 +114,14 @@ export const SearchSelect = ({
       document.removeEventListener('touchstart', onPointerDown);
     };
   }, [open, selectedLabel]);
+
+  // The list hangs below the input, and a picker near the bottom of a scrolling
+  // bottom sheet (WhatsApp templates) opened into the part of the sheet that is
+  // not on screen -- it looked like nothing happened. Nudge the container so
+  // the list is visible the moment it opens.
+  useEffect(() => {
+    if (open) listRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [open]);
 
   // Keep the keyboard-highlighted row visible when the list is longer than the
   // dropdown; arrowing off the bottom edge otherwise moves an invisible cursor.
@@ -112,11 +144,20 @@ export const SearchSelect = ({
     setQuery(selectedLabel);
   };
 
-  const pick = (option: SearchOption) => {
+  const pick = (row: SelectRow) => {
     setOpen(false);
     setTyping(false);
-    setQuery(option.value === '' ? '' : option.label);
-    onChange(option.value);
+
+    if (row.kind === 'create') {
+      // The box goes back to showing the current selection: the typed name
+      // travels into the dialog, and backing out of it leaves this untouched.
+      setQuery(selectedLabel);
+      onCreate?.(row.name);
+      return;
+    }
+
+    setQuery(row.kind === 'clear' ? '' : row.option.label);
+    onChange(row.kind === 'clear' ? '' : row.option.value);
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
@@ -212,24 +253,39 @@ export const SearchSelect = ({
           {typing && matches.length === 0 && (
             <div className="ssel-empty">{T17.searchSelectNoMatch}</div>
           )}
-          {rows.map((option, index) => (
-            <button
-              type="button"
-              key={option.value === '' ? '__empty__' : option.value}
-              role="option"
-              aria-selected={option.value === value}
-              className={`ssel-option${index === highlight ? ' on' : ''}${
-                option.value === value ? ' sel' : ''
-              }`}
-              onMouseEnter={() => setHighlight(index)}
-              onClick={() => pick(option)}
-            >
-              <span>{option.label}</span>
-              {option.hint !== undefined && option.hint !== '' && (
-                <small className="ssel-hint">{option.hint}</small>
-              )}
-            </button>
-          ))}
+          {rows.map((row, index) => {
+            const isSelected =
+              row.kind === 'clear'
+                ? value === ''
+                : row.kind === 'option' && row.option.value === value;
+            const hint = row.kind === 'option' ? row.option.hint : undefined;
+            const label = row.kind === 'option' ? row.option.label : row.label;
+            return (
+              <button
+                type="button"
+                key={
+                  row.kind === 'option'
+                    ? (row.option.value === '' ? '__empty__' : row.option.value)
+                    : `__${row.kind}__`
+                }
+                role="option"
+                aria-selected={isSelected}
+                className={`ssel-option${index === highlight ? ' on' : ''}${
+                  isSelected ? ' sel' : ''
+                }${row.kind === 'create' ? ' create' : ''}`}
+                onMouseEnter={() => setHighlight(index)}
+                onClick={() => pick(row)}
+              >
+                <span>
+                  {row.kind === 'create' && <IconPlus size={12} />}
+                  {label}
+                </span>
+                {hint !== undefined && hint !== '' && (
+                  <small className="ssel-hint">{hint}</small>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

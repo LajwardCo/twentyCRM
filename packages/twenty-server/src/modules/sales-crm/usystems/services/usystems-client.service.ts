@@ -87,6 +87,28 @@ export type UsystemsPrintDocument = {
   partials: { key: string; bodyHtml: string }[];
 };
 
+const describeCoreError = (json: unknown, status: number): string => {
+  if (json && typeof json === 'object') {
+    const body = json as Record<string, unknown>;
+    const top = body.error ?? body.detail;
+
+    if (typeof top === 'string' && top.trim() !== '') return top;
+    const fields = Object.entries(body).filter(([key]) => key !== 'statusCode');
+
+    if (fields.length > 0) {
+      return fields
+        .map(([field, value]) => {
+          const text = Array.isArray(value) ? value.join(', ') : String(value);
+
+          return `${field}: ${text}`;
+        })
+        .join('; ');
+    }
+  }
+
+  return `Usystems Core answered ${status}`;
+};
+
 @Injectable()
 export class UsystemsClientService {
   constructor(private readonly twentyConfigService: TwentyConfigService) {}
@@ -159,14 +181,16 @@ export class UsystemsClientService {
     }
 
     if (!response.ok) {
-      const detail =
-        (json as { error?: string; detail?: string })?.error ??
-        (json as { error?: string; detail?: string })?.detail ??
-        `Usystems Core answered ${response.status}`;
-
       // 4xx from Core is the seller's problem to read (a validation error);
-      // pass it through with the same status so the UI can show the field.
-      throw new UsystemsApiError(String(detail), response.status, json);
+      // pass it through with the same status. DRF answers field errors as
+      // {field: [msg]} with no top-level message, and the REST exception
+      // filter forwards only `messages`, so the field text is folded into
+      // the message here or the seller would see "answered 400" and nothing.
+      throw new UsystemsApiError(
+        describeCoreError(json, response.status),
+        response.status,
+        json,
+      );
     }
 
     return json as T;

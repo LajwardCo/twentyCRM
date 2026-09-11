@@ -94,6 +94,7 @@ describe('UsystemsClientService', () => {
       service.issueSalesOrder({ contact_id: 1, items: [] }),
     ).rejects.toMatchObject({
       status: 400,
+      message: 'items: At least one item line is required.',
       details: { items: ['At least one item line is required.'] },
     });
   });

@@ -65,7 +65,11 @@ describe('UsystemsClientService', () => {
   });
 
   it('maps an issue request onto the Developer API payload', async () => {
-    respond(201, { sales_order: { code: 'SO-1' }, sales_items: [], total_price: '10' });
+    respond(201, {
+      sales_order: { code: 'SO-1' },
+      sales_items: [],
+      total_price: '10',
+    });
 
     const result = await service.issueSalesOrder({
       contact_id: 7,
@@ -105,11 +109,19 @@ describe('UsystemsClientService', () => {
     await expect(service.listCurrencies()).rejects.toBeInstanceOf(
       UsystemsApiError,
     );
-    await expect(service.listCurrencies()).rejects.toMatchObject({ status: 502 });
+    await expect(service.listCurrencies()).rejects.toMatchObject({
+      status: 502,
+    });
   });
 
   it('asks for the print document in a language', async () => {
-    respond(200, { template: {}, context: {}, labels: {}, language: 'fa', partials: [] });
+    respond(200, {
+      template: {},
+      context: {},
+      labels: {},
+      language: 'fa',
+      partials: [],
+    });
 
     await service.getPrintDocument(42, 'fa');
 

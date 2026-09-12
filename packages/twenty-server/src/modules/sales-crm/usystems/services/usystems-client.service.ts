@@ -116,8 +116,8 @@ export class UsystemsClientService {
   isConfigured(): boolean {
     return Boolean(
       this.twentyConfigService.get('USYSTEMS_API_BASE_URL') &&
-        this.twentyConfigService.get('USYSTEMS_API_KEY') &&
-        this.twentyConfigService.get('USYSTEMS_PRODUCT_CODE'),
+      this.twentyConfigService.get('USYSTEMS_API_KEY') &&
+      this.twentyConfigService.get('USYSTEMS_PRODUCT_CODE'),
     );
   }
 

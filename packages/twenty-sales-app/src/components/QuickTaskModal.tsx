@@ -1,11 +1,15 @@
 import { useState } from 'react';
 
 import { createQuickTask, updateTask, type Task, type TaskType } from '../api/records';
+import { useRemindersProvisioned } from '../api/remindersSupport';
 import { JalaliDatePicker } from './JalaliDatePicker';
+import { ReminderField } from './ReminderField';
 import { invalidateCache } from '../lib/cache';
 import { toLocalInputValue } from '../lib/format';
+import { refreshReminders } from '../lib/reminderStore';
+import { shiftRemindAt } from '../lib/reminders';
 import { navigate } from '../lib/router';
-import { T, T2, TASK_TYPE_LABELS } from '../lib/strings';
+import { T, T2, T_REMIND, TASK_TYPE_LABELS } from '../lib/strings';
 
 type QuickTaskModalProps =
   | {
@@ -44,7 +48,13 @@ const sheetStyle: React.CSSProperties = {
   animation: 'rise-in .3s both',
 };
 
-const TASK_TYPES: TaskType[] = ['CALL', 'MEETING', 'DEMO', 'VISIT', 'OTHER'];
+const TASK_TYPES: TaskType[] = ['CALL', 'MEETING', 'DEMO', 'VISIT', 'REMINDER', 'OTHER'];
+
+const localToIso = (local: string): string | null => {
+  if (!local) return null;
+  const date = new Date(local);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
 
 const defaultDueValue = (dateIso: string): string => {
   const [y, m, d] = dateIso.split('-').map(Number);
@@ -67,6 +77,22 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
     props.mode === 'edit' ? (props.task.taskType ?? 'OTHER') : 'OTHER',
   );
   const [dueValue, setDueValue] = useState(() => initialDueValue(props));
+  const [remindAt, setRemindAt] = useState<string | null>(
+    props.mode === 'edit' ? (props.task.remindAt ?? null) : null,
+  );
+  const remindersProvisioned = useRemindersProvisioned();
+
+  // Moving the due time drags the reminder along so "1 hour before" stays
+  // 1 hour before the new time.
+  const changeDue = (nextLocal: string) => {
+    const nextIso = localToIso(nextLocal);
+    setDueValue(nextLocal);
+    if (nextIso === null || remindAt === null) return;
+    setRemindAt(
+      shiftRemindAt({ dueAt: localToIso(dueValue), remindAt, reminderDismissedAt: null }, nextIso)
+        .remindAt,
+    );
+  };
   const [done, setDone] = useState(props.mode === 'edit' ? props.task.status === 'DONE' : false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,12 +106,15 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
     setError(null);
     try {
       const dueAt = dueValue ? new Date(dueValue).toISOString() : null;
+      // The key is only sent once the server is known to accept it.
+      const reminderFields = remindersProvisioned === true ? { remindAt } : {};
       if (props.mode === 'create') {
         await createQuickTask({
           title: title.trim(),
           status: done ? 'DONE' : 'TODO',
           taskType,
           dueAt,
+          ...reminderFields,
           assigneeId: props.assigneeId,
         });
       } else {
@@ -101,9 +130,16 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
           taskType,
           dueAt,
           status,
+          ...reminderFields,
+          // a changed reminder is a fresh one; a dismissed past one stays dismissed
+          ...(remindersProvisioned === true && remindAt !== (props.task.remindAt ?? null)
+            ? { reminderDismissedAt: null }
+            : {}),
         });
       }
       invalidateCache('calendar:');
+      invalidateCache('today:');
+      void refreshReminders();
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : T2.quickTaskSaveFailed);
@@ -158,9 +194,21 @@ export const QuickTaskModal = (props: QuickTaskModalProps) => {
           </div>
           <div className="fld">
             <label htmlFor="qt-due">{T2.quickTaskDueLbl}</label>
-            <JalaliDatePicker id="qt-due" value={dueValue} onChange={setDueValue} />
+            <JalaliDatePicker id="qt-due" value={dueValue} onChange={changeDue} />
           </div>
         </div>
+
+        {remindersProvisioned === true && (
+          <div className="fld">
+            <label htmlFor="qt-remind">{T_REMIND.notifyMe}</label>
+            <ReminderField
+              id="qt-remind"
+              dueLocal={dueValue}
+              remindAt={remindAt}
+              onChange={setRemindAt}
+            />
+          </div>
+        )}
 
         {props.mode === 'edit' && (
           <label

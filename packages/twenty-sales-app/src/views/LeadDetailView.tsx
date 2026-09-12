@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { generateText } from '../api/ai';
 import { type CurrentUser } from '../api/auth';
+import { useRemindersProvisioned } from '../api/remindersSupport';
 import {
   CONVERTIBLE_STAGES,
   createNoteForLead,
@@ -24,6 +25,7 @@ import {
 import { ActionBar, type ActionBarItem } from '../components/ActionBar';
 import {
   IconAI,
+  IconBell,
   IconCheck,
   IconEdit,
   IconMail,
@@ -49,6 +51,7 @@ import { NoteEditModal } from '../components/NoteEditModal';
 import { LeadEditModal } from '../components/LeadEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
 import { RecordHistory } from '../components/RecordHistory';
+import { ReminderModal } from '../components/ReminderModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { canSeeMoney, isExternalUser } from '../lib/access';
 import { invalidateCache, useCached } from '../lib/cache';
@@ -85,6 +88,7 @@ import {
   T14,
   T15,
   T16,
+  T_REMIND,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -134,6 +138,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [override, setOverride] = useState<Partial<LeadSummary>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
+  const remindersProvisioned = useRemindersProvisioned();
   const [tlFilter, setTlFilter] = useState<TimelineFilter>('all');
   const [toast, setToast] = useState<string | null>(null);
 
@@ -465,6 +471,13 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       onClick: () => email && (window.location.href = `mailto:${email}`),
     },
     {
+      key: 'remind',
+      label: T_REMIND.reminder,
+      icon: IconBell,
+      disabled: remindersProvisioned !== true,
+      onClick: () => setShowReminder(true),
+    },
+    {
       // short label: five slots on a 360px screen leave ~60px each
       key: 'ai',
       label: 'دستیار',
@@ -599,6 +612,11 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   >
                     {relativeDueLabel(task.dueAt)}
                   </span>
+                  {task.remindAt && (
+                    <span className="rem-chip" title={T_REMIND.remindAtLbl}>
+                      <IconBell size={11} /> {relativeDueLabel(task.remindAt)}
+                    </span>
+                  )}
                   <RowActions
                     onEdit={() => setEditingTask(task)}
                     onDelete={() => setDeleting({ kind: 'task', task })}
@@ -751,13 +769,20 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 <JalaliDatePicker value={followUpDate} onChange={setFollowUpDate} />
               </div>
             </div>
-            <button
-              className="btn line sm"
-              disabled={followUpBusy || followUpDraft.trim() === ''}
-              onClick={addFollowUp}
-            >
-              {followUpBusy ? T.saving : `＋ ${T.addFollowUp}`}
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                className="btn line sm"
+                disabled={followUpBusy || followUpDraft.trim() === ''}
+                onClick={addFollowUp}
+              >
+                {followUpBusy ? T.saving : `＋ ${T.addFollowUp}`}
+              </button>
+              {remindersProvisioned === true && (
+                <button className="btn line sm" onClick={() => setShowReminder(true)}>
+                  <IconBell size={14} /> {T_REMIND.setReminder}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1067,6 +1092,18 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
         </div>
       </div>
 
+      {showReminder && (
+        <ReminderModal
+          lead={lead}
+          assigneeId={user.workspaceMemberId}
+          onClose={() => setShowReminder(false)}
+          onSaved={() => {
+            setShowReminder(false);
+            showToast(T_REMIND.saved);
+            void reload();
+          }}
+        />
+      )}
       {showWhatsApp && lead.pointOfContact && (
         <WhatsAppModal
           personId={lead.pointOfContact.id}

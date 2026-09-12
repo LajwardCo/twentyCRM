@@ -26,6 +26,7 @@ import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { QuickTaskModal } from '../components/QuickTaskModal';
 import {
   IconAI,
+  IconBell,
   IconCheck,
   IconEdit,
   IconLeads,
@@ -63,6 +64,7 @@ export const TASK_TYPE_ICONS: Record<string, React.ComponentType<{ size?: number
   MEETING: IconLeads,
   DEMO: IconPresentation,
   VISIT: IconMapPin,
+  REMINDER: IconBell,
   OTHER: IconCheck,
 };
 
@@ -341,6 +343,11 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
             ) : (
               <span className={`due ${task.dueAt && new Date(task.dueAt) < new Date() ? 'over' : 'today'}`}>
                 موعد: {relativeDueLabel(task.dueAt)}
+              </span>
+            )}
+            {!isDone && task.remindAt && (
+              <span className="rem-chip">
+                <IconBell size={11} /> {relativeDueLabel(task.remindAt)}
               </span>
             )}
             {lead && (

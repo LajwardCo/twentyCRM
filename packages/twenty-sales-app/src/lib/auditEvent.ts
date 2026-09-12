@@ -382,6 +382,7 @@ const WATERMARKED_SECTIONS = new Set([
   'competitors',
   'audit',
   'search',
+  'files',
 ]);
 
 export const isWatermarkedSection = (section: string | undefined): boolean =>

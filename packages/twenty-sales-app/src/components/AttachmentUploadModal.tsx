@@ -3,13 +3,21 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   fetchTaskAttachments,
   generateTaskUploadToken,
+  getAttachmentMetadata,
   uploadTaskAttachment,
   type TaskAttachment,
 } from '../api/attachments';
+import { TFILES } from '../lib/fileStrings';
+import {
+  defaultFileTypeFor,
+  normalizeExtension,
+  previewKindOf,
+} from '../lib/fileType';
 import { buildPublicUploadUrl, secondsUntil } from '../lib/publicUpload';
 import { renderQrDataUrl } from '../lib/qr';
 import { toPersianDigits } from '../lib/jalali';
 import { AttachmentChip } from './AttachmentChip';
+import { FileTypeSelect } from './FileTypeSelect';
 import { IconMic, IconRefresh, IconX } from './icons';
 
 type AttachmentUploadModalProps = {
@@ -17,6 +25,8 @@ type AttachmentUploadModalProps = {
   opportunityId?: string | null;
   onUploaded: () => void | Promise<void>;
   onClose: () => void;
+  // External accounts have no Files manager to link chips to.
+  showDetailLink?: boolean;
 };
 
 const overlayStyle: React.CSSProperties = {
@@ -56,6 +66,7 @@ export const AttachmentUploadModal = ({
   opportunityId,
   onUploaded,
   onClose,
+  showDetailLink = true,
 }: AttachmentUploadModalProps) => {
   const [tab, setTab] = useState<Tab>('device');
 
@@ -63,12 +74,20 @@ export const AttachmentUploadModal = ({
   const [uploading, setUploading] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
-  const onDeviceUpload = async (file: File | undefined) => {
-    if (!file) return;
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [fileType, setFileType] = useState<string>('DOCUMENT');
+
+  const uploadNow = async (file: File, chosenType: string | null) => {
     setUploading(true);
     setDeviceError(null);
     try {
-      await uploadTaskAttachment({ file, taskId, opportunityId });
+      await uploadTaskAttachment({
+        file,
+        taskId,
+        opportunityId,
+        fileType: chosenType,
+      });
+      setPendingFile(null);
       await refreshExisting();
       await onUploaded();
     } catch (err) {
@@ -76,6 +95,24 @@ export const AttachmentUploadModal = ({
     } finally {
       setUploading(false);
     }
+  };
+
+  // Until attachment.fileType is provisioned there is nothing to pick, and
+  // a chosen file uploads straight away as before. Asked per pick (the probe
+  // is cached) rather than read from state, so a fast click right after the
+  // sheet opens cannot race the probe and skip the picker.
+  const onDeviceFilePicked = async (file: File | undefined) => {
+    if (!file) return;
+    const canPickType = await getAttachmentMetadata()
+      .then((metadata) => metadata.hasFileType)
+      .catch(() => false);
+    if (!canPickType) {
+      void uploadNow(file, null);
+      return;
+    }
+    const kind = previewKindOf(normalizeExtension(file.name));
+    setFileType(defaultFileTypeFor(kind));
+    setPendingFile(file);
   };
 
   // --- QR / mobile upload ---
@@ -210,18 +247,55 @@ export const AttachmentUploadModal = ({
               فایل، عکس یا سند را از همین دستگاه انتخاب کنید.
             </p>
             <label
-              className="btn primary"
+              className={pendingFile === null ? 'btn primary' : 'btn line'}
               style={{ cursor: 'pointer', justifyContent: 'center' }}
             >
               <IconMic size={16} />
-              {uploading ? 'در حال آپلود…' : 'انتخاب فایل'}
+              {uploading
+                ? TFILES.uploading
+                : pendingFile === null
+                  ? 'انتخاب فایل'
+                  : TFILES.changeFile}
               <input
                 type="file"
                 style={{ display: 'none' }}
-                onChange={(e) => onDeviceUpload(e.target.files?.[0])}
+                onChange={(e) => {
+                  void onDeviceFilePicked(e.target.files?.[0]);
+                  e.target.value = '';
+                }}
                 disabled={uploading}
               />
             </label>
+
+            {pendingFile !== null && (
+              <div className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <div className="sub">{TFILES.selectedFile}</div>
+                  <div style={{ fontWeight: 650, wordBreak: 'break-all' }}>
+                    {pendingFile.name}
+                  </div>
+                </div>
+                <div className="fld">
+                  <label htmlFor="upload-file-type">{TFILES.chooseType}</label>
+                  <FileTypeSelect
+                    id="upload-file-type"
+                    value={fileType}
+                    onChange={setFileType}
+                    disabled={uploading}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn primary"
+                  style={{ justifyContent: 'center' }}
+                  disabled={uploading}
+                  onClick={() => void uploadNow(pendingFile, fileType)}
+                >
+                  {uploading ? TFILES.uploading : TFILES.upload}
+                </button>
+              </div>
+            )}
+
             {deviceError !== null && (
               <div className="error-banner">{deviceError}</div>
             )}
@@ -233,7 +307,13 @@ export const AttachmentUploadModal = ({
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {existing.map((a) => (
-                    <AttachmentChip key={a.id} attachment={a} />
+                    <AttachmentChip
+                      key={a.id}
+                      attachment={a}
+                      taskId={taskId}
+                      leadId={opportunityId}
+                      showDetailLink={showDetailLink}
+                    />
                   ))}
                 </div>
               </div>

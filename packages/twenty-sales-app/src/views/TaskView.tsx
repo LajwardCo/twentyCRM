@@ -41,6 +41,7 @@ import {
 import { AttachmentChip } from '../components/AttachmentChip';
 import { AttachmentUploadModal } from '../components/AttachmentUploadModal';
 import { invalidateCache, useCached } from '../lib/cache';
+import { isExternalUser } from '../lib/access';
 import { formatMoney, fullPhone, personName, toLocalInputValue } from '../lib/format';
 import { relativeDueLabel } from '../lib/jalali';
 import { leadContextText, SUMMARIZE_SYSTEM_PROMPT } from '../lib/leadContext';
@@ -451,7 +452,12 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                   افزودن فایل
                 </button>
                 {(data?.attachments ?? []).map((a: TaskAttachment) => (
-                  <AttachmentChip key={a.id} attachment={a} />
+                  <AttachmentChip
+                    key={a.id}
+                    attachment={a}
+                    leadId={lead?.id ?? null}
+                    showDetailLink={!isExternalUser(user)}
+                  />
                 ))}
               </div>
             </div>
@@ -663,6 +669,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
           opportunityId={lead?.id ?? null}
           onUploaded={onAttachmentUploaded}
           onClose={() => setUploadModalOpen(false)}
+          showDetailLink={!isExternalUser(user)}
         />
       )}
 

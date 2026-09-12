@@ -11,7 +11,7 @@ import { isPhoneAppsFieldProvisioned } from './phoneAppsSupport';
 
 // ---------- shared types ----------
 
-export type TaskType = 'CALL' | 'MEETING' | 'DEMO' | 'VISIT' | 'OTHER';
+export type TaskType = 'CALL' | 'MEETING' | 'DEMO' | 'VISIT' | 'REMINDER' | 'OTHER';
 
 export type Task = {
   id: string;
@@ -19,6 +19,10 @@ export type Task = {
   status: 'TODO' | 'IN_PROGRESS' | 'DONE' | null;
   taskType: TaskType | null;
   dueAt: string | null;
+  // Null on servers that predate provision-reminders.mjs; the record API
+  // answers an unknown selected field with null, so selecting them is safe.
+  remindAt?: string | null;
+  reminderDismissedAt?: string | null;
   createdAt: string;
   bodyV2: { markdown: string | null } | null;
   assignee?: {
@@ -393,6 +397,8 @@ export const fetchLeadTasks = async (opportunityId: string): Promise<Task[]> => 
               status
               taskType
               dueAt
+              remindAt
+              reminderDismissedAt
               createdAt
               bodyV2 { markdown }
             }
@@ -462,6 +468,8 @@ const OPEN_TASKS_PAGE_QUERY = `query MyOpenTasks($filter: TaskFilterInput, $limi
         status
         taskType
         dueAt
+        remindAt
+        reminderDismissedAt
         createdAt
         bodyV2 { markdown }
         assignee { id name { firstName lastName } }
@@ -548,6 +556,8 @@ export const fetchTasksForCalendar = async (
             status
             taskType
             dueAt
+            remindAt
+            reminderDismissedAt
             createdAt
             bodyV2 { markdown }
             taskTargets {
@@ -576,15 +586,27 @@ export const fetchTasksForCalendar = async (
   return data.tasks.edges.map((e) => e.node);
 };
 
+// dismissReminder: finishing a task also silences its reminder so it leaves
+// the bell at once. Opt-in because the key is rejected by servers that have
+// not run provision-reminders.mjs -- callers pass it only when provisioned.
 export const setTaskStatus = async (
   taskId: string,
   status: 'TODO' | 'DONE',
+  options: { dismissReminder?: boolean } = {},
 ): Promise<void> => {
   await coreQuery(
     `mutation SetTaskStatus($id: UUID!, $data: TaskUpdateInput!) {
       updateTask(id: $id, data: $data) { id }
     }`,
-    { id: taskId, data: { status } },
+    {
+      id: taskId,
+      data: {
+        status,
+        ...(status === 'DONE' && options.dismissReminder
+          ? { reminderDismissedAt: new Date().toISOString() }
+          : {}),
+      },
+    },
   );
 };
 
@@ -598,6 +620,8 @@ export const fetchTask = async (taskId: string): Promise<Task> => {
         status
         taskType
         dueAt
+        remindAt
+        reminderDismissedAt
         createdAt
         bodyV2 { markdown }
         assignee { id name { firstName lastName } }
@@ -641,6 +665,8 @@ export const createTaskForLead = async (input: {
   status: 'TODO' | 'DONE';
   taskType?: TaskType;
   dueAt: string | null;
+  // undefined = leave the key out entirely (unprovisioned servers reject it)
+  remindAt?: string | null;
   assigneeId: string;
   target: LeadTargetIds;
 }): Promise<string> => {
@@ -655,6 +681,7 @@ export const createTaskForLead = async (input: {
         dueAt: input.dueAt,
         assigneeId: input.assigneeId,
         ...(input.taskType ? { taskType: input.taskType } : {}),
+        ...(input.remindAt !== undefined ? { remindAt: input.remindAt } : {}),
         ...(input.bodyMarkdown
           ? { bodyV2: { markdown: input.bodyMarkdown } }
           : {}),
@@ -1904,6 +1931,7 @@ export const createQuickTask = async (input: {
   status: 'TODO' | 'DONE';
   taskType?: TaskType;
   dueAt: string | null;
+  remindAt?: string | null;
   assigneeId: string;
 }): Promise<string> => {
   const created = await coreQuery<{ createTask: { id: string } }>(
@@ -1917,6 +1945,7 @@ export const createQuickTask = async (input: {
         dueAt: input.dueAt,
         assigneeId: input.assigneeId,
         ...(input.taskType ? { taskType: input.taskType } : {}),
+        ...(input.remindAt !== undefined ? { remindAt: input.remindAt } : {}),
       },
     },
   );

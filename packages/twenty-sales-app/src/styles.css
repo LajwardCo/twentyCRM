@@ -4515,3 +4515,109 @@ table.leads tbody tr:hover {
   width: 220px;
   max-width: 60vw;
 }
+
+/* ---------- files: preview + manager ---------- */
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.file-preview audio,
+.file-preview video {
+  width: 100%;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+.file-preview video {
+  max-height: 60dvh;
+}
+.file-preview.image img {
+  max-width: 100%;
+  max-height: 60dvh;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  object-fit: contain;
+  background: var(--paper);
+}
+.file-preview.pdf iframe {
+  width: 100%;
+  height: 70dvh;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+}
+.file-preview.compact.pdf iframe,
+.file-preview.compact video,
+.file-preview.compact.image img {
+  max-height: 260px;
+  height: 260px;
+}
+.file-preview.none {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+}
+.file-preview-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--warm);
+  background: var(--warm-bg);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+.file-row-player td {
+  background: var(--paper);
+  padding: 10px 14px !important;
+}
+.file-play {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--lapis-800);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+.file-play.on {
+  background: var(--lapis-800);
+  color: #fff;
+  border-color: var(--lapis-800);
+}
+.file-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.file-meta .k {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.file-card .grow {
+  min-width: 0;
+}
+.file-card .name {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

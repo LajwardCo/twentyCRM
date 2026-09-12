@@ -619,7 +619,14 @@ export const MetaCard = ({
 
 // ---------- pricing: deal products + quotations + assign product ----------
 
-export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
+export const PricingCard = ({
+  lead,
+  embedded = false,
+}: {
+  lead: LeadSummary;
+  // Inside the Deal card: no outer card or title, the host draws those.
+  embedded?: boolean;
+}) => {
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState<DealLineDraft>(emptyDealLineDraft);
   const [busy, setBusy] = useState(false);
@@ -735,13 +742,15 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     {},
   );
 
-  return (
-    <div className="card card-pad anim">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <IconPackage size={16} />
-          {T2.pricingSection}
-        </h3>
+  const body = (
+    <>
+      <div style={{ display: 'flex', justifyContent: embedded ? 'flex-end' : 'space-between', alignItems: 'center' }}>
+        {!embedded && (
+          <h3 style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <IconPackage size={16} />
+            {T2.pricingSection}
+          </h3>
+        )}
         <button className="btn soft sm" onClick={() => setShowAdd((v) => !v)}>
           ＋ {T2.addProduct}
         </button>
@@ -893,6 +902,8 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
+
+  return embedded ? body : <div className="card card-pad anim">{body}</div>;
 };

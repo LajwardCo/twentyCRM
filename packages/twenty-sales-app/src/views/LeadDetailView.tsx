@@ -39,14 +39,13 @@ import {
 } from '../components/icons';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
-import { LeadOffersCard } from '../components/LeadOffersCard';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
-import { LeadSalesOrderCard } from '../components/LeadSalesOrderCard';
+import { LeadDealCard } from '../components/LeadDealCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
 import { AddContactModal } from '../components/AddContactModal';
 import { ContactEditModal } from '../components/ContactEditModal';
-import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
+import { CompanyCard, MetaCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
 import { LeadEditModal } from '../components/LeadEditModal';
@@ -934,13 +933,15 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             )}
           </div>
 
-          {/* deal info */}
-          {/* Negotiation history. Hides itself on an instance that hasn't run
-              provision-subscriptions-referrals-offers.mjs. */}
+          {/* The deal: product lines + quotations, negotiated offers, and the
+              Usystems sales order -- one card, three tabs. Sections that are
+              unavailable on this instance drop their tab. */}
           {showMoney && (
-            <LeadOffersCard
-              leadId={leadId}
+            <LeadDealCard
+              lead={lead}
               currentUserId={user.workspaceMemberId}
+              contactPhone={phone}
+              contactEmail={email}
               onAgreed={() => void reload()}
             />
           )}
@@ -1056,23 +1057,6 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               {T6.deleteLeadTitle}
             </button>
           </div>
-
-          {/* pricing: deal products + quotations */}
-          {showMoney && <PricingCard lead={lead} />}
-
-          {/* The formal, numbered offer issued into Usystems Core, with the
-              date until which it stands. */}
-          {showMoney && (
-            <LeadSalesOrderCard
-              leadId={leadId}
-              leadName={lead.name}
-              companyId={lead.company?.id ?? null}
-              companyName={lead.company?.name ?? null}
-              contactPhone={phone}
-              contactEmail={email}
-              city={null}
-            />
-          )}
 
           {/* What the customer pays after the deal closes, and the reviewed
               conversion that creates it from the won lead's lines. */}

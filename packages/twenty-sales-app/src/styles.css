@@ -4552,6 +4552,14 @@ table.leads tbody tr:hover {
   cursor: pointer;
 }
 
+.rem-upcoming .lead-chip {
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .rem-upcoming .num {
   color: var(--ink-3);
   font-size: 12px;

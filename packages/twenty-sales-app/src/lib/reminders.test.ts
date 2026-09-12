@@ -128,6 +128,10 @@ describe('presets', () => {
     expect(presetFromRemindAt('2026-09-12T08:37:00.000Z', due)).toBe('custom');
     expect(presetFromRemindAt('2026-09-12T08:37:00.000Z', null)).toBe('custom');
   });
+
+  it('presetFromRemindAt ignores sub-minute drift between stored and edited times', () => {
+    expect(presetFromRemindAt('2026-09-12T09:45:00.000Z', '2026-09-12T10:00:27.412Z')).toBe('15m');
+  });
 });
 
 describe('taskLeadRef', () => {

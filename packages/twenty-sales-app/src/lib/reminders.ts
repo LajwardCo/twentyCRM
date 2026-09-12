@@ -135,7 +135,10 @@ export const presetFromRemindAt = (
   if (remindMs === null) return 'none';
   const dueMs = toMs(dueIso);
   if (dueMs === null) return 'custom';
-  const offset = dueMs - remindMs;
+  // Editors hold the due time at minute precision while stored dates may
+  // carry seconds (tasks created from "+3 days" presets); compare by minute
+  // so a 15-minute reminder still reads as the 15-minute option.
+  const offset = Math.round((dueMs - remindMs) / 60_000) * 60_000;
   const match = (Object.keys(PRESET_OFFSET_MS) as OffsetPreset[]).find(
     (key) => PRESET_OFFSET_MS[key] === offset,
   );

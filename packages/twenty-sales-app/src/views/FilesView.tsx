@@ -21,15 +21,28 @@ import { useFilters } from '../lib/useFilters';
 // list. Only one row plays at a time; when a recording ends the next playable
 // row starts (auto-advance), stopping at the end of the loaded rows.
 export const FilesView = () => {
-  const route = useRoute();
-
-  const { data: schema } = useCached('attachment-metadata', () =>
+  // The filter engine reads the URL once, on mount, against the field list it
+  // is given. The `type` field only exists once the metadata probe has
+  // answered, so mounting the screen before that would silently drop a
+  // ?type= from a shared link. Wait for the probe first.
+  const { data: schema, error } = useCached('attachment-metadata', () =>
     getAttachmentMetadata(),
   );
-  const fields = useMemo(
-    () => fileFilterFields({ hasFileType: schema?.hasFileType ?? false }),
-    [schema?.hasFileType],
-  );
+  if (schema === null) {
+    return (
+      <main className="page">
+        {error !== null && <div className="error-banner">{error}</div>}
+        <div className="skeleton" style={{ height: 44, maxWidth: 320, marginBottom: 14 }} />
+        <div className="skeleton" style={{ height: 240 }} />
+      </main>
+    );
+  }
+  return <FilesScreen hasFileType={schema.hasFileType} />;
+};
+
+const FilesScreen = ({ hasFileType }: { hasFileType: boolean }) => {
+  const route = useRoute();
+  const fields = useMemo(() => fileFilterFields({ hasFileType }), [hasFileType]);
   const filters = useFilters('files', fields, route.query);
   const serverFilter = useMemo(
     () => buildGraphQLFilter(fields, filters.state),

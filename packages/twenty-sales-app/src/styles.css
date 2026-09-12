@@ -4732,6 +4732,7 @@ table.leads tbody tr:hover {
   font-weight: 700;
   color: var(--ink-3);
   letter-spacing: 0.2px;
+}
 
 /* ============ today suggestions (TodaySuggestionsCard) ============ */
 

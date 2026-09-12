@@ -6,6 +6,7 @@ import {
   type Referrer,
 } from '../api/records';
 import { type CatalogProduct } from '../api/catalog';
+import { type FileRecord } from '../api/files';
 import {
   isFilterActive,
   type FilterField,
@@ -13,6 +14,8 @@ import {
   type FilterState,
   type FilterValue,
 } from './filters';
+import { TFILES } from './fileStrings';
+import { EXTENSIONS_BY_KIND, FILE_TYPE_OPTIONS, previewKindOf } from './fileType';
 import {
   COMPETITOR_STATUS_LABELS,
   COMPETITOR_THREAT_LABELS,
@@ -430,5 +433,77 @@ export const competitorFilterFields = (): FilterField<CompetitorRow>[] => [
     label: T7.fCreated,
     kind: 'dateRange',
     get: (competitor) => competitor.createdAt,
+  },
+];
+
+// ---------- files ----------
+
+// The Files manager is server-paged (see api/files.ts), so every field here
+// carries a server clause. `type` only exists once attachment.fileType is
+// provisioned; naming an unknown field would fail the whole query.
+export const fileFilterFields = (schema: {
+  hasFileType: boolean;
+}): FilterField<FileRecord>[] => [
+  ...(schema.hasFileType
+    ? [
+        {
+          key: 'type',
+          label: TFILES.fType,
+          kind: 'multiEnum',
+          serverPath: 'fileType',
+          get: (file: FileRecord) => file.fileType ?? NONE,
+          options: [
+            ...FILE_TYPE_OPTIONS.map((option) => ({
+              value: option.value,
+              label: option.label,
+            })),
+            { value: NONE, label: TFILES.untyped },
+          ],
+          buildServerFilter: enumWithNoneServerFilter('fileType'),
+        } satisfies FilterField<FileRecord>,
+      ]
+    : []),
+  {
+    key: 'kind',
+    label: TFILES.fKind,
+    kind: 'multiEnum',
+    get: (file) => previewKindOf(file.file?.[0]?.extension, file.file?.[0]?.label),
+    options: [
+      { value: 'audio', label: TFILES.kindAudio },
+      { value: 'video', label: TFILES.kindVideo },
+      { value: 'image', label: TFILES.kindImage },
+      { value: 'pdf', label: TFILES.kindPdf },
+    ],
+    // The FILES composite exposes its extension column to filters; a kind is
+    // just the union of its extensions.
+    buildServerFilter: (value) =>
+      value.kind === 'multiEnum'
+        ? {
+            file: {
+              extension: {
+                in: value.values.flatMap(
+                  (kind) =>
+                    EXTENSIONS_BY_KIND[
+                      kind as keyof typeof EXTENSIONS_BY_KIND
+                    ] ?? [],
+                ),
+              },
+            },
+          }
+        : undefined,
+  },
+  {
+    key: 'name',
+    label: TFILES.fName,
+    kind: 'text',
+    serverPath: 'name',
+    get: (file) => file.name,
+  },
+  {
+    key: 'date',
+    label: TFILES.fDate,
+    kind: 'dateRange',
+    serverPath: 'createdAt',
+    get: (file) => file.createdAt,
   },
 ];

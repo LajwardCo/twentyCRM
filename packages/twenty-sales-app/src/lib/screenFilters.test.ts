@@ -5,6 +5,7 @@ import {
   contactFilterFields,
   distinctOptions,
   effectiveOpenOnly,
+  fileFilterFields,
   leadFilterFields,
   memberOptions,
 } from './screenFilters';
@@ -166,5 +167,52 @@ describe('effectiveOpenOnly', () => {
     expect(
       effectiveOpenOnly(true, { temp: { kind: 'multiEnum', values: ['HOT'] } }),
     ).toBe(true);
+  });
+});
+
+describe('fileFilterFields', () => {
+  it('offers the type filter only once attachment.fileType is provisioned', () => {
+    expect(fileFilterFields({ hasFileType: true }).map((f) => f.key)).toContain(
+      'type',
+    );
+    expect(
+      fileFilterFields({ hasFileType: false }).map((f) => f.key),
+    ).not.toContain('type');
+  });
+
+  it('filters by type on the server, with "no type" as a null check', () => {
+    const fields = fileFilterFields({ hasFileType: true });
+    const state: FilterState = {
+      type: { kind: 'multiEnum', values: ['CALL_RECORDING', ''] },
+    };
+    expect(buildGraphQLFilter(fields, state)).toEqual({
+      and: [
+        {
+          or: [
+            { fileType: { in: ['CALL_RECORDING'] } },
+            { fileType: { is: 'NULL' } },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('turns a media kind into an extension list on the file composite', () => {
+    const fields = fileFilterFields({ hasFileType: false });
+    const state: FilterState = { kind: { kind: 'multiEnum', values: ['pdf'] } };
+    expect(buildGraphQLFilter(fields, state)).toEqual({
+      and: [{ file: { extension: { in: ['pdf'] } } }],
+    });
+  });
+
+  it('searches the name and bounds the upload date', () => {
+    const fields = fileFilterFields({ hasFileType: false });
+    const state: FilterState = {
+      name: { kind: 'text', text: 'call' },
+      date: { kind: 'dateRange', from: '2026-09-01', to: null },
+    };
+    const filter = buildGraphQLFilter(fields, state) as { and: unknown[] };
+    expect(filter.and[0]).toEqual({ name: { ilike: '%call%' } });
+    expect(filter.and[1]).toMatchObject({ createdAt: { gte: expect.any(String) } });
   });
 });

@@ -33,6 +33,9 @@ export const FileDetailView = ({ fileId }: FileDetailViewProps) => {
   const [fileType, setFileType] = useState('OTHER');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // One refetch for a possibly expired signed URL; a file that is really gone
+  // must not turn into an endless refresh loop.
+  const [urlRetried, setUrlRetried] = useState(false);
 
   // The form mirrors the record once it arrives (and after each refresh).
   useEffect(() => {
@@ -141,7 +144,11 @@ export const FileDetailView = ({ fileId }: FileDetailViewProps) => {
           kind={kind}
           label={label}
           extension={media?.extension ?? null}
-          onError={() => void refresh()}
+          onError={() => {
+            if (urlRetried) return;
+            setUrlRetried(true);
+            void refresh();
+          }}
         />
       </div>
 

@@ -74,15 +74,6 @@ export const AttachmentUploadModal = ({
   const [uploading, setUploading] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
-  // Whether this workspace has attachment.fileType. Until it is provisioned
-  // the picker is hidden and a chosen file uploads straight away, as before.
-  const [canPickType, setCanPickType] = useState(false);
-  useEffect(() => {
-    getAttachmentMetadata()
-      .then((metadata) => setCanPickType(metadata.hasFileType))
-      .catch(() => setCanPickType(false));
-  }, []);
-
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<string>('DOCUMENT');
 
@@ -106,8 +97,15 @@ export const AttachmentUploadModal = ({
     }
   };
 
-  const onDeviceFilePicked = (file: File | undefined) => {
+  // Until attachment.fileType is provisioned there is nothing to pick, and
+  // a chosen file uploads straight away as before. Asked per pick (the probe
+  // is cached) rather than read from state, so a fast click right after the
+  // sheet opens cannot race the probe and skip the picker.
+  const onDeviceFilePicked = async (file: File | undefined) => {
     if (!file) return;
+    const canPickType = await getAttachmentMetadata()
+      .then((metadata) => metadata.hasFileType)
+      .catch(() => false);
     if (!canPickType) {
       void uploadNow(file, null);
       return;
@@ -262,7 +260,7 @@ export const AttachmentUploadModal = ({
                 type="file"
                 style={{ display: 'none' }}
                 onChange={(e) => {
-                  onDeviceFilePicked(e.target.files?.[0]);
+                  void onDeviceFilePicked(e.target.files?.[0]);
                   e.target.value = '';
                 }}
                 disabled={uploading}

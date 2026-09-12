@@ -70,9 +70,12 @@ export const FilePreview = ({
   }
 
   if (failed) {
+    // On WebKit an Ogg/Opus error is the codec, not the file: say so.
     return (
       <div className={`file-preview none${compact ? ' compact' : ''}`}>
-        <span className="muted">{TFILES.fileUnavailable}</span>
+        <span className="muted">
+          {unplayable ? TFILES.unplayableHere : TFILES.fileUnavailable}
+        </span>
         {downloadLink}
       </div>
     );

@@ -14,6 +14,7 @@ import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
 import { toPersianDigits } from './lib/jalali';
+import { disablePushSubscription, ensurePushSubscription } from './lib/push';
 import { navigate, useRoute } from './lib/router';
 import { TFILES } from './lib/fileStrings';
 import { T, T5 } from './lib/strings';
@@ -93,6 +94,9 @@ export const App = () => {
       // screen they land on is already attributed to them.
       startAudit(user);
       setSession({ status: 'ready', user });
+      // Keeps this device's push registration current for sellers who
+      // already granted permission; a no-op for everyone else.
+      void ensurePushSubscription();
     } catch {
       setSession({ status: 'anonymous' });
     }
@@ -180,6 +184,8 @@ export const App = () => {
 
   const handleLogout = () => {
     recordSignOut('user');
+    // Must run before the token goes: the server call needs it.
+    void disablePushSubscription();
     logout();
     invalidateCache();
     setSession({ status: 'anonymous' });

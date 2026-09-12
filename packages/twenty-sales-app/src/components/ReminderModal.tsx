@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { createTaskForLead } from '../api/records';
 import { invalidateCache } from '../lib/cache';
 import { toLocalInputValue } from '../lib/format';
+import { ensurePushSubscription } from '../lib/push';
 import { refreshReminders, requestNotificationPermission } from '../lib/reminderStore';
 import { offsetToRemindAt, shiftRemindAt } from '../lib/reminders';
 import { T, T_REMIND } from '../lib/strings';
@@ -70,6 +71,9 @@ export const ReminderModal = ({ lead, assigneeId, onClose, onSaved }: ReminderMo
       // Ask while the seller's finger is still on "save": a permission prompt
       // tied to an action is granted far more often than one on page load.
       await requestNotificationPermission();
+      // Background delivery for when the app is closed; a server without
+      // push, or a refusal, leaves the in-app bell as the only channel.
+      void ensurePushSubscription();
       await createTaskForLead({
         title: title.trim(),
         status: 'TODO',

@@ -6,6 +6,7 @@ import { AiAgentModule } from 'src/engine/metadata-modules/ai/ai-agent/ai-agent.
 import { AiChatModule } from 'src/engine/metadata-modules/ai/ai-chat/ai-chat.module';
 import { AiGenerateTextModule } from 'src/engine/metadata-modules/ai/ai-generate-text/ai-generate-text.module';
 import { AuditLogModule } from 'src/modules/sales-crm/audit-log/audit-log.module';
+import { PushRemindersModule } from 'src/modules/sales-crm/push-reminders/push-reminders.module';
 import { UsystemsModule } from 'src/modules/sales-crm/usystems/usystems.module';
 import { CallActivityModule } from 'src/modules/sales-crm/call-activity/call-activity.module';
 import { AiWorkspaceStatsModule } from 'src/engine/metadata-modules/ai/ai-workspace-stats/ai-workspace-stats.module';
@@ -51,6 +52,7 @@ import { WorkspaceMetadataVersionModule } from 'src/engine/metadata-modules/work
     AiGenerateTextModule,
     CallActivityModule,
     AuditLogModule,
+    PushRemindersModule,
     UsystemsModule,
     AiWorkspaceStatsModule,
     ApplicationConnectionsModule,

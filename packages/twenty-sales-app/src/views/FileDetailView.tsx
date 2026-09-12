@@ -23,10 +23,11 @@ export const FileDetailView = ({ fileId }: FileDetailViewProps) => {
   const { data: schema } = useCached('attachment-metadata', () =>
     getAttachmentMetadata(),
   );
-  const { data, error, refresh } = useCached(`file:${fileId}`, () =>
-    fetchFile(fileId),
-  );
-  const file: FileRecord | null = data ?? null;
+  // Wrapped so "still loading" (null) and "not found" ({ file: null }) differ.
+  const { data, error, refresh } = useCached(`file:${fileId}`, async () => ({
+    file: await fetchFile(fileId),
+  }));
+  const file: FileRecord | null = data?.file ?? null;
 
   const [name, setName] = useState('');
   const [fileType, setFileType] = useState('OTHER');

@@ -2977,6 +2977,46 @@ table.leads tbody tr:hover {
   color: var(--ink-2);
 }
 
+.jdp-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.jdp-seg {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-2);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.jdp-seg:hover {
+  background: var(--lapis-50);
+}
+
+.jdp-seg.on {
+  background: var(--lapis-600);
+  border-color: var(--lapis-600);
+  color: #fff;
+}
+
+/* the same date in the other calendar, so a switch is never a guess */
+.jdp-alt {
+  margin-inline-start: auto;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .jdp-time input {
   width: auto;
   flex: 0 0 auto;

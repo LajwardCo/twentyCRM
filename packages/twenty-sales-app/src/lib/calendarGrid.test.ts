@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCalendarGrid, groupTasksByDate, todayDateKey } from './calendarGrid';
+import {
+  addGregorianMonths,
+  buildCalendarGrid,
+  buildGregorianCalendarGrid,
+  groupTasksByDate,
+  todayDateKey,
+} from './calendarGrid';
 
 describe('buildCalendarGrid', () => {
   it('produces a whole number of weeks that fully covers the month', () => {
@@ -96,5 +102,39 @@ describe('groupTasksByDate', () => {
 describe('todayDateKey', () => {
   it('returns a yyyy-mm-dd string', () => {
     expect(todayDateKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('buildGregorianCalendarGrid', () => {
+  it('covers the month in whole Saturday-first weeks with consecutive dates', () => {
+    const cells = buildGregorianCalendarGrid(2026, 10, '2026-10-12');
+    expect(cells.length % 7).toBe(0);
+    const inMonth = cells.filter((c) => c.inCurrentMonth);
+    expect(inMonth).toHaveLength(31);
+    expect(inMonth[0].day).toBe(1);
+    expect(inMonth[30].day).toBe(31);
+    // 1 Oct 2026 is a Thursday: Saturday-first columns put it at index 5
+    expect(cells.findIndex((c) => c.inCurrentMonth)).toBe(5);
+    for (let i = 1; i < cells.length; i++) {
+      const prev = new Date(cells[i - 1].dateIso).getTime();
+      expect(new Date(cells[i].dateIso).getTime() - prev).toBe(86_400_000);
+    }
+    expect(cells.filter((c) => c.isToday).map((c) => c.dateIso)).toEqual(['2026-10-12']);
+  });
+
+  it('carries the Jalali coordinates of every cell, so the two grids agree on a day', () => {
+    const g = buildGregorianCalendarGrid(2026, 10, '2000-01-01').find((c) => c.dateIso === '2026-10-12')!;
+    const j = buildCalendarGrid(g.jy, g.jm, '2000-01-01').find((c) => c.dateIso === '2026-10-12')!;
+    expect(j.key).toBe(g.key);
+    expect(j.day).toBe(j.jd);
+    expect(g.day).toBe(12);
+  });
+
+  it('handles February in a leap year and December rollover', () => {
+    expect(buildGregorianCalendarGrid(2028, 2, '2000-01-01').filter((c) => c.inCurrentMonth)).toHaveLength(29);
+    const dec = buildGregorianCalendarGrid(2026, 12, '2000-01-01');
+    expect(dec[dec.length - 1].dateIso.startsWith('2027-01')).toBe(true);
+    expect(addGregorianMonths(2026, 12, 1)).toEqual({ gy: 2027, gm: 1 });
+    expect(addGregorianMonths(2026, 1, -1)).toEqual({ gy: 2025, gm: 12 });
   });
 });

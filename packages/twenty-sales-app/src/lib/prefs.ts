@@ -15,6 +15,9 @@ export type Prefs = {
   // than as objects: it is the same string the URL carries, and a stale shape
   // from an older build decodes to "no filter" instead of throwing.
   filters: Record<string, string>;
+  // Which calendar the date pickers draw. A seller who thinks in Gregorian
+  // should not have to flip every picker they open.
+  calendar: 'jalali' | 'gregorian';
 };
 
 const DEFAULTS: Prefs = {
@@ -25,6 +28,7 @@ const DEFAULTS: Prefs = {
   leadsSort: 'created',
   deepSearch: false,
   filters: {},
+  calendar: 'jalali',
 };
 
 export const loadPrefs = (): Prefs => {

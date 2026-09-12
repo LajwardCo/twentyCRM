@@ -1,6 +1,7 @@
 import { type CurrentUser } from '../api/auth';
 import { canSeeNavKey } from '../lib/access';
 import { TAUDIT } from '../lib/auditStrings';
+import { TFILES } from '../lib/fileStrings';
 import { T, T2, T3, T4, T7, T13 } from '../lib/strings';
 import {
   IconCalendar,
@@ -11,6 +12,7 @@ import {
   IconFlame,
   IconLeads,
   IconPackage,
+  IconPaperclip,
   IconShield,
   IconTasks,
 } from './icons';
@@ -28,6 +30,7 @@ export const NAV: readonly NavItem[] = [
   { key: 'today', label: T.tabToday, icon: IconDashboard },
   { key: 'calendar', label: T2.calendar, icon: IconCalendar },
   { key: 'tasks', label: 'کارها', icon: IconTasks },
+  { key: 'files', label: TFILES.nav, icon: IconPaperclip },
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'contacts', label: T7.contacts, icon: IconContacts },
   { key: 'reports', label: T2.reports, icon: IconChart },

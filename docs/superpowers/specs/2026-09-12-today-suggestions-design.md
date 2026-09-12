@@ -36,7 +36,7 @@ work even when the AI is slow, rate-limited or down.
 | `src/components/TodaySuggestionsCard.tsx` | **new** — the card |
 | `src/views/TodayView.tsx` | import + one JSX line + pass data |
 | `src/styles.css` | appended block `/* ---- today suggestions ---- */` |
-| `src/lib/strings.ts` | new keys under a `T_SUGGEST` object (own block, appended) |
+| (strings) | card copy lives in the component: `strings.ts`'s tail is where every feature appends |
 
 `records.ts` is not modified. Another agent is editing lead/catalog/partner
 screens and `styles.css`; all new code lives in new files and appended blocks
@@ -85,7 +85,7 @@ Additive scores; the highest single reason supplies `why` and `kind`:
 
 | reason | score | kind | why |
 |---|---|---|---|
-| open task on this lead is overdue | 50 | task | «کار عقب‌مانده دارد» (href → that task) |
+| open task on this lead is overdue | 60 | task | «کار عقب‌مانده دارد» (href → that task) |
 | HOT with no open task | 40 | call | «لید داغ بدون قدم بعدی» |
 | WARM with no open task | 25 | call | «لید گرم بدون قدم بعدی» |
 | stage ∈ {CONTRACT_SENT, SIGNED_AWAITING_PAYMENT} and stage age ≥ 3d and no open task | 35 | contract | «قرارداد ارسال شده، پیگیری نشده» / «امضا شده، پرداخت پیگیری نشده» |

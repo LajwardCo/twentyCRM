@@ -18,6 +18,7 @@ import {
   IconMoney,
   IconTasks,
 } from '../components/icons';
+import { TodaySuggestionsCard } from '../components/TodaySuggestionsCard';
 import {
   endOfToday,
   formatMoney,
@@ -320,6 +321,7 @@ export const TodayView = ({ user }: TodayViewProps) => {
       <div className="dash-grid">
         <div className="stack">
           <RemindersCard />
+          <TodaySuggestionsCard user={user} leads={leads} openTasks={tasks} />
           <div className="card anim d2">
             <div
               className="card-pad"

@@ -4542,7 +4542,7 @@ table.leads tbody tr:hover {
 }
 .file-preview.pdf iframe {
   width: 100%;
-  height: 70dvh;
+  height: 55dvh;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: #fff;

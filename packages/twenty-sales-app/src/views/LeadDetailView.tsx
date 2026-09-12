@@ -39,6 +39,7 @@ import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadOffersCard } from '../components/LeadOffersCard';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
+import { LeadSalesOrderCard } from '../components/LeadSalesOrderCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
 import { AddContactModal } from '../components/AddContactModal';
@@ -1033,6 +1034,20 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
           {/* pricing: deal products + quotations */}
           {showMoney && <PricingCard lead={lead} />}
+
+          {/* The formal, numbered offer issued into Usystems Core, with the
+              date until which it stands. */}
+          {showMoney && (
+            <LeadSalesOrderCard
+              leadId={leadId}
+              leadName={lead.name}
+              companyId={lead.company?.id ?? null}
+              companyName={lead.company?.name ?? null}
+              contactPhone={phone}
+              contactEmail={email}
+              city={null}
+            />
+          )}
 
           {/* What the customer pays after the deal closes, and the reviewed
               conversion that creates it from the won lead's lines. */}

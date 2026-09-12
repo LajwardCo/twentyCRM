@@ -1169,3 +1169,17 @@ export const T_REMIND = {
   pushBlocked: 'اعلان‌ها در مرورگر مسدود شده‌اند؛ از تنظیمات مرورگر اجازه دهید.',
   pushUnsupported: 'این مرورگر یا سرور از اعلان پس‌زمینه پشتیبانی نمی‌کند؛ یادآوری‌ها فقط داخل برنامه نمایش داده می‌شوند.',
 };
+
+// --- the Deal card: products + offers + sales order under one roof ---
+export const T19 = {
+  dealSection: 'معامله',
+  tabProducts: 'محصولات',
+  tabOffers: 'پیشنهادها',
+  tabOrder: 'سفارش فروش',
+  stripLines: 'جمع اقلام',
+  stripAgreed: 'قیمت توافق‌شده',
+  stripOpenOffers: 'پیشنهاد باز',
+  stripOrder: 'سفارش فروش',
+  stripValidUntil: 'معتبر تا',
+  stripExpired: 'منقضی',
+};

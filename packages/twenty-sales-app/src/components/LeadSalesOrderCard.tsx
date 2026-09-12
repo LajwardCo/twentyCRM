@@ -38,6 +38,12 @@ type Props = {
   contactPhone: string | null;
   contactEmail: string | null;
   city: string | null;
+  // Inside the Deal card: no outer card or title, the host draws those.
+  embedded?: boolean;
+  // The host hides the tab when the server is not connected or the instance
+  // is not provisioned, instead of the component hiding itself.
+  onSupported?: (supported: boolean) => void;
+  onLinkChange?: (link: LeadUsystemsLink | null) => void;
 };
 
 const isPast = (isoDate: string | null): boolean =>
@@ -51,6 +57,9 @@ export const LeadSalesOrderCard = ({
   contactPhone,
   contactEmail,
   city,
+  embedded = false,
+  onSupported,
+  onLinkChange,
 }: Props) => {
   const { data: pricing } = useCached(`pricing:${leadId}`, () => fetchLeadPricing(leadId));
   const dealLines: DealProductLine[] = pricing?.dealProducts ?? [];
@@ -73,9 +82,14 @@ export const LeadSalesOrderCard = ({
       setConfigured(status.configured);
       setLink(leadLink === null ? 'unsupported' : leadLink);
       setLinkedContactId(contactId);
+      const ok = status.configured && leadLink !== null;
+      onSupported?.(ok);
+      onLinkChange?.(ok ? leadLink : null);
     } catch {
       setConfigured(false);
+      onSupported?.(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId, companyId]);
 
   useEffect(() => {
@@ -106,6 +120,7 @@ export const LeadSalesOrderCard = ({
       setError(T18.linkSaveFailed);
       setLink(next);
     }
+    onLinkChange?.(next);
     if (order.id) await print(order.id);
   };
 
@@ -129,9 +144,9 @@ export const LeadSalesOrderCard = ({
     }
   };
 
-  return (
-    <div className="card card-pad anim d3" data-testid="lead-sales-order-card">
-      <h3>{T18.salesOrderSection}</h3>
+  const body = (
+    <>
+      {!embedded && <h3>{T18.salesOrderSection}</h3>}
       <div className="sub">{T18.salesOrderHint}</div>
 
       {notice !== null && (
@@ -194,6 +209,14 @@ export const LeadSalesOrderCard = ({
           onIssued={onIssued}
         />
       )}
+    </>
+  );
+
+  return embedded ? (
+    <div data-testid="lead-sales-order-card">{body}</div>
+  ) : (
+    <div className="card card-pad anim d3" data-testid="lead-sales-order-card">
+      {body}
     </div>
   );
 };

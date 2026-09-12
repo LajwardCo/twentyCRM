@@ -3,11 +3,12 @@ import { useEffect } from 'react';
 import { type CurrentUser } from '../api/auth';
 import logoSquare from '../assets/usystems-square.png';
 import { navigate, useRoute } from '../lib/router';
-import { T } from '../lib/strings';
+import { T, T_REMIND } from '../lib/strings';
 import {
   IconLogout,
   IconMoon,
   IconPlus,
+  IconBell,
   IconSearch,
   IconSun,
   IconX,
@@ -21,6 +22,9 @@ type MobileMenuProps = {
   onLogout: () => void;
   onToggleTheme: () => void;
   onOpenPalette: () => void;
+  // null = reminders not available on this server (no bell shown)
+  reminderCount: number | null;
+  onOpenReminders: () => void;
 };
 
 // Full-screen navigation sheet behind the mobile bar's "منو" button. It also
@@ -33,6 +37,8 @@ export const MobileMenu = ({
   onLogout,
   onToggleTheme,
   onOpenPalette,
+  reminderCount,
+  onOpenReminders,
 }: MobileMenuProps) => {
   const route = useRoute();
   const active = activeNavKey(route.parts);
@@ -103,6 +109,19 @@ export const MobileMenu = ({
             {theme === 'dark' ? <IconSun size={17} /> : <IconMoon size={17} />}
             {theme === 'dark' ? 'حالت روشن' : 'حالت تاریک'}
           </button>
+          {reminderCount !== null && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenReminders();
+              }}
+              style={{ position: 'relative' }}
+            >
+              <IconBell size={17} />
+              {T_REMIND.reminders}
+              {reminderCount > 0 && <span className="rem-badge">{reminderCount}</span>}
+            </button>
+          )}
         </div>
       </div>
 

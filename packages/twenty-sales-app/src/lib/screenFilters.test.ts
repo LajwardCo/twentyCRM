@@ -197,11 +197,23 @@ describe('fileFilterFields', () => {
     });
   });
 
-  it('turns a media kind into an extension list on the file composite', () => {
+  it('matches a media kind against the jsonb text of the file composite', () => {
+    // FILES fields only accept RawJsonFilter (is/like) and Postgres prints
+    // jsonb as `"extension": ".pdf"`; the API path stores the dot, the QR
+    // upload path does not, and only `like` (case-sensitive) is available.
     const fields = fileFilterFields({ hasFileType: false });
     const state: FilterState = { kind: { kind: 'multiEnum', values: ['pdf'] } };
     expect(buildGraphQLFilter(fields, state)).toEqual({
-      and: [{ file: { extension: { in: ['pdf'] } } }],
+      and: [
+        {
+          or: [
+            { file: { like: '%"extension": ".pdf"%' } },
+            { file: { like: '%"extension": "pdf"%' } },
+            { file: { like: '%"extension": ".PDF"%' } },
+            { file: { like: '%"extension": "PDF"%' } },
+          ],
+        },
+      ],
     });
   });
 

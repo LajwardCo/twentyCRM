@@ -474,23 +474,28 @@ export const fileFilterFields = (schema: {
       { value: 'image', label: TFILES.kindImage },
       { value: 'pdf', label: TFILES.kindPdf },
     ],
-    // The FILES composite exposes its extension column to filters; a kind is
-    // just the union of its extensions.
-    buildServerFilter: (value) =>
-      value.kind === 'multiEnum'
-        ? {
-            file: {
-              extension: {
-                in: value.values.flatMap(
-                  (kind) =>
-                    EXTENSIONS_BY_KIND[
-                      kind as keyof typeof EXTENSIONS_BY_KIND
-                    ] ?? [],
-                ),
-              },
-            },
-          }
-        : undefined,
+    // A FILES field only takes RawJsonFilter (is/like), evaluated as
+    // `file::text LIKE`, so a kind becomes an OR over the exact
+    // `"extension": "<ext>"` fragments Postgres prints for jsonb. Both the
+    // dotted form (path.extname, API uploads, case kept) and the bare
+    // lowercase form (QR uploads) exist in the data, and `like` is
+    // case-sensitive, hence four patterns per extension.
+    buildServerFilter: (value) => {
+      if (value.kind !== 'multiEnum') return undefined;
+      const patterns = value.values
+        .flatMap(
+          (kind) =>
+            EXTENSIONS_BY_KIND[kind as keyof typeof EXTENSIONS_BY_KIND] ?? [],
+        )
+        .flatMap((extension) => [
+          `.${extension}`,
+          extension,
+          `.${extension.toUpperCase()}`,
+          extension.toUpperCase(),
+        ])
+        .map((stored) => ({ file: { like: `%"extension": "${stored}"%` } }));
+      return patterns.length > 0 ? { or: patterns } : undefined;
+    },
   },
   {
     key: 'name',

@@ -61,3 +61,6 @@ screenshots/
 !**/public/screenshots/
 !**/assets/screenshots/
 .superpowers/
+
+# local git worktrees (agents build features here)
+.worktrees/

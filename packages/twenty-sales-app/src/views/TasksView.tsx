@@ -79,6 +79,7 @@ const TYPE_FILTERS: (TaskType | 'ALL')[] = [
   'MEETING',
   'DEMO',
   'VISIT',
+  'REMINDER',
   'OTHER',
 ];
 

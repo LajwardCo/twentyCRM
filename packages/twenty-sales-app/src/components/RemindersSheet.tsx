@@ -1,6 +1,10 @@
+import { useEffect, useState } from 'react';
+
+import { ensurePushSubscription, pushPermissionStatus, type PushStatus } from '../lib/push';
 import {
   completeReminderOptimistic,
   dismissReminderOptimistic,
+  requestNotificationPermission,
   snoozeReminderOptimistic,
   useReminders,
 } from '../lib/reminderStore';
@@ -17,6 +21,54 @@ type RemindersSheetProps = {
 };
 
 // The bell's sheet: the same rows as the Today card, reachable from any page.
+// One line of push status under the list. "off" is the only state with an
+// action: asking permission must be a tap, never a page load.
+const PushStatusRow = () => {
+  const [status, setStatus] = useState<PushStatus>(() => pushPermissionStatus());
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (status !== 'on') return;
+    let cancelled = false;
+    void ensurePushSubscription().then((result) => {
+      if (!cancelled) setStatus(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
+
+  const enable = async () => {
+    setBusy(true);
+    try {
+      await requestNotificationPermission();
+      setStatus(await ensurePushSubscription());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const message =
+    status === 'on'
+      ? T_REMIND.pushOn
+      : status === 'off'
+        ? T_REMIND.pushOff
+        : status === 'blocked'
+          ? T_REMIND.pushBlocked
+          : T_REMIND.pushUnsupported;
+
+  return (
+    <div className="rem-push-status">
+      <span>{message}</span>
+      {status === 'off' && (
+        <button className="btn soft sm" disabled={busy} onClick={() => void enable()}>
+          {T_REMIND.pushEnable}
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const RemindersSheet = ({ onClose }: RemindersSheetProps) => {
   const { fired, upcomingToday, lastError, loaded } = useReminders();
 
@@ -75,6 +127,8 @@ export const RemindersSheet = ({ onClose }: RemindersSheetProps) => {
           })}
         </div>
       )}
+
+      <PushStatusRow />
 
       <button
         className="btn line sm"

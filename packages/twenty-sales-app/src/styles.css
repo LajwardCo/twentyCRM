@@ -4829,3 +4829,21 @@ table.leads tbody tr:hover {
   font-weight: 650;
   color: var(--ink-2);
 }
+
+.rem-push-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.rem-push-status .btn {
+  flex-shrink: 0;
+}

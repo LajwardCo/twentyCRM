@@ -4627,4 +4627,100 @@ table.leads tbody tr:hover {
   font-weight: 700;
   color: var(--ink-3);
   letter-spacing: 0.2px;
+
+/* ============ today suggestions (TodaySuggestionsCard) ============ */
+
+.suggest-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.suggest-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.suggest-spark {
+  display: inline-flex;
+  color: var(--warm);
+  flex-shrink: 0;
+}
+
+.suggest-refresh {
+  width: 32px;
+  height: 32px;
+}
+
+.suggest-refresh.spinning svg {
+  animation: suggest-spin 0.9s linear infinite;
+}
+
+@keyframes suggest-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.suggest-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 16px 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--lapis-50);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.suggest-note p {
+  margin: 0;
+  flex: 1;
+}
+
+.suggest-note .suggest-spark {
+  margin-top: 4px;
+}
+
+.suggest-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--lapis-100);
+  color: var(--lapis-800);
+}
+
+.suggest-ico.kind-task {
+  background: var(--hot-bg);
+  color: var(--hot);
+}
+
+.suggest-ico.kind-contract {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.suggest-ico.kind-follow_up {
+  background: var(--warm-bg);
+  color: var(--warm);
+}
+
+.suggest-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.suggest-why {
+  font-weight: 650;
+  color: var(--ink-2);
 }

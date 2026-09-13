@@ -35,6 +35,15 @@ describe('renderSalesOrderDocument', () => {
     expect(rendered.title).toBe('سفارش فروش SO-2026-000118');
   });
 
+  it('prints a line\'s details under its name, line breaks kept, and nothing for a bare line', () => {
+    const rendered = renderSalesOrderDocument(doc);
+    expect(rendered.html).toContain(
+      'white-space:pre-line;margin-top:2px;">کاربر × ۲۵ @ ۱٬۲۰۰ ؋ = ۳۰٬۰۰۰ ؋ (سالانه)\nانبار × ۳ @ ۶٬۰۰۰ ؋ = ۱۸٬۰۰۰ ؋ (سالانه)</div>',
+    );
+    // the second item has no details: exactly one details block
+    expect(rendered.html.match(/white-space:pre-line/g)).toHaveLength(1);
+  });
+
   it('shows the expired state when the deadline has passed', () => {
     const expired: PrintDocument = {
       ...doc,

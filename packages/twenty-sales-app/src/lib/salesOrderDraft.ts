@@ -14,6 +14,9 @@ export type DraftProduct = {
   id: string;
   pricingModel: string | null;
   pricingFactors: { name: string; unitPrice: number; billingFrequency?: 'MONTHLY' | 'HOURLY' | 'ANNUAL' }[] | null;
+  baseInstallPrice?: { amountMicros: number | null; currencyCode: string | null } | null;
+  baseAnnualPrice?: { amountMicros: number | null; currencyCode: string | null } | null;
+  priceBook?: Record<string, { install?: number; annual?: number }> | null;
 };
 
 const fromMicros = (micros: number | null | undefined): number =>

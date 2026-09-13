@@ -58,16 +58,48 @@ describe('describeDealLine', () => {
     expect(describeDealLine(line, metricProduct)).toEqual(['کاربر × ۵ @ ۴۰۰ ؋ = ۲٬۰۰۰ ؋ (ماهانه)']);
   });
 
-  it('keeps a fixed-plus-metrics product\'s fixed amounts alongside its metrics', () => {
+  it('names only the fixed part of a fixed-plus-metrics line, from the catalog', () => {
+    // installPrice (16,000) is fixed 15,000 + the metric's 1,000: the metric
+    // line already says 1,000, so "install" must say 15,000, not 16,000.
     const line: DealProductLine = {
       ...base,
+      installPrice: money(16000),
+      annualPrice: money(7000),
       factorQuantities: { کاربر: 2 },
     };
-    expect(describeDealLine(line, { ...metricProduct, pricingModel: 'FIXED_PLUS_METRICS' })).toEqual([
+    const product = {
+      ...metricProduct,
+      pricingModel: 'FIXED_PLUS_METRICS',
+      baseInstallPrice: money(15000),
+      baseAnnualPrice: money(7000),
+    };
+    expect(describeDealLine(line, product)).toEqual([
       'نصب: ۱۵٬۰۰۰ ؋',
       'سالانه: ۷٬۰۰۰ ؋',
       'کاربر × ۲ @ ۵۰۰ ؋ = ۱٬۰۰۰ ؋ (ماهانه)',
     ]);
+  });
+
+  it('prefers the restated fixed amount, then the price book of the line currency', () => {
+    const line: DealProductLine = {
+      ...base,
+      installPrice: money(1200, 'USD'),
+      annualPrice: null,
+      factorQuantities: { کاربر: 2 },
+      priceOverrides: { currencyCode: 'USD', fixedInstall: 180 },
+    };
+    const product = {
+      ...metricProduct,
+      baseInstallPrice: money(15000),
+      priceBook: { USD: { install: 200, annual: 90 } },
+    };
+    // the catalog's ؋ metric rate does not apply to a $ line: quantity only
+    expect(describeDealLine(line, product)).toEqual(['نصب: $۱۸۰', 'سالانه: $۹۰', 'کاربر × ۲ (ماهانه)']);
+  });
+
+  it('says nothing about fixed amounts for a metric-only line with no catalog amount', () => {
+    const line: DealProductLine = { ...base, installPrice: money(1000), annualPrice: null, factorQuantities: { کاربر: 2 } };
+    expect(describeDealLine(line, metricProduct)).toEqual(['کاربر × ۲ @ ۵۰۰ ؋ = ۱٬۰۰۰ ؋ (ماهانه)']);
   });
 
   it('reads the package, tier band and subtotals from the price snapshot', () => {

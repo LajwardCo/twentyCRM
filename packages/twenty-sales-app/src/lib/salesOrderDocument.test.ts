@@ -53,6 +53,17 @@ describe('renderSalesOrderDocument', () => {
     expect(out.html).toBe('<b>Nope</b> X');
   });
 
+  it('keeps a Jalali date whole: the ltr helper isolates right-to-left text as rtl', () => {
+    const rendered = renderSalesOrderDocument(doc);
+    // 2026-10-10 is ۱۸ میزان ۱۴۰۵ -- forcing it ltr splits the day from the year
+    expect(rendered.html).toContain('<span dir="rtl">۱۸ میزان ۱۴۰۵</span>');
+    expect(rendered.html).not.toMatch(/<span dir="ltr">[^<]*میزان/);
+    // codes, phones and amounts stay ltr islands
+    expect(rendered.html).toContain('<span dir="ltr">SO-2026-000118</span>');
+    expect(rendered.html).toContain('<span dir="ltr">+93 744 998 877</span>');
+    expect(rendered.html).toContain('<span dir="ltr">AFN55,000</span>');
+  });
+
   it('strips scripts and keeps inline svg', () => {
     const out = renderTemplateHtml('<div><script>alert(1)</script>{{barcode "A1"}}</div>', {});
     expect(out.html).not.toContain('<script');
@@ -74,5 +85,15 @@ describe('buildPageCss / buildPrintableHtml', () => {
     expect(html).toContain('<html lang="fa" dir="rtl">');
     expect(html).toContain('<title>سفارش فروش SO-2026-000118</title>');
     expect(html).toContain('@page');
+  });
+});
+
+describe('ltr helper', () => {
+  it('keeps digit-only and latin values ltr, and turns letters rtl', () => {
+    const render = (value: string) => renderTemplateHtml('{{ltr v}}', { v: value }).html;
+    expect(render('۱۴۰۵')).toBe('<span dir="ltr">۱۴۰۵</span>');
+    expect(render('1405/07/20')).toBe('<span dir="ltr">1405/07/20</span>');
+    expect(render('۲۰ میزان ۱۴۰۵')).toBe('<span dir="rtl">۲۰ میزان ۱۴۰۵</span>');
+    expect(render('')).toBe('<span dir="ltr"></span>');
   });
 });

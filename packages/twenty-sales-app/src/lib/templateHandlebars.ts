@@ -38,6 +38,9 @@ export interface RenderTemplateOptions {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+// Letters only: Persian digits are Arabic-script too but do not make a run rtl.
+const RTL_LETTER = /(?![\u0660-\u0669\u06f0-\u06f9])[\p{Script=Arabic}\p{Script=Hebrew}]/u;
+
 // Module-level so the helper closure sees the labels of the render in flight.
 let currentLabels: Record<string, string> = {};
 
@@ -126,10 +129,16 @@ const registerHelpers = () => {
       .replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x0660));
   });
 
+  // Studio bodies wrap codes, phones and amounts in {{ltr}} -- and, because
+  // Usystems' own jalali helper emits a numeric 1405/07/20, dates too. Ours
+  // spells the month (۲۰ میزان ۱۴۰۵), and forcing that into an ltr island
+  // splits the day from the year. Text carrying right-to-left letters is
+  // isolated as rtl instead; everything else stays the ltr island it asked for.
   Handlebars.registerHelper('ltr', (value: unknown) => {
     const text = value === null || value === undefined ? '' : String(value);
+    const dir = RTL_LETTER.test(text) ? 'rtl' : 'ltr';
     return new Handlebars.SafeString(
-      `<span dir="ltr">${Handlebars.escapeExpression(text)}</span>`,
+      `<span dir="${dir}">${Handlebars.escapeExpression(text)}</span>`,
     );
   });
 

@@ -72,7 +72,10 @@ describe('UsystemsController', () => {
         lines: [{ description: 'x', quantity: 1, unitPrice: 1 }],
       }),
     ).rejects.toMatchObject(
-      new HttpException({ message: 'bad', details: { items: ['required'] } }, 400),
+      new HttpException(
+        { message: 'bad', details: { items: ['required'] } },
+        400,
+      ),
     );
   });
 });

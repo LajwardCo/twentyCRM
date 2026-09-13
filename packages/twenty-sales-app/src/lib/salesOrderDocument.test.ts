@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type PrintDocument } from '../api/usystems';
 import fixture from './__fixtures__/salesOrderPrintDocument.json';
-import { buildPageCss, buildPrintableHtml, renderSalesOrderDocument } from './salesOrderDocument';
+import { buildPageCss, buildPrintableHtml, pageBox, renderSalesOrderDocument } from './salesOrderDocument';
 import { renderTemplateHtml } from './templateHandlebars';
 
 // The fixture is the REAL seeded Sales Order body (localized to fa, as a
@@ -95,5 +95,19 @@ describe('ltr helper', () => {
     expect(render('1405/07/20')).toBe('<span dir="ltr">1405/07/20</span>');
     expect(render('۲۰ میزان ۱۴۰۵')).toBe('<span dir="rtl">۲۰ میزان ۱۴۰۵</span>');
     expect(render('')).toBe('<span dir="ltr"></span>');
+  });
+});
+
+describe('pageBox', () => {
+  it('defaults to A4 portrait in mm', () => {
+    expect(pageBox(undefined)).toEqual({ widthMm: 210, heightMm: 297, orientation: 'portrait' });
+  });
+
+  it('converts inches and swaps the sides for landscape', () => {
+    expect(pageBox({ width: 8.5, height: 11, unit: 'in', orientation: 'landscape' })).toEqual({
+      widthMm: 279.4,
+      heightMm: 215.9,
+      orientation: 'landscape',
+    });
   });
 });

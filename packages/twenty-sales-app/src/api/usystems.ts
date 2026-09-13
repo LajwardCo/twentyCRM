@@ -30,6 +30,9 @@ export type SalesOrderLineInput = {
   quantity: number;
   unitPrice: number;
   unit?: string;
+  // What the line is made of (metrics, install/annual split, package,
+  // discount), printed under the item name. Newline-separated.
+  details?: string;
 };
 
 export type IssueSalesOrderInput = {
@@ -188,10 +191,25 @@ export const fetchSalesOrderPrintDocument = (
 
 // ---------- the link fields on CRM records (provision-usystems-link.mjs) ----------
 
+// One issued order, as kept on the lead. Amounts are Core's decimal strings.
+export type SalesOrderHistoryEntry = {
+  id: string | null;
+  code: string;
+  documentDate: string | null;
+  validUntil: string | null;
+  total: string | null;
+  currencyCode: string | null;
+  issuedAt: string | null;
+};
+
 export type LeadUsystemsLink = {
+  // The latest order, again: CRM table views and reports read these three.
   usystemsSalesOrderCode: string | null;
   usystemsSalesOrderId: string | null;
   usystemsSalesOrderValidUntil: string | null;
+  // Every order issued for this lead, oldest first. null on an instance that
+  // provisioned the link before the history field existed.
+  usystemsSalesOrders: SalesOrderHistoryEntry[] | null;
 };
 
 const isUnsupported = (error: unknown): boolean =>
@@ -200,21 +218,42 @@ const isUnsupported = (error: unknown): boolean =>
     error.message,
   );
 
+const HISTORY_FIELD = 'usystemsSalesOrders';
+
+const isMissingHistoryField = (error: unknown): boolean =>
+  error instanceof Error &&
+  new RegExp(
+    `(Cannot query field|is not defined by type).*"${HISTORY_FIELD}"|"${HISTORY_FIELD}".*is not defined by type`,
+    'i',
+  ).test(error.message);
+
 /** null when the instance hasn't run the provisioning script. */
 export const fetchLeadUsystemsLink = async (
   opportunityId: string,
 ): Promise<LeadUsystemsLink | null> => {
-  try {
+  const run = async (withHistory: boolean) => {
     const data = await coreQuery<{ opportunity: LeadUsystemsLink }>(
       `query LeadUsystemsLink($id: UUID!) {
         opportunity(filter: { id: { eq: $id } }) {
           usystemsSalesOrderCode usystemsSalesOrderId usystemsSalesOrderValidUntil
+          ${withHistory ? HISTORY_FIELD : ''}
         }
       }`,
       { id: opportunityId },
     );
-    return data.opportunity;
+    return { ...data.opportunity, usystemsSalesOrders: data.opportunity.usystemsSalesOrders ?? null };
+  };
+  try {
+    return await run(true);
   } catch (error) {
+    // The history field arrived in a later provisioning run than the other
+    // three; an instance that has only those still gets its latest order.
+    if (isMissingHistoryField(error)) {
+      return run(false).catch((inner: unknown) => {
+        if (isUnsupported(inner)) return null;
+        throw inner;
+      });
+    }
     if (isUnsupported(error)) return null;
     throw error;
   }
@@ -248,13 +287,24 @@ export const saveCompanyUsystemsContactId = (
     { id: companyId, data: { usystemsContactId } },
   );
 
-export const saveLeadUsystemsLink = (
+export const saveLeadUsystemsLink = async (
   opportunityId: string,
   link: LeadUsystemsLink,
-): Promise<unknown> =>
-  coreQuery(
-    `mutation LinkLeadToUsystems($id: UUID!, $data: OpportunityUpdateInput!) {
-      updateOpportunity(id: $id, data: $data) { id }
-    }`,
-    { id: opportunityId, data: link },
-  );
+): Promise<unknown> => {
+  const save = (data: Partial<LeadUsystemsLink>) =>
+    coreQuery(
+      `mutation LinkLeadToUsystems($id: UUID!, $data: OpportunityUpdateInput!) {
+        updateOpportunity(id: $id, data: $data) { id }
+      }`,
+      { id: opportunityId, data },
+    );
+  try {
+    return await save(link);
+  } catch (error) {
+    // Same instance as above: keep the latest fields current even where the
+    // history cannot be stored yet.
+    if (!isMissingHistoryField(error)) throw error;
+    const { usystemsSalesOrders: _unsupported, ...latestOnly } = link;
+    return save(latestOnly);
+  }
+};

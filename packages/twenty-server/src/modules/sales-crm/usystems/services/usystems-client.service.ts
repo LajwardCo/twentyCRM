@@ -47,6 +47,7 @@ export type UsystemsSalesOrderLine = {
   quantity: number | string;
   unit_price: number | string;
   unit_of_measure?: string;
+  details?: string;
 };
 
 export type IssueSalesOrderInput = {

@@ -74,7 +74,14 @@ describe('UsystemsClientService', () => {
     const result = await service.issueSalesOrder({
       contact_id: 7,
       valid_until: '2026-10-10',
-      items: [{ description: 'Package', quantity: 1, unit_price: '10' }],
+      items: [
+        {
+          description: 'Package',
+          quantity: 1,
+          unit_price: '10',
+          details: 'کاربر × ۵\nنصب: ۱۵٬۰۰۰ ؋',
+        },
+      ],
     });
 
     const [url, init] = fetchMock.mock.calls[0];
@@ -86,7 +93,14 @@ describe('UsystemsClientService', () => {
     expect(JSON.parse(init.body)).toMatchObject({
       contact_id: 7,
       valid_until: '2026-10-10',
-      items: [{ description: 'Package', quantity: 1, unit_price: '10' }],
+      items: [
+        {
+          description: 'Package',
+          quantity: 1,
+          unit_price: '10',
+          details: 'کاربر × ۵\nنصب: ۱۵٬۰۰۰ ؋',
+        },
+      ],
     });
     expect(result.sales_order.code).toBe('SO-1');
   });

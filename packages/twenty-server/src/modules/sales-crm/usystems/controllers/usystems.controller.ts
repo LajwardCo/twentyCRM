@@ -99,6 +99,7 @@ export class UsystemsController {
           quantity: line.quantity,
           unit_price: line.unitPrice,
           unit_of_measure: line.unit,
+          ...(line.details ? { details: line.details } : {}),
         })),
       }),
     );

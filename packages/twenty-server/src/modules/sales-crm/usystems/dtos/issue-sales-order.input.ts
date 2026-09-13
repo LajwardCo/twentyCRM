@@ -40,6 +40,8 @@ export class IssueSalesOrderInput {
     quantity: number | string;
     unitPrice: number | string;
     unit?: string;
+    // What the line is made of, printed under the item name. Free text.
+    details?: string;
   }[];
 }
 

@@ -18,6 +18,7 @@ import {
   defaultValidUntil,
   type DraftLine,
   draftLinesFromDeal,
+  type DraftProduct,
   draftTotal,
   emptyLine,
   today,
@@ -46,6 +47,8 @@ type Props = {
   /** Already-linked Core contact id, if the company was linked before. */
   linkedContactId: string | null;
   dealLines: DealProductLine[];
+  // The catalog, to spell out each line's metrics and rates under the item.
+  products: DraftProduct[];
   onClose: () => void;
   onIssued: (order: IssuedSalesOrder) => void;
 };
@@ -75,6 +78,7 @@ export const IssueSalesOrderModal = ({
   city,
   linkedContactId,
   dealLines,
+  products,
   onClose,
   onIssued,
 }: Props) => {
@@ -87,7 +91,7 @@ export const IssueSalesOrderModal = ({
   const [clientError, setClientError] = useState<string | null>(null);
 
   // --- order ---
-  const [lines, setLines] = useState<DraftLine[]>(() => draftLinesFromDeal(dealLines));
+  const [lines, setLines] = useState<DraftLine[]>(() => draftLinesFromDeal(dealLines, products));
   const [currencies, setCurrencies] = useState<UsystemsCurrency[]>([]);
   const [currencyId, setCurrencyId] = useState<number | null>(null);
   const [documentDate, setDocumentDate] = useState(today());
@@ -281,53 +285,63 @@ export const IssueSalesOrderModal = ({
         <h3 style={{ margin: '16px 0 2px' }}>{T18.linesStep}</h3>
         <div className="sub" style={{ marginBottom: 8 }}>{T18.linesHint}</div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {lines.map((line) => (
-            <div
-              key={line.key}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 64px 110px 64px auto',
-                gap: 6,
-                alignItems: 'center',
-              }}
-            >
-              <input
-                aria-label={T18.lineDescription}
-                placeholder={T18.lineDescription}
-                value={line.description}
-                onChange={(e) => updateLine(line.key, { description: e.target.value })}
-              />
-              <input
-                aria-label={T18.lineQty}
-                type="number"
-                min={0}
-                step="any"
-                value={line.quantity}
-                onChange={(e) => updateLine(line.key, { quantity: Number(e.target.value) })}
-              />
-              <input
-                aria-label={T18.lineUnitPrice}
-                type="number"
-                min={0}
-                step="any"
-                value={line.unitPrice}
-                onChange={(e) => updateLine(line.key, { unitPrice: Number(e.target.value) })}
-              />
-              <input
-                aria-label={T18.lineUnit}
-                placeholder={T18.lineUnit}
-                value={line.unit ?? ''}
-                onChange={(e) => updateLine(line.key, { unit: e.target.value })}
-              />
-              <button
-                type="button"
-                className="btn line sm"
-                aria-label={T18.removeLine}
-                onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
+            <div key={line.key} className="so-line">
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 64px 110px 64px auto',
+                  gap: 6,
+                  alignItems: 'center',
+                }}
               >
-                ×
-              </button>
+                <input
+                  aria-label={T18.lineDescription}
+                  placeholder={T18.lineDescription}
+                  value={line.description}
+                  onChange={(e) => updateLine(line.key, { description: e.target.value })}
+                />
+                <input
+                  aria-label={T18.lineQty}
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={line.quantity}
+                  onChange={(e) => updateLine(line.key, { quantity: Number(e.target.value) })}
+                />
+                <input
+                  aria-label={T18.lineUnitPrice}
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={line.unitPrice}
+                  onChange={(e) => updateLine(line.key, { unitPrice: Number(e.target.value) })}
+                />
+                <input
+                  aria-label={T18.lineUnit}
+                  placeholder={T18.lineUnit}
+                  value={line.unit ?? ''}
+                  onChange={(e) => updateLine(line.key, { unit: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="btn line sm"
+                  aria-label={T18.removeLine}
+                  onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
+                >
+                  ×
+                </button>
+              </div>
+              {/* What the line is made of; printed under the item name. */}
+              <textarea
+                aria-label={T18.lineDetails}
+                placeholder={T18.lineDetailsHint}
+                className="so-line-details"
+                rows={Math.min(6, Math.max(1, line.details.split('\n').length))}
+                value={line.details}
+                onChange={(e) => updateLine(line.key, { details: e.target.value })}
+              />
             </div>
           ))}
         </div>

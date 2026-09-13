@@ -1416,6 +1416,21 @@ const fetchLegacyLeadsMarketers = async (
 
 // ---------- pricing: deal products + quotations ----------
 
+// The server's frozen pricing computation for a line priced from a pricing
+// version (see deal-product-price-calculation.service.ts). Only the parts the
+// UI reads are typed.
+export type DealLinePriceSnapshot = {
+  packageName?: string | null;
+  versionNumber?: number;
+  breakdown?: {
+    factor: string;
+    quantity: number;
+    matchedBand?: { amount: number } | null;
+    subtotal: number;
+    billingFrequency?: 'MONTHLY' | 'HOURLY' | 'ANNUAL';
+  }[];
+};
+
 export type DealProductLine = {
   id: string;
   name: string;
@@ -1425,6 +1440,10 @@ export type DealProductLine = {
   installPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   annualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   product: { id: string; name: string } | null;
+  // Absent on an instance whose provisioning predates each field.
+  factorQuantities?: Record<string, number> | null;
+  priceOverrides?: LinePriceOverridesPayload | null;
+  priceSnapshot?: DealLinePriceSnapshot | null;
 };
 
 export type QuotationRow = {
@@ -1440,8 +1459,11 @@ export type QuotationRow = {
 export const fetchLeadPricing = async (
   opportunityId: string,
 ): Promise<{ dealProducts: DealProductLine[]; quotations: QuotationRow[] }> => {
-  const [dealProducts, quotations] = await Promise.all([
-    coreQuery<{ dealProducts: { edges: { node: DealProductLine }[] } }>(
+  // The pricing detail fields each arrived with their own provisioning
+  // script; an instance missing one is retried without it, and the line
+  // details simply say less. Same pattern as fetchProducts.
+  const runDealProducts = async (optionalFields: string[]) => {
+    const d = await coreQuery<{ dealProducts: { edges: { node: DealProductLine }[] } }>(
       `query LeadDealProducts($oppId: UUID!) {
         dealProducts(filter: { opportunityId: { eq: $oppId } }, first: 50) {
           edges {
@@ -1454,14 +1476,32 @@ export const fetchLeadPricing = async (
               installPrice { amountMicros currencyCode }
               annualPrice { amountMicros currencyCode }
               product { id name }
+              ${optionalFields.join('\n              ')}
             }
           }
         }
       }`,
       { oppId: opportunityId },
-    )
-      .then((d) => d.dealProducts.edges.map((e) => e.node))
-      .catch(() => [] as DealProductLine[]),
+    );
+    return d.dealProducts.edges.map((e) => e.node);
+  };
+  const fetchDealProducts = async (): Promise<DealProductLine[]> => {
+    let groups = [['factorQuantities'], ['priceOverrides'], ['priceSnapshot']];
+    for (;;) {
+      try {
+        return await runDealProducts(groups.flat());
+      } catch (error) {
+        const remaining = groups.filter(
+          (group) => missingProductFieldFromError(error, group) === undefined,
+        );
+        if (remaining.length === groups.length) return [];
+        groups = remaining;
+      }
+    }
+  };
+
+  const [dealProducts, quotations] = await Promise.all([
+    fetchDealProducts(),
     coreQuery<{ quotations: { edges: { node: QuotationRow }[] } }>(
       `query LeadQuotations($oppId: UUID!) {
         quotations(filter: { opportunityId: { eq: $oppId } }, first: 50) {

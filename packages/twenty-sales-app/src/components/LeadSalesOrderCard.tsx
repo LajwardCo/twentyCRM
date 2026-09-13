@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { type DealProductLine, fetchLeadPricing } from '../api/records';
+import { type DealProductLine, fetchLeadPricing, fetchProducts } from '../api/records';
 import {
   fetchCompanyUsystemsContactId,
   fetchLeadUsystemsLink,
@@ -8,24 +8,27 @@ import {
   fetchUsystemsStatus,
   type IssuedSalesOrder,
   type LeadUsystemsLink,
+  type SalesOrderHistoryEntry,
   saveLeadUsystemsLink,
 } from '../api/usystems';
 import { useCached } from '../lib/cache';
+import { formatMoney } from '../lib/format';
 import { formatJalaliDate } from '../lib/jalali';
 import {
   buildPrintableHtml,
+  downloadSalesOrderPdf,
   openPrintWindow,
   renderSalesOrderDocument,
 } from '../lib/salesOrderDocument';
-import { T9, T18 } from '../lib/strings';
+import { orderHistory, withIssuedOrder } from '../lib/salesOrderHistory';
+import { T18 } from '../lib/strings';
 import { IssueSalesOrderModal } from './IssueSalesOrderModal';
 
-// The formal, numbered offer for this lead, issued into Usystems Core.
+// The formal, numbered offers for this lead, issued into Usystems Core.
 //
-// Shows the most recently issued order (the CRM keeps only the latest on the
-// lead; Core is the list of record), whether its deadline has passed, and the
-// two actions: issue one, and print the one that exists through the tenant's
-// Template Studio template.
+// Lists every order the CRM issued for the lead, newest first, with whether
+// its deadline has passed, and the actions: issue another, download one as a
+// PDF, or print it through the tenant's Template Studio template.
 //
 // Hides itself when the server has no Usystems connection configured, and
 // when the instance hasn't run provision-usystems-link.mjs.
@@ -46,8 +49,13 @@ type Props = {
   onLinkChange?: (link: LeadUsystemsLink | null) => void;
 };
 
+type Busy = { id: string; action: 'download' | 'print' } | null;
+
 const isPast = (isoDate: string | null): boolean =>
   Boolean(isoDate) && new Date(`${isoDate}T23:59:59`) < new Date();
+
+const describeError = (err: unknown): string =>
+  `${T18.printFailed} ${err instanceof Error ? err.message : ''}`.trim();
 
 export const LeadSalesOrderCard = ({
   leadId,
@@ -63,12 +71,14 @@ export const LeadSalesOrderCard = ({
 }: Props) => {
   const { data: pricing } = useCached(`pricing:${leadId}`, () => fetchLeadPricing(leadId));
   const dealLines: DealProductLine[] = pricing?.dealProducts ?? [];
+  // Same key the products tab caches under, so this costs no extra request.
+  const { data: products } = useCached('products', fetchProducts);
 
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [link, setLink] = useState<LeadUsystemsLink | null | 'unsupported'>(null);
   const [linkedContactId, setLinkedContactId] = useState<string | null>(null);
   const [issuing, setIssuing] = useState(false);
-  const [printing, setPrinting] = useState(false);
+  const [busy, setBusy] = useState<Busy>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,49 +109,106 @@ export const LeadSalesOrderCard = ({
   if (configured === null || link === null) return null;
   if (link === 'unsupported' || !configured) return null;
 
-  const code = link.usystemsSalesOrderCode;
-  const orderId = link.usystemsSalesOrderId ? Number(link.usystemsSalesOrderId) : null;
-  const validUntil = link.usystemsSalesOrderValidUntil;
-  const expired = isPast(validUntil);
+  const orders = orderHistory(link);
+  const hasOrders = orders.length > 0;
 
   const onIssued = async (order: IssuedSalesOrder) => {
     setIssuing(false);
     setNotice(`${T18.issued}: ${order.code}`);
     setError(null);
-    const next: LeadUsystemsLink = {
-      usystemsSalesOrderCode: order.code,
-      usystemsSalesOrderId: order.id ? String(order.id) : null,
-      usystemsSalesOrderValidUntil: order.validUntil,
-    };
+    const next = withIssuedOrder(link, order);
     try {
       await saveLeadUsystemsLink(leadId, next);
-      setLink(next);
     } catch {
       setError(T18.linkSaveFailed);
-      setLink(next);
     }
+    setLink(next);
     onLinkChange?.(next);
-    if (order.id) await print(order.id);
+    if (order.id) await print(String(order.id));
   };
 
-  const print = async (id: number) => {
-    setPrinting(true);
+  const withDocument = async (
+    id: string,
+    action: 'download' | 'print',
+    run: (doc: Awaited<ReturnType<typeof fetchSalesOrderPrintDocument>>) => Promise<void> | void,
+  ) => {
+    setBusy({ id, action });
     setError(null);
     try {
-      const doc = await fetchSalesOrderPrintDocument(id);
-      const rendered = renderSalesOrderDocument(doc);
-      if (!rendered.ok) {
-        setError(`${T18.printFailed} ${rendered.error ?? ''}`.trim());
-        return;
-      }
-      if (!openPrintWindow(buildPrintableHtml(doc, rendered))) {
-        setError(T18.popupBlocked);
-      }
+      await run(await fetchSalesOrderPrintDocument(Number(id)));
     } catch (err) {
-      setError(`${T18.printFailed} ${err instanceof Error ? err.message : ''}`.trim());
+      setError(describeError(err));
     } finally {
-      setPrinting(false);
+      setBusy(null);
     }
+  };
+
+  const print = (id: string) =>
+    withDocument(id, 'print', (doc) => {
+      const rendered = renderSalesOrderDocument(doc);
+      if (!rendered.ok) throw new Error(rendered.error ?? '');
+      if (!openPrintWindow(buildPrintableHtml(doc, rendered))) setError(T18.popupBlocked);
+    });
+
+  const download = (id: string) =>
+    withDocument(id, 'download', async (doc) => {
+      const rendered = renderSalesOrderDocument(doc);
+      if (!rendered.ok) throw new Error(rendered.error ?? '');
+      await downloadSalesOrderPdf(doc, rendered);
+    });
+
+  const row = (order: SalesOrderHistoryEntry) => {
+    const expired = isPast(order.validUntil);
+    const busyHere = busy !== null && busy.id === order.id;
+    return (
+      <div className="so-row" key={order.code} data-testid="lead-sales-order-row">
+        <div className="so-row-main">
+          <span>
+            <span className="so-row-code num">{order.code}</span>
+            {order.validUntil && (
+              <span className={`due ${expired ? 'over' : 'later'}`} style={{ marginInlineStart: 8 }}>
+                {expired ? T18.expired : T18.validUntil} <bdi>{formatJalaliDate(order.validUntil)}</bdi>
+              </span>
+            )}
+          </span>
+          <span className="so-row-meta">
+            {order.documentDate && (
+              <span>
+                {T18.orderDate}: <bdi className="num">{formatJalaliDate(order.documentDate)}</bdi>
+              </span>
+            )}
+            {order.total && (
+              <span>
+                {T18.orderTotal}:{' '}
+                <b className="num">{formatMoney(Number(order.total) * 1_000_000, order.currencyCode)}</b>
+              </span>
+            )}
+          </span>
+        </div>
+        {order.id && (
+          <div className="so-row-actions">
+            <button
+              type="button"
+              className="btn soft sm"
+              disabled={busy !== null}
+              onClick={() => void download(order.id as string)}
+              data-testid="lead-download-sales-order"
+            >
+              {busyHere && busy?.action === 'download' ? T18.preparing : T18.downloadPdf}
+            </button>
+            <button
+              type="button"
+              className="btn line sm"
+              disabled={busy !== null}
+              onClick={() => void print(order.id as string)}
+              data-testid="lead-print-sales-order"
+            >
+              {busyHere && busy?.action === 'print' ? T18.preparing : T18.printPdf}
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const body = (
@@ -154,21 +221,8 @@ export const LeadSalesOrderCard = ({
       )}
       {error !== null && <div className="error-banner" style={{ marginTop: 8 }}>{error}</div>}
 
-      {code ? (
-        <div className="c-row" style={{ marginTop: 10, alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <span>
-            <span className="t-sub">{T18.latestOrder}: </span>
-            <b className="num">{code}</b>
-            {validUntil && (
-              <span className="t-sub" style={{ marginInlineStart: 8 }}>
-                {T18.validUntil} {formatJalaliDate(validUntil)}
-              </span>
-            )}
-          </span>
-          <span className={`due ${expired ? 'over' : 'later'}`}>
-            {expired ? T18.expired : T18.validUntil}
-          </span>
-        </div>
+      {hasOrders ? (
+        <div className="so-list" data-testid="lead-sales-order-list">{orders.map(row)}</div>
       ) : (
         <div className="empty-state" style={{ marginTop: 8 }}>{T18.noOrderYet}</div>
       )}
@@ -180,19 +234,8 @@ export const LeadSalesOrderCard = ({
           onClick={() => setIssuing(true)}
           data-testid="lead-issue-sales-order"
         >
-          {code ? T18.reissueOrder : T18.issueOrder}
+          {hasOrders ? T18.reissueOrder : T18.issueOrder}
         </button>
-        {orderId !== null && (
-          <button
-            type="button"
-            className="btn line sm"
-            disabled={printing}
-            onClick={() => void print(orderId)}
-            data-testid="lead-print-sales-order"
-          >
-            {printing ? T9.loading : T18.printPdf}
-          </button>
-        )}
       </div>
 
       {issuing && (
@@ -205,6 +248,7 @@ export const LeadSalesOrderCard = ({
           city={city}
           linkedContactId={linkedContactId}
           dealLines={dealLines}
+          products={products ?? []}
           onClose={() => setIssuing(false)}
           onIssued={onIssued}
         />

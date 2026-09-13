@@ -7,11 +7,16 @@
 //                                         issued Sales Order for this lead.
 //   opportunity.usystemsSalesOrderId   — TEXT, its Core id (for re-printing).
 //   opportunity.usystemsSalesOrderValidUntil — DATE, that order's deadline.
+//   opportunity.usystemsSalesOrders    — RAW_JSON, EVERY order issued for the
+//                                         lead, oldest first: [{id, code,
+//                                         documentDate, validUntil, total,
+//                                         currencyCode, issuedAt}].
 //
-// A lead can be issued more than one order over its life; the three
-// opportunity fields hold only the latest, for display on the lead. Usystems
-// Core remains the list of record -- re-issuing overwrites these and leaves the
-// earlier order in Core untouched.
+// A lead can be issued more than one order over its life. The three "latest"
+// fields are what CRM table views and reports read; the history array is what
+// the Sales UI lists. Usystems Core remains the record of truth for the orders
+// themselves. An instance that ran this script before the history field
+// existed keeps working with the latest fields alone until it re-runs it.
 //
 // TEXT rather than NUMBER for the ids so a Core id can never be mistaken for a
 // CRM record id in a filter, and so it round-trips exactly.
@@ -85,6 +90,14 @@ const FIELDS_BY_OBJECT = {
       type: 'DATE',
       icon: 'IconCalendarDue',
       description: 'The deadline on the most recently issued sales order.',
+    },
+    {
+      name: 'usystemsSalesOrders',
+      label: 'Sales Orders',
+      type: 'RAW_JSON',
+      icon: 'IconFileInvoice',
+      description:
+        'Every Usystems sales order issued for this lead, oldest first: [{id, code, documentDate, validUntil, total, currencyCode, issuedAt}]. Maintained by the Sales UI.',
     },
   ],
 };

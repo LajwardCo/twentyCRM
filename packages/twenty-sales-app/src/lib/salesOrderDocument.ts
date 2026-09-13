@@ -120,10 +120,10 @@ export const downloadSalesOrderPdf = async (
   doc: PrintDocument,
   rendered: RenderedDocument,
 ): Promise<void> => {
-  const page = doc.template.page as Page | undefined;
-  const box = pageBox(page);
-  const m = page?.margin ?? {};
-  const unit = page?.unit === 'in' || page?.unit === 'cm' ? page.unit : 'mm';
+  const pageSettings = doc.template.page as Page | undefined;
+  const box = pageBox(pageSettings);
+  const m = pageSettings?.margin ?? {};
+  const unit = pageSettings?.unit === 'in' || pageSettings?.unit === 'cm' ? pageSettings.unit : 'mm';
   const toMm = unit === 'in' ? 25.4 : unit === 'cm' ? 10 : 1;
   const margin: [number, number, number, number] = [
     num(m.top, 12) * toMm,
@@ -132,22 +132,22 @@ export const downloadSalesOrderPdf = async (
     num(m.left, 12) * toMm,
   ];
 
+  // html2canvas honours the opacity of the element it is handed, so the
+  // element that hides the page from the seller must be an ancestor of the
+  // one that is rasterised, not that element itself.
   const host = document.createElement('div');
-  host.setAttribute('dir', rendered.direction);
-  host.setAttribute('lang', rendered.language);
-  host.style.cssText = [
-    'position:fixed',
-    'left:0',
-    'top:0',
-    'z-index:-1',
-    'opacity:0',
-    'pointer-events:none',
+  host.style.cssText = 'position:fixed;left:0;top:0;z-index:-1;opacity:0;pointer-events:none;overflow:hidden';
+  const page = document.createElement('div');
+  page.setAttribute('dir', rendered.direction);
+  page.setAttribute('lang', rendered.language);
+  page.style.cssText = [
     `width:${Math.round((box.widthMm - margin[1] - margin[3]) * PX_PER_MM)}px`,
     'background:#fff',
     `font-family:${DOCUMENT_FONT_STACK}`,
     'color:#0B253F',
   ].join(';');
-  host.innerHTML = rendered.html;
+  page.innerHTML = rendered.html;
+  host.appendChild(page);
   document.body.appendChild(host);
 
   try {
@@ -162,7 +162,7 @@ export const downloadSalesOrderPdf = async (
       jsPDF: { unit: 'mm', format: [box.widthMm, box.heightMm] as [number, number], orientation: box.orientation },
       pagebreak: { mode: ['css', 'legacy'] },
     };
-    await html2pdf().set(options).from(host).save();
+    await html2pdf().set(options).from(page).save();
   } finally {
     host.remove();
   }

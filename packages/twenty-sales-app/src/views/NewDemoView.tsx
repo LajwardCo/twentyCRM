@@ -62,7 +62,7 @@ const previewSubdomain = (raw: string): string => {
     .replace(/-{2,}/g, '-')
     .replace(/^-|-$/g, '');
   if (!base) return '';
-  return base.endsWith('-demo') ? base : `${base}-demo`;
+  return base.endsWith('-crmdemo') ? base : `${base}-crmdemo`;
 };
 
 type CheckState = 'idle' | 'checking' | 'available' | 'taken';

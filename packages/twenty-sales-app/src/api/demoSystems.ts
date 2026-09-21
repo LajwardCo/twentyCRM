@@ -4,7 +4,12 @@ import { loadTokens } from './client';
 // to the Usystems Core partner API with the server-held key. Same bearer-token
 // pattern as api/ai.ts.
 
-export type DemoBusinessType = 'mobile_store' | 'home_appliances' | 'other';
+export type DemoBusinessType =
+  | 'mobile_store'
+  | 'home_appliances'
+  | 'snooker_club'
+  | 'car_rental'
+  | 'other';
 
 export type DemoStatus = {
   id: number;

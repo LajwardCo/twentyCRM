@@ -23,6 +23,8 @@ type BusinessOption = {
 const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: 'mobile_store', label: TDEMO.bizMobile, desc: TDEMO.bizMobileDesc, emoji: '📱' },
   { key: 'home_appliances', label: TDEMO.bizAppliances, desc: TDEMO.bizAppliancesDesc, emoji: '🧺' },
+  { key: 'snooker_club', label: TDEMO.bizSnooker, desc: TDEMO.bizSnookerDesc, emoji: '🎱' },
+  { key: 'car_rental', label: TDEMO.bizCarRental, desc: TDEMO.bizCarRentalDesc, emoji: '🚗' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
 
@@ -30,7 +32,7 @@ const CURRENCIES = ['AFN', 'USD'];
 
 // Business types that ship a rich demo dataset (custom fields, images,
 // storefront, branding, documents) whose pieces the agent can toggle.
-const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store'];
+const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'snooker_club', 'car_rental'];
 const LANGUAGES: { code: string; label: string }[] = [
   { code: 'fa', label: TDEMO.langFa },
   { code: 'en', label: TDEMO.langEn },

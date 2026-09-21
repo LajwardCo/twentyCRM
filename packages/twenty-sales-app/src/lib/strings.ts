@@ -1238,9 +1238,13 @@ export const TDEMO = {
   businessNamePh: 'مثلاً موبایل‌فروشی احمد',
   bizMobile: 'موبایل‌فروشی',
   bizAppliances: 'لوازم خانگی',
+  bizSnooker: 'باشگاه اسنوکر',
+  bizCarRental: 'کرایه موتر',
   bizOther: 'سایر / تجارت عمومی',
   bizMobileDesc: 'گوشی، لوازم جانبی و خدمات تعمیر',
   bizAppliancesDesc: 'یخچال، ماشین لباسشویی و لوازم بزرگ',
+  bizSnookerDesc: 'میزهای ساعتی، بوفه و ماژول رزرو',
+  bizCarRentalDesc: 'کرایه موتر روزانه، افزودنی‌ها و ماژول رزرو',
   bizOtherDesc: 'کاتالوگ عمومی حسابداری و انبار',
 
   // step 2

@@ -25,6 +25,7 @@ import {
   T14,
 } from '../lib/strings';
 import { JalaliDatePicker } from './JalaliDatePicker';
+import { SearchSelect } from './SearchSelect';
 
 // Which competitors this lead is already a customer of.
 //
@@ -142,6 +143,20 @@ export const LeadCompetitorsCard = ({ leadId, leadName }: Props) => {
       .filter((competitor) => !linked.has(competitor.id))
       .sort((a, b) => a.name.localeCompare(b.name, 'fa'));
   }, [competitors, usages, draft?.id]);
+
+  const competitorOptions = useMemo(
+    () =>
+      selectableCompetitors.map((competitor) => ({
+        value: competitor.id,
+        label: competitor.name,
+      })),
+    [selectableCompetitors],
+  );
+
+  const productOptions = useMemo(
+    () => products.map((product) => ({ value: product.id, label: product.name })),
+    [products],
+  );
 
   if (!supported) return null;
 
@@ -353,19 +368,15 @@ export const LeadCompetitorsCard = ({ leadId, leadName }: Props) => {
         >
           <div className="fld">
             <label>{T14.competitorLbl}</label>
-            <select
+            <SearchSelect
               value={draft.input.competitorId}
-              onChange={(e) =>
-                setInput({ competitorId: e.target.value, productId: null })
+              onChange={(value) =>
+                setInput({ competitorId: value, productId: null })
               }
-            >
-              <option value="">{T14.pickCompetitor}</option>
-              {selectableCompetitors.map((competitor) => (
-                <option key={competitor.id} value={competitor.id}>
-                  {competitor.name}
-                </option>
-              ))}
-            </select>
+              options={competitorOptions}
+              emptyLabel={T14.pickCompetitor}
+              ariaLabel={T14.competitorLbl}
+            />
           </div>
 
           <div className="f2">
@@ -426,18 +437,14 @@ export const LeadCompetitorsCard = ({ leadId, leadName }: Props) => {
             </div>
             <div className="fld">
               <label>{T14.competitorProductLbl}</label>
-              <select
+              <SearchSelect
                 value={draft.input.productId ?? ''}
-                onChange={(e) => setInput({ productId: e.target.value || null })}
+                onChange={(value) => setInput({ productId: value || null })}
+                options={productOptions}
+                emptyLabel="—"
                 disabled={products.length === 0}
-              >
-                <option value="">—</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
+                ariaLabel={T14.competitorProductLbl}
+              />
             </div>
           </div>
 

@@ -16,6 +16,7 @@ import {
   type Referrer,
 } from '../api/records';
 import { setLeadPrimaryContact } from '../api/contacts';
+import { fetchMembers, type Member } from '../api/admin';
 import { phoneEntries } from '../lib/phones';
 import {
   fetchDiscountRules,
@@ -50,6 +51,7 @@ import {
   T6,
   T8,
   T13,
+  T15,
   T16,
 } from '../lib/strings';
 import { AddContactModal } from './AddContactModal';
@@ -58,6 +60,7 @@ import { ContactEditModal } from './ContactEditModal';
 import { ContactPhoneLines } from './ContactPhoneLines';
 import { DealLinePricingEditor, lineMetricNames } from './DealLinePricingEditor';
 import { ModalSheet } from './ModalSheet';
+import { PartnerQuickAddModal } from './PartnerQuickAddModal';
 import { SearchSelect } from './SearchSelect';
 import { IconBuilding, IconChevronDown, IconEdit, IconPackage } from './icons';
 
@@ -346,6 +349,8 @@ const EditableMetaRow = ({
   editable,
   searchable = false,
   onSave,
+  onCreate,
+  createLabel,
 }: {
   label: React.ReactNode;
   display: React.ReactNode;
@@ -357,6 +362,10 @@ const EditableMetaRow = ({
   // is quicker to tap through than anything we can draw.
   searchable?: boolean;
   onSave: (value: string) => Promise<void>;
+  // Searchable rows only: the picker's "add new" row. The row drops out of edit
+  // mode when it fires; whoever opens the dialog saves the result.
+  onCreate?: (name: string) => void;
+  createLabel?: string;
 }) => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -396,6 +405,15 @@ const EditableMetaRow = ({
                 emptyLabel={options.find((o) => o.value === '')?.label ?? '—'}
                 disabled={saving}
                 autoFocus
+                onCreate={
+                  onCreate === undefined
+                    ? undefined
+                    : (name) => {
+                        setEditing(false);
+                        onCreate(name);
+                      }
+                }
+                createLabel={createLabel}
               />
             </div>
           ) : (
@@ -438,21 +456,54 @@ type MetaCardProps = {
   lead: LeadSummary;
   referrers?: Referrer[];
   editable?: boolean;
+  // Whether the responsible (owner) row may be reassigned here. Off for
+  // external users, who can neither see the member list nor move a lead.
+  ownerEditable?: boolean;
   onSaveLead?: (patch: Record<string, unknown>) => Promise<void>;
+  // Refetch the partner list after the referrer row creates a new one, so the
+  // picker can show the name it just saved.
+  onReferrersChanged?: () => Promise<void>;
 };
 
 export const MetaCard = ({
   lead,
   referrers = [],
   editable = false,
+  ownerEditable = false,
   onSaveLead,
+  onReferrersChanged,
 }: MetaCardProps) => {
+  // Non-null while the referrer row's "add new" dialog is open.
+  const [newReferrerName, setNewReferrerName] = useState<string | null>(null);
+
+  // The member list only matters when this card may reassign the lead; sellers
+  // reassigning is a legitimate handoff and the server enforces access either
+  // way, so this is gated on the caller's flag rather than an admin check.
+  const { data: members } = useCached(
+    ownerEditable ? 'members' : 'members:skip',
+    ownerEditable ? fetchMembers : () => Promise.resolve([] as Member[]),
+  );
+
   const { data: marketer, refresh: refreshMarketer } = useCached(
     `marketer:${lead.id}`,
     () => fetchLeadMarketer(lead.id),
   );
 
   const canEdit = editable && !!onSaveLead;
+  const canEditOwner = canEdit && ownerEditable;
+
+  // The current owner is always kept in the list even when the fetched page of
+  // members doesn't contain them (bounded query, or a deactivated member), so
+  // the row opens on the real name rather than a blank.
+  const ownerOptions: MetaOption[] = [
+    ...(members ?? []).map((member) => ({
+      value: member.id,
+      label: personName(member),
+    })),
+    ...(lead.owner && !(members ?? []).some((m) => m.id === lead.owner?.id)
+      ? [{ value: lead.owner.id, label: personName(lead.owner) }]
+      : []),
+  ];
 
   const sourceOptions: MetaOption[] = [
     { value: '', label: '—' },
@@ -531,6 +582,15 @@ export const MetaCard = ({
       <h3>{T2.metaSection}</h3>
       <div className="contact-rows">
         <EditableMetaRow
+          label={T15.ownerLbl}
+          display={lead.owner ? personName(lead.owner) : '—'}
+          currentValue={lead.owner?.id ?? ''}
+          options={ownerOptions}
+          editable={canEditOwner}
+          searchable
+          onSave={(value) => onSaveLead!({ ownerId: value || null })}
+        />
+        <EditableMetaRow
           label="منبع لید"
           display={SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}
           currentValue={lead.leadSource ?? ''}
@@ -543,12 +603,13 @@ export const MetaCard = ({
           display={referrerDisplay}
           currentValue={lead.referrer?.id ?? ''}
           options={referrerOptions}
-          // Editable whenever there is something to choose — clearing an
-          // existing referrer counts, so an empty partner list no longer makes
-          // the row silently read-only.
-          editable={canEdit && referrerOptions.length > 1}
+          // Always editable when the lead is: even with an empty partner list
+          // the picker can create the referrer it needs.
+          editable={canEdit}
           searchable
           onSave={(value) => onSaveLead!({ referrerId: value || null })}
+          onCreate={canEdit ? setNewReferrerName : undefined}
+          createLabel={T13.addReferrerInline}
         />
         <EditableMetaRow
           label={T2.marketerLbl}
@@ -576,13 +637,33 @@ export const MetaCard = ({
           <b className="num">{formatJalaliDate(lead.createdAt)}</b>
         </div>
       </div>
+      {newReferrerName !== null && (
+        <PartnerQuickAddModal
+          initialName={newReferrerName}
+          defaultType="OTHER"
+          existingNames={referrers.map((referrer) => referrer.name)}
+          onCancel={() => setNewReferrerName(null)}
+          onCreated={async (partner) => {
+            setNewReferrerName(null);
+            await onSaveLead!({ referrerId: partner.id });
+            await onReferrersChanged?.();
+          }}
+        />
+      )}
     </div>
   );
 };
 
 // ---------- pricing: deal products + quotations + assign product ----------
 
-export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
+export const PricingCard = ({
+  lead,
+  embedded = false,
+}: {
+  lead: LeadSummary;
+  // Inside the Deal card: no outer card or title, the host draws those.
+  embedded?: boolean;
+}) => {
   const [showAdd, setShowAdd] = useState(false);
   const [draft, setDraft] = useState<DealLineDraft>(emptyDealLineDraft);
   const [busy, setBusy] = useState(false);
@@ -698,13 +779,15 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
     {},
   );
 
-  return (
-    <div className="card card-pad anim">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <IconPackage size={16} />
-          {T2.pricingSection}
-        </h3>
+  const body = (
+    <>
+      <div style={{ display: 'flex', justifyContent: embedded ? 'flex-end' : 'space-between', alignItems: 'center' }}>
+        {!embedded && (
+          <h3 style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <IconPackage size={16} />
+            {T2.pricingSection}
+          </h3>
+        )}
         <button className="btn soft sm" onClick={() => setShowAdd((v) => !v)}>
           ＋ {T2.addProduct}
         </button>
@@ -856,6 +939,8 @@ export const PricingCard = ({ lead }: { lead: LeadSummary }) => {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
+
+  return embedded ? body : <div className="card card-pad anim">{body}</div>;
 };

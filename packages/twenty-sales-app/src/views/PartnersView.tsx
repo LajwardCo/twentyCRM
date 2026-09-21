@@ -12,6 +12,7 @@ import {
   updatePartner,
 } from '../api/partners';
 import { toPersianDigits } from '../lib/jalali';
+import { parseDecimalInput } from '../lib/numberInput';
 import { PARTNER_TYPE_LABELS, T9, T13 } from '../lib/strings';
 
 // Managing marketers, referrers and partners.
@@ -102,12 +103,10 @@ export const PartnersView = () => {
       return;
     }
 
-    const parsed = Number(commissionInput);
     const input: PartnerInput = {
       name,
       partnerType: draft.partnerType,
-      commissionPercent:
-        commissionInput.trim() === '' || !Number.isFinite(parsed) ? null : parsed,
+      commissionPercent: parseDecimalInput(commissionInput),
     };
 
     setBusy(true);

@@ -1,5 +1,6 @@
 import { type PricingFactor } from '../api/catalog';
 import { BILLING_FREQUENCY_LABELS, DISCOUNT_TYPE_LABELS, T4 } from '../lib/strings';
+import { NumberField } from './NumberField';
 
 // Structured builder for Product.pricingFactors (the "based on metrics" pricing
 // model). Each metric is a per-unit fee billed at a chosen cadence -- e.g.
@@ -57,11 +58,9 @@ export const ProductMetricsEditor = ({ value, currencyCode, onChange }: Props) =
             <label>
               {T4.metricUnitPriceLbl} ({symbol})
             </label>
-            <input
-              inputMode="decimal"
-              dir="ltr"
+            <NumberField
               value={metric.unitPrice}
-              onChange={(e) => updateMetric(mi, { unitPrice: Number(e.target.value) || 0 })}
+              onChange={(unitPrice) => updateMetric(mi, { unitPrice: unitPrice ?? 0 })}
             />
           </div>
           <div className="fld" style={{ maxWidth: 130 }}>
@@ -113,12 +112,10 @@ export const ProductMetricsEditor = ({ value, currencyCode, onChange }: Props) =
                 {T4.metricDiscountValueLbl} (
                 {metric.discountType === 'PERCENTAGE' ? '%' : symbol})
               </label>
-              <input
-                inputMode="decimal"
-                dir="ltr"
-                value={metric.discountValue ?? ''}
-                onChange={(e) =>
-                  updateMetric(mi, { discountValue: Number(e.target.value) || 0 })
+              <NumberField
+                value={metric.discountValue ?? null}
+                onChange={(discountValue) =>
+                  updateMetric(mi, { discountValue: discountValue ?? 0 })
                 }
               />
             </div>

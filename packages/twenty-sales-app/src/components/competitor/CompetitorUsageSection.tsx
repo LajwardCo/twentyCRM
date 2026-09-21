@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   deleteCompetitorUsage,
@@ -20,6 +20,7 @@ import {
   T5,
 } from '../../lib/strings';
 import { JalaliDatePicker } from '../JalaliDatePicker';
+import { SearchSelect } from '../SearchSelect';
 
 type CompetitorUsageSectionProps = {
   competitorId: string;
@@ -113,6 +114,16 @@ export const CompetitorUsageSection = ({
   const productName = (productId: string | null) =>
     products?.find((p) => p.id === productId)?.name ?? null;
 
+  const leadOptions = useMemo(
+    () => (leads ?? []).map((lead) => ({ value: lead.id, label: lead.name })),
+    [leads],
+  );
+
+  const productOptions = useMemo(
+    () => (products ?? []).map((product) => ({ value: product.id, label: product.name })),
+    [products],
+  );
+
   return (
     <div className="card anim d4" style={{ marginBottom: 16 }}>
       <div className="card-pad" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -137,15 +148,13 @@ export const CompetitorUsageSection = ({
             </div>
             <div className="fld">
               <label>{T5.linkedLeadLbl}</label>
-              <select
+              <SearchSelect
                 value={draft.input.opportunityId ?? ''}
-                onChange={(e) => setInput({ opportunityId: e.target.value || null })}
-              >
-                <option value="">—</option>
-                {leads?.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
+                onChange={(value) => setInput({ opportunityId: value || null })}
+                options={leadOptions}
+                emptyLabel="—"
+                ariaLabel={T5.linkedLeadLbl}
+              />
             </div>
           </div>
           <div className="f2">
@@ -189,15 +198,13 @@ export const CompetitorUsageSection = ({
             </div>
             <div className="fld">
               <label>{T5.relatedProductLbl}</label>
-              <select
+              <SearchSelect
                 value={draft.input.productId ?? ''}
-                onChange={(e) => setInput({ productId: e.target.value || null })}
-              >
-                <option value="">—</option>
-                {products?.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                onChange={(value) => setInput({ productId: value || null })}
+                options={productOptions}
+                emptyLabel="—"
+                ariaLabel={T5.relatedProductLbl}
+              />
             </div>
           </div>
           <div className="fld">

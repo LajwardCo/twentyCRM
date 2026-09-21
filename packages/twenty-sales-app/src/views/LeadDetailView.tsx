@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { generateText } from '../api/ai';
 import { type CurrentUser } from '../api/auth';
+import { useRemindersProvisioned } from '../api/remindersSupport';
 import {
   CONVERTIBLE_STAGES,
   createNoteForLead,
@@ -24,7 +25,9 @@ import {
 import { ActionBar, type ActionBarItem } from '../components/ActionBar';
 import {
   IconAI,
+  IconBell,
   IconCheck,
+  IconClock,
   IconEdit,
   IconMail,
   IconNote,
@@ -36,19 +39,22 @@ import {
   IconWhatsApp,
 } from '../components/icons';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
+import { FullTimelineModal } from '../components/FullTimelineModal';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
-import { LeadOffersCard } from '../components/LeadOffersCard';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
+import { LeadDealCard } from '../components/LeadDealCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
 import { AddContactModal } from '../components/AddContactModal';
 import { ContactEditModal } from '../components/ContactEditModal';
-import { CompanyCard, MetaCard, PricingCard } from '../components/LeadPanels';
+import { CompanyCard, MetaCard } from '../components/LeadPanels';
 import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
 import { LeadEditModal } from '../components/LeadEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
+import { LeadTaskDrawer } from '../components/LeadTaskDrawer';
 import { RecordHistory } from '../components/RecordHistory';
+import { ReminderModal } from '../components/ReminderModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { canSeeMoney, isExternalUser } from '../lib/access';
 import { invalidateCache, useCached } from '../lib/cache';
@@ -71,6 +77,7 @@ import {
   SUMMARIZE_SYSTEM_PROMPT,
 } from '../lib/leadContext';
 import { ageTone, stageAgeDays } from '../lib/leadAge';
+import { parseDecimalInput } from '../lib/numberInput';
 import { navigate } from '../lib/router';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import {
@@ -85,6 +92,7 @@ import {
   T14,
   T15,
   T16,
+  T_REMIND,
   TEMP_LABELS,
 } from '../lib/strings';
 
@@ -134,6 +142,9 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [override, setOverride] = useState<Partial<LeadSummary>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
+  const remindersProvisioned = useRemindersProvisioned();
   const [tlFilter, setTlFilter] = useState<TimelineFilter>('all');
   const [toast, setToast] = useState<string | null>(null);
 
@@ -157,6 +168,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [amountInput, setAmountInput] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<CurrencyCode>('AFN');
 
+  // Full task-create drawer opened from the lead page.
+  const [addingTask, setAddingTask] = useState(false);
   // Quick edit / delete for the lead and for anything on its timeline.
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -293,13 +306,9 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   };
 
   const saveAmount = async () => {
-    const parsed = Number(
-      amountInput
-        .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
-        .replace(/[,\s]/g, ''),
-    );
+    const parsed = parseDecimalInput(amountInput);
     const patch =
-      Number.isFinite(parsed) && parsed > 0
+      parsed !== null && parsed > 0
         ? {
             amount: {
               amountMicros: Math.round(parsed * 1_000_000),
@@ -465,6 +474,13 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       onClick: () => email && (window.location.href = `mailto:${email}`),
     },
     {
+      key: 'remind',
+      label: T_REMIND.reminder,
+      icon: IconBell,
+      disabled: remindersProvisioned !== true,
+      onClick: () => setShowReminder(true),
+    },
+    {
       // short label: five slots on a 360px screen leave ~60px each
       key: 'ai',
       label: 'دستیار',
@@ -508,6 +524,15 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           </div>
         </div>
         <div className="hero-actions">
+          <button
+            className="btn line sm"
+            type="button"
+            aria-label={T15.showFullHistory}
+            title={T15.showFullHistory}
+            onClick={() => setShowTimeline(true)}
+          >
+            <IconClock size={13} /> {T15.showFullHistory}
+          </button>
           <button
             className="btn line sm"
             type="button"
@@ -564,13 +589,29 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           {/* open tasks under this lead */}
           {openTasks.length > 0 && (
             <div className="card anim d1">
-              <div className="card-pad" style={{ paddingBottom: 6 }}>
+              <div
+                className="card-pad"
+                style={{
+                  paddingBottom: 6,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
                 <h3>
                   {T2.openTasks}{' '}
                   <span className="num" style={{ color: 'var(--ink-3)', fontWeight: 600 }}>
                     ({toPersianDigits(openTasks.length)})
                   </span>
                 </h3>
+                <button
+                  type="button"
+                  className="btn line sm"
+                  onClick={() => setAddingTask(true)}
+                >
+                  ＋ {T2.leadAddTask}
+                </button>
               </div>
               {openTasks.map((task) => (
                 <div className="task" key={task.id}>
@@ -599,6 +640,11 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                   >
                     {relativeDueLabel(task.dueAt)}
                   </span>
+                  {task.remindAt && (
+                    <span className="rem-chip" title={T_REMIND.remindAtLbl}>
+                      <IconBell size={11} /> {relativeDueLabel(task.remindAt)}
+                    </span>
+                  )}
                   <RowActions
                     onEdit={() => setEditingTask(task)}
                     onDelete={() => setDeleting({ kind: 'task', task })}
@@ -720,7 +766,23 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
           {/* quick add */}
           <div className="card card-pad anim d3">
-            <h3>ثبت سریع</h3>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <h3>ثبت سریع</h3>
+              <button
+                type="button"
+                className="btn line sm"
+                onClick={() => setAddingTask(true)}
+              >
+                ＋ {T2.leadAddTask}
+              </button>
+            </div>
             <div className="fld" style={{ marginTop: 10 }}>
               <textarea
                 placeholder={T.notePlaceholder}
@@ -751,13 +813,20 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 <JalaliDatePicker value={followUpDate} onChange={setFollowUpDate} />
               </div>
             </div>
-            <button
-              className="btn line sm"
-              disabled={followUpBusy || followUpDraft.trim() === ''}
-              onClick={addFollowUp}
-            >
-              {followUpBusy ? T.saving : `＋ ${T.addFollowUp}`}
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                className="btn line sm"
+                disabled={followUpBusy || followUpDraft.trim() === ''}
+                onClick={addFollowUp}
+              >
+                {followUpBusy ? T.saving : `＋ ${T.addFollowUp}`}
+              </button>
+              {remindersProvisioned === true && (
+                <button className="btn line sm" onClick={() => setShowReminder(true)}>
+                  <IconBell size={14} /> {T_REMIND.setReminder}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -911,13 +980,15 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             )}
           </div>
 
-          {/* deal info */}
-          {/* Negotiation history. Hides itself on an instance that hasn't run
-              provision-subscriptions-referrals-offers.mjs. */}
+          {/* The deal: product lines + quotations, negotiated offers, and the
+              Usystems sales order -- one card, three tabs. Sections that are
+              unavailable on this instance drop their tab. */}
           {showMoney && (
-            <LeadOffersCard
-              leadId={leadId}
+            <LeadDealCard
+              lead={lead}
               currentUserId={user.workspaceMemberId}
+              contactPhone={phone}
+              contactEmail={email}
               onAgreed={() => void reload()}
             />
           )}
@@ -1034,9 +1105,6 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             </button>
           </div>
 
-          {/* pricing: deal products + quotations */}
-          {showMoney && <PricingCard lead={lead} />}
-
           {/* What the customer pays after the deal closes, and the reviewed
               conversion that creates it from the won lead's lines. */}
           {showMoney && (
@@ -1062,11 +1130,29 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             lead={lead}
             referrers={referrers}
             editable
+            ownerEditable={!isExternalUser(user)}
             onSaveLead={saveLeadField}
+            onReferrersChanged={reloadReferrers}
           />
         </div>
       </div>
 
+      {showTimeline && (
+        <FullTimelineModal lead={lead} onClose={() => setShowTimeline(false)} />
+      )}
+
+      {showReminder && (
+        <ReminderModal
+          lead={lead}
+          assigneeId={user.workspaceMemberId}
+          onClose={() => setShowReminder(false)}
+          onSaved={() => {
+            setShowReminder(false);
+            showToast(T_REMIND.saved);
+            void reload();
+          }}
+        />
+      )}
       {showWhatsApp && lead.pointOfContact && (
         <WhatsAppModal
           personId={lead.pointOfContact.id}
@@ -1112,6 +1198,22 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             invalidateCache('leads:');
             void reload();
             showToast('ذخیره شد ✓');
+          }}
+        />
+      )}
+
+      {addingTask && lead && (
+        <LeadTaskDrawer
+          target={{ opportunityId: lead.id, companyId: lead.company?.id }}
+          assigneeId={user.workspaceMemberId}
+          initialTitle={followUpDraft.trim()}
+          initialDueValue={followUpDate}
+          onClose={() => setAddingTask(false)}
+          onSaved={async () => {
+            setAddingTask(false);
+            setFollowUpDraft('');
+            showToast('کار ثبت شد ✓');
+            await reload();
           }}
         />
       )}

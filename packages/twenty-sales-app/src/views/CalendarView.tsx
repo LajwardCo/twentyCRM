@@ -3,8 +3,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { type CurrentUser } from '../api/auth';
 import { fetchTasksForCalendar, updateTask, type Task } from '../api/records';
 import { CalendarGrid } from '../components/CalendarGrid';
-import { IconCheck } from '../components/icons';
+import { IconBell, IconCheck } from '../components/icons';
 import { useCached } from '../lib/cache';
+import { refreshReminders } from '../lib/reminderStore';
+import { shiftRemindAt } from '../lib/reminders';
 import { buildCalendarGrid, groupTasksByDate, todayDateKey } from '../lib/calendarGrid';
 import {
   AFGHAN_MONTHS,
@@ -15,7 +17,7 @@ import {
   toPersianDigits,
 } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { T, T2, TASK_TYPE_LABELS } from '../lib/strings';
+import { T, T2, T_REMIND, TASK_TYPE_LABELS } from '../lib/strings';
 import { TASK_TYPE_ICONS } from './TaskView';
 
 type CalendarViewProps = {
@@ -43,7 +45,9 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
     jm: currentJalali.jm,
   }));
   const [selectedDate, setSelectedDate] = useState<string | null>(() => todayDateKey());
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [overrides, setOverrides] = useState<
+    Record<string, { dueAt: string; remindAt: string | null | undefined }>
+  >({});
   const [dropError, setDropError] = useState<string | null>(null);
 
   const cells = useMemo(
@@ -69,7 +73,7 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
   const effectiveTasks = useMemo(
     () =>
       tasks.map((task) =>
-        overrides[task.id] ? { ...task, dueAt: overrides[task.id] } : task,
+        overrides[task.id] ? { ...task, ...overrides[task.id] } : task,
       ),
     [tasks, overrides],
   );
@@ -87,9 +91,16 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
       const nextIso = next.toISOString();
       if (nextIso === task.dueAt) return;
 
-      setOverrides((prev) => ({ ...prev, [taskId]: nextIso }));
+      // A reminder keeps its distance from the due time; the spread is empty
+      // when there is none, so unprovisioned servers never see the keys.
+      const reminderShift = task.remindAt ? shiftRemindAt(task, nextIso) : null;
+      setOverrides((prev) => ({
+        ...prev,
+        [taskId]: { dueAt: nextIso, remindAt: reminderShift?.remindAt ?? task.remindAt },
+      }));
       try {
-        await updateTask(taskId, { dueAt: nextIso });
+        await updateTask(taskId, { dueAt: nextIso, ...(reminderShift ?? {}) });
+        void refreshReminders();
         await refresh();
         setOverrides((prev) => {
           const cleared = { ...prev };
@@ -225,6 +236,11 @@ export const CalendarView = ({ user }: CalendarViewProps) => {
                     </div>
                   </div>
                   <span className="due later">{relativeDueLabel(task.dueAt)}</span>
+                  {task.remindAt && task.status !== 'DONE' && (
+                    <span className="rem-chip" title={T_REMIND.remindAtLbl}>
+                      <IconBell size={11} /> {relativeDueLabel(task.remindAt)}
+                    </span>
+                  )}
                 </div>
               );
             })

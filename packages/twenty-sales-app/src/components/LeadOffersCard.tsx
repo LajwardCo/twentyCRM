@@ -15,6 +15,7 @@ import {
   formatMoney,
   SUPPORTED_CURRENCIES,
 } from '../lib/format';
+import { parseDecimalInput } from '../lib/numberInput';
 import { OFFER_STATUS_LABELS, T9 } from '../lib/strings';
 
 // Negotiation history on a lead: what was offered, when, by whom, and which
@@ -28,6 +29,12 @@ type Props = {
   // Lets the lead screen refresh its own agreed-price display once an offer is
   // accepted, since accepting writes to the opportunity too.
   onAgreed: () => void;
+  // Inside the Deal card: no outer card or title, the host draws those.
+  embedded?: boolean;
+  // The host hides the tab on an unprovisioned instance instead of the
+  // component hiding itself.
+  onSupported?: (supported: boolean) => void;
+  onOffersChange?: (offers: LeadOffer[]) => void;
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -37,7 +44,14 @@ const STATUS_TONE: Record<string, string> = {
   SUPERSEDED: 'muted',
 };
 
-export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
+export const LeadOffersCard = ({
+  leadId,
+  currentUserId,
+  onAgreed,
+  embedded = false,
+  onSupported,
+  onOffersChange,
+}: Props) => {
   const [offers, setOffers] = useState<LeadOffer[]>([]);
   const [supported, setSupported] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -55,14 +69,18 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
       const result = await fetchLeadOffers(leadId);
       if (!result.supported) {
         setSupported(false);
+        onSupported?.(false);
         return;
       }
       setOffers(result.value);
+      onSupported?.(true);
+      onOffersChange?.(result.value);
     } catch {
       setError(T9.offersLoadFailed);
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId]);
 
   useEffect(() => {
@@ -71,11 +89,11 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
 
   if (!supported) return null;
 
-  const amount = Number(amountInput);
-  const canSubmit = Number.isFinite(amount) && amount > 0 && !busy;
+  const amount = parseDecimalInput(amountInput);
+  const canSubmit = amount !== null && amount > 0 && !busy;
 
   const submit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || amount === null) return;
     setBusy(true);
     setError(null);
     try {
@@ -128,9 +146,9 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
     }
   };
 
-  return (
-    <div className="card card-pad anim d3">
-      <h3>{T9.offersSection}</h3>
+  const body = (
+    <>
+      {!embedded && <h3>{T9.offersSection}</h3>}
       <div className="sub">{T9.offersHint}</div>
 
       {error !== null && <div className="err">{error}</div>}
@@ -256,6 +274,8 @@ export const LeadOffersCard = ({ leadId, currentUserId, onAgreed }: Props) => {
           </button>
         </div>
       )}
-    </div>
+    </>
   );
+
+  return embedded ? body : <div className="card card-pad anim d3">{body}</div>;
 };

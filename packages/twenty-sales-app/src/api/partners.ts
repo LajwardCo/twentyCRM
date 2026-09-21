@@ -19,9 +19,20 @@ import {
 // instance that never ran it every call here reports "unsupported" and the
 // screens say so rather than failing.
 
-export type PartnerType = 'MARKETER' | 'SELLER' | 'PARTNER';
+// OTHER is the catch-all: a referral can come from anyone -- a happy customer,
+// a relative of the owner, someone met at a conference -- and none of the three
+// working roles fit them. It exists on the `partner.partnerType` select from
+// provision-partner-type-other.mjs; on an instance that never ran it, saving a
+// partner as OTHER is rejected by the server, which surfaces as a save error
+// rather than a silent wrong type.
+export type PartnerType = 'MARKETER' | 'SELLER' | 'PARTNER' | 'OTHER';
 
-export const PARTNER_TYPES: PartnerType[] = ['MARKETER', 'SELLER', 'PARTNER'];
+export const PARTNER_TYPES: PartnerType[] = [
+  'MARKETER',
+  'SELLER',
+  'PARTNER',
+  'OTHER',
+];
 
 export type Partner = Referrer & {
   createdAt: string;

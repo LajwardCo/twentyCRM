@@ -1,0 +1,122 @@
+// @vitest-environment jsdom
+import { describe, expect, it } from 'vitest';
+
+import { type PrintDocument } from '../api/usystems';
+import fixture from './__fixtures__/salesOrderPrintDocument.json';
+import { buildPageCss, buildPrintableHtml, pageBox, renderSalesOrderDocument } from './salesOrderDocument';
+import { renderTemplateHtml } from './templateHandlebars';
+
+// The fixture is the REAL seeded Sales Order body (localized to fa, as a
+// non-English tenant stores it), its sample context, its labels and the
+// default partials -- exported from the backend catalog. If a redesign there
+// adds a binding this renderer cannot resolve, or a label nobody translated,
+// this is where it shows.
+
+const doc = fixture as unknown as PrintDocument;
+
+describe('renderSalesOrderDocument', () => {
+  it('renders the seeded body with every binding and label resolved', () => {
+    const rendered = renderSalesOrderDocument(doc);
+    expect(rendered.ok).toBe(true);
+    expect(rendered.direction).toBe('ltr'); // the sample context says ltr
+    expect(rendered.html).not.toMatch(/\{\{/); // no unrendered mustache
+    // labels came from the served dict, not the key
+    expect(rendered.html).toContain('سفارش فروش');
+    expect(rendered.html).toContain('معتبر تا');
+    // document values landed
+    expect(rendered.html).toContain('SO-2026-000118');
+    expect(rendered.html).toContain('Sayed Moheb Sadat');
+    expect(rendered.html).toContain('Usystems Core - Accounting Package (annual)');
+    // amounts formatted by the currency helper, ltr-wrapped
+    expect(rendered.html).toContain('55,000');
+    expect(rendered.html).toContain('<span dir="ltr">');
+    // barcode of the order code was drawn
+    expect(rendered.html).toContain('<svg');
+    expect(rendered.title).toBe('سفارش فروش SO-2026-000118');
+  });
+
+  it('prints a line\'s details under its name, line breaks kept, and nothing for a bare line', () => {
+    const rendered = renderSalesOrderDocument(doc);
+    expect(rendered.html).toContain(
+      'white-space:pre-line;margin-top:2px;">کاربر × ۲۵ @ ۱٬۲۰۰ ؋ = ۳۰٬۰۰۰ ؋ (سالانه)\nانبار × ۳ @ ۶٬۰۰۰ ؋ = ۱۸٬۰۰۰ ؋ (سالانه)</div>',
+    );
+    // the second item has no details: exactly one details block
+    expect(rendered.html.match(/white-space:pre-line/g)).toHaveLength(1);
+  });
+
+  it('shows the expired state when the deadline has passed', () => {
+    const expired: PrintDocument = {
+      ...doc,
+      context: {
+        ...doc.context,
+        document: { ...(doc.context.document as object), is_expired: true },
+      },
+    };
+    const rendered = renderSalesOrderDocument(expired);
+    expect(rendered.html).toContain('منقضی شده');
+    expect(rendered.html).toContain('#8a1c1c');
+  });
+
+  it('answers an unknown label with the key itself', () => {
+    const out = renderTemplateHtml('<b>{{t "Nope"}}</b> {{t "Valid Until"}}', {}, { labels: { 'Valid Until': 'X' } });
+    expect(out.html).toBe('<b>Nope</b> X');
+  });
+
+  it('keeps a Jalali date whole: the ltr helper isolates right-to-left text as rtl', () => {
+    const rendered = renderSalesOrderDocument(doc);
+    // 2026-10-10 is ۱۸ میزان ۱۴۰۵ -- forcing it ltr splits the day from the year
+    expect(rendered.html).toContain('<span dir="rtl">۱۸ میزان ۱۴۰۵</span>');
+    expect(rendered.html).not.toMatch(/<span dir="ltr">[^<]*میزان/);
+    // codes, phones and amounts stay ltr islands
+    expect(rendered.html).toContain('<span dir="ltr">SO-2026-000118</span>');
+    expect(rendered.html).toContain('<span dir="ltr">+93 744 998 877</span>');
+    expect(rendered.html).toContain('<span dir="ltr">AFN55,000</span>');
+  });
+
+  it('strips scripts and keeps inline svg', () => {
+    const out = renderTemplateHtml('<div><script>alert(1)</script>{{barcode "A1"}}</div>', {});
+    expect(out.html).not.toContain('<script');
+    expect(out.html).toContain('<svg');
+  });
+});
+
+describe('buildPageCss / buildPrintableHtml', () => {
+  it('derives @page from the template page settings', () => {
+    const css = buildPageCss({ width: 148, height: 210, unit: 'mm', orientation: 'landscape', margin: { top: 5, right: 6, bottom: 7, left: 8 } });
+    expect(css).toContain('@page { size: 210mm 148mm; margin: 5mm 6mm 7mm 8mm; }');
+    expect(buildPageCss(undefined)).toContain('size: 210mm 297mm');
+  });
+
+  it('wraps the render in a standalone page with the document direction', () => {
+    const rendered = renderSalesOrderDocument({ ...doc, context: { ...doc.context, meta: { direction: 'rtl', language: 'fa' } } });
+    const html = buildPrintableHtml(doc, rendered);
+    expect(html).toMatch(/^<!doctype html>/);
+    expect(html).toContain('<html lang="fa" dir="rtl">');
+    expect(html).toContain('<title>سفارش فروش SO-2026-000118</title>');
+    expect(html).toContain('@page');
+  });
+});
+
+describe('ltr helper', () => {
+  it('keeps digit-only and latin values ltr, and turns letters rtl', () => {
+    const render = (value: string) => renderTemplateHtml('{{ltr v}}', { v: value }).html;
+    expect(render('۱۴۰۵')).toBe('<span dir="ltr">۱۴۰۵</span>');
+    expect(render('1405/07/20')).toBe('<span dir="ltr">1405/07/20</span>');
+    expect(render('۲۰ میزان ۱۴۰۵')).toBe('<span dir="rtl">۲۰ میزان ۱۴۰۵</span>');
+    expect(render('')).toBe('<span dir="ltr"></span>');
+  });
+});
+
+describe('pageBox', () => {
+  it('defaults to A4 portrait in mm', () => {
+    expect(pageBox(undefined)).toEqual({ widthMm: 210, heightMm: 297, orientation: 'portrait' });
+  });
+
+  it('converts inches and swaps the sides for landscape', () => {
+    expect(pageBox({ width: 8.5, height: 11, unit: 'in', orientation: 'landscape' })).toEqual({
+      widthMm: 279.4,
+      heightMm: 215.9,
+      orientation: 'landscape',
+    });
+  });
+});

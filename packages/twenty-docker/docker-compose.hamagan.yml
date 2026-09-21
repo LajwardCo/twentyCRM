@@ -76,6 +76,14 @@ services:
       STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT:-}
       STORAGE_S3_ACCESS_KEY_ID: ${STORAGE_S3_ACCESS_KEY_ID:-}
       STORAGE_S3_SECRET_ACCESS_KEY: ${STORAGE_S3_SECRET_ACCESS_KEY:-}
+      # Usystems Core connection for the Sales UI's "issue sales order" flow
+      # (rest/sales/usystems/* proxies to the Core Developer API). The key is a
+      # Usystems Developer API key with contacts.read/write + sales_orders.read/
+      # write on the tenant named by USYSTEMS_PRODUCT_CODE. Values live in the
+      # box .env; unset simply hides the Sales Order card on leads.
+      USYSTEMS_API_BASE_URL: ${USYSTEMS_API_BASE_URL:-}
+      USYSTEMS_API_KEY: ${USYSTEMS_API_KEY:-}
+      USYSTEMS_PRODUCT_CODE: ${USYSTEMS_PRODUCT_CODE:-}
 
   worker:
     dns:

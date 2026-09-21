@@ -15,6 +15,7 @@ import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twent
 import { CheckCustomDomainValidRecordsCronCommand } from 'src/engine/core-modules/workspace/crons/commands/check-custom-domain-valid-records.cron.command';
 import { TrashCleanupCronCommand } from 'src/engine/trash-cleanup/commands/trash-cleanup.cron.command';
 import { AuditLogRetentionCronCommand } from 'src/modules/sales-crm/audit-log/commands/audit-log-retention.cron.command';
+import { PushReminderSweepCronCommand } from 'src/modules/sales-crm/push-reminders/commands/push-reminder-sweep.cron.command';
 import { CleanOnboardingWorkspacesCronCommand } from 'src/engine/workspace-manager/workspace-cleaner/commands/clean-onboarding-workspaces.cron.command';
 import { CleanSuspendedWorkspacesCronCommand } from 'src/engine/workspace-manager/workspace-cleaner/commands/clean-suspended-workspaces.cron.command';
 import { CalendarEventListFetchCronCommand } from 'src/modules/calendar/calendar-event-import-manager/crons/commands/calendar-event-list-fetch.cron.command';
@@ -60,6 +61,7 @@ export class CronRegisterAllCommand extends CommandRunner {
     private readonly cleanOnboardingWorkspacesCronCommand: CleanOnboardingWorkspacesCronCommand,
     private readonly trashCleanupCronCommand: TrashCleanupCronCommand,
     private readonly auditLogRetentionCronCommand: AuditLogRetentionCronCommand,
+    private readonly pushReminderSweepCronCommand: PushReminderSweepCronCommand,
     private readonly eventLogCleanupCronCommand: EventLogCleanupCronCommand,
     private readonly enterpriseKeyValidationCronCommand: EnterpriseKeyValidationCronCommand,
     private readonly rotateSigningKeysCronCommand: RotateSigningKeysCronCommand,
@@ -154,6 +156,10 @@ export class CronRegisterAllCommand extends CommandRunner {
       {
         name: 'SalesAuditLogRetention',
         command: this.auditLogRetentionCronCommand,
+      },
+      {
+        name: 'SalesPushReminderSweep',
+        command: this.pushReminderSweepCronCommand,
       },
       {
         name: 'EventLogCleanup',

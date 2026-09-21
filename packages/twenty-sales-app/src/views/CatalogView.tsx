@@ -12,7 +12,9 @@ import {
   type ProductCurrencyCode,
 } from '../api/catalog';
 import { FilterBar } from '../components/FilterBar';
+import { NumberField } from '../components/NumberField';
 import { ProductPricingFields } from '../components/ProductPricingFields';
+import { SearchSelect } from '../components/SearchSelect';
 import { ProductTaxonomyFields } from '../components/ProductTaxonomyFields';
 import { useCached } from '../lib/cache';
 import { applyFilters } from '../lib/filters';
@@ -161,13 +163,9 @@ const ProductsTab = () => {
             </div>
             <div className="fld">
               <label>{T4.maxDiscountPercentLbl}</label>
-              <input
-                inputMode="numeric"
-                dir="ltr"
-                value={editing.maxDiscountPercent ?? ''}
-                onChange={(e) =>
-                  set({ maxDiscountPercent: e.target.value === '' ? null : Number(e.target.value) })
-                }
+              <NumberField
+                value={editing.maxDiscountPercent}
+                onChange={(maxDiscountPercent) => set({ maxDiscountPercent })}
               />
             </div>
           </div>
@@ -302,6 +300,16 @@ const DiscountRulesTab = () => {
   const set = (patch: Partial<CatalogDiscountRuleInput>) =>
     setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
 
+  const productOptions = useMemo(
+    () =>
+      (products ?? []).map((product) => ({
+        value: product.id,
+        label: product.name,
+        hint: product.category ?? '',
+      })),
+    [products],
+  );
+
   // The fixed-amount discount is denominated in the applies-to product's
   // currency, and the metric-condition dropdown draws from that product's
   // defined pricing metrics.
@@ -348,17 +356,13 @@ const DiscountRulesTab = () => {
             </div>
             <div className="fld">
               <label>{T4.appliesToProductLbl} *</label>
-              <select
+              <SearchSelect
                 value={editing.appliesToProductId}
-                onChange={(e) => set({ appliesToProductId: e.target.value })}
-              >
-                <option value="">انتخاب…</option>
-                {(products ?? []).map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => set({ appliesToProductId: value })}
+                options={productOptions}
+                emptyLabel="انتخاب…"
+                ariaLabel={T4.appliesToProductLbl}
+              />
             </div>
           </div>
 
@@ -379,32 +383,25 @@ const DiscountRulesTab = () => {
             {editing.conditionType === 'MIN_QUANTITY' && (
               <div className="fld">
                 <label>{T4.conditionMinQuantityLbl}</label>
-                <input
-                  inputMode="numeric"
-                  dir="ltr"
-                  value={editing.conditionMinQuantity ?? ''}
-                  onChange={(e) =>
-                    set({
-                      conditionMinQuantity: e.target.value === '' ? null : Number(e.target.value),
-                    })
-                  }
+                <NumberField
+                  integer
+                  value={editing.conditionMinQuantity}
+                  onChange={(conditionMinQuantity) => set({ conditionMinQuantity })}
                 />
               </div>
             )}
             {editing.conditionType === 'SIBLING_PRODUCT_PURCHASED' && (
               <div className="fld">
                 <label>{T4.conditionSiblingProductLbl}</label>
-                <select
+                <SearchSelect
                   value={editing.conditionSiblingProductId ?? ''}
-                  onChange={(e) => set({ conditionSiblingProductId: e.target.value || undefined })}
-                >
-                  <option value="">انتخاب…</option>
-                  {(products ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) =>
+                    set({ conditionSiblingProductId: value || undefined })
+                  }
+                  options={productOptions}
+                  emptyLabel="انتخاب…"
+                  ariaLabel={T4.conditionSiblingProductLbl}
+                />
               </div>
             )}
           </div>
@@ -434,15 +431,10 @@ const DiscountRulesTab = () => {
               </div>
               <div className="fld">
                 <label>{T4.conditionMinQuantityLbl}</label>
-                <input
-                  inputMode="numeric"
-                  dir="ltr"
-                  value={editing.conditionMinQuantity ?? ''}
-                  onChange={(e) =>
-                    set({
-                      conditionMinQuantity: e.target.value === '' ? null : Number(e.target.value),
-                    })
-                  }
+                <NumberField
+                  integer
+                  value={editing.conditionMinQuantity}
+                  onChange={(conditionMinQuantity) => set({ conditionMinQuantity })}
                 />
               </div>
             </div>
@@ -462,15 +454,9 @@ const DiscountRulesTab = () => {
             {editing.discountType === 'PERCENTAGE' && (
               <div className="fld">
                 <label>{T4.discountPercentValueLbl}</label>
-                <input
-                  inputMode="numeric"
-                  dir="ltr"
-                  value={editing.discountPercentValue ?? ''}
-                  onChange={(e) =>
-                    set({
-                      discountPercentValue: e.target.value === '' ? null : Number(e.target.value),
-                    })
-                  }
+                <NumberField
+                  value={editing.discountPercentValue}
+                  onChange={(discountPercentValue) => set({ discountPercentValue })}
                 />
               </div>
             )}
@@ -479,15 +465,9 @@ const DiscountRulesTab = () => {
                 <label>
                   {T4.discountFixedAmountLbl} ({CURRENCY_SYMBOLS[selectedCurrency]})
                 </label>
-                <input
-                  inputMode="decimal"
-                  dir="ltr"
-                  value={editing.discountFixedAmount ?? ''}
-                  onChange={(e) =>
-                    set({
-                      discountFixedAmount: e.target.value === '' ? null : Number(e.target.value),
-                    })
-                  }
+                <NumberField
+                  value={editing.discountFixedAmount}
+                  onChange={(discountFixedAmount) => set({ discountFixedAmount })}
                 />
               </div>
             )}

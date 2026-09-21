@@ -17,6 +17,7 @@
 import {
   type ActivityRow,
   type AuditEntry,
+  mergeAuditEntries,
   toAuditEntries,
 } from '../lib/recordHistory';
 import { coreQuery } from './client';
@@ -76,4 +77,20 @@ export const fetchRecordHistory = async (
     // losing it must not take down the screen that shows it.
     return [];
   }
+};
+
+// The lead's full picture: its own history plus every related record's. Each
+// target is queried on its own `target<Object>Id`, then the streams are merged
+// into one chronological log. A record the user cannot read simply returns no
+// rows (access follows the record), so the merge is safe to run over the whole
+// relation set without leaking anything.
+export const fetchCombinedHistory = async (
+  targets: HistoryTarget[],
+  limit: number = HISTORY_PAGE_SIZE,
+): Promise<AuditEntry[]> => {
+  const streams = await Promise.all(
+    targets.map((target) => fetchRecordHistory(target, limit)),
+  );
+
+  return mergeAuditEntries(streams, limit);
 };

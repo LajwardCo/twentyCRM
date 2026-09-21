@@ -4,7 +4,11 @@
 //
 // Works for any record the server tracks -- pass a different target and the
 // same panel serves a person, a company, a task or a competitor.
-import { type HistoryTarget, fetchRecordHistory } from '../api/recordHistory';
+import {
+  type HistoryTarget,
+  fetchCombinedHistory,
+  fetchRecordHistory,
+} from '../api/recordHistory';
 import { type AuditAction, type AuditEntry } from '../lib/recordHistory';
 import { useCached } from '../lib/cache';
 import { formatJalaliDateTime } from '../lib/jalali';
@@ -50,16 +54,31 @@ const ChangeRow = ({ label, before, after }: { label: string; before: string; af
 );
 
 type RecordHistoryProps = {
-  target: HistoryTarget;
+  // One record's log, or -- when `targets` is given -- the merged log across a
+  // record and everything related to it (the lead plus its company, contact,
+  // notes and tasks). Exactly one of the two is supplied.
+  target?: HistoryTarget;
+  targets?: HistoryTarget[];
   // Set when the panel is the only thing on screen; inside the lead's timeline
   // tab the surrounding card already carries the heading.
   showHeading?: boolean;
 };
 
-export const RecordHistory = ({ target, showHeading = false }: RecordHistoryProps) => {
-  const { data, error } = useCached(`history:${target.kind}:${target.id}`, () =>
-    fetchRecordHistory(target),
-  );
+export const RecordHistory = ({ target, targets, showHeading = false }: RecordHistoryProps) => {
+  // A stable key over the whole target set, so the combined log caches like any
+  // single record's does.
+  const effectiveTargets = targets ?? (target ? [target] : []);
+  const cacheKey = `history:${effectiveTargets
+    .map((t) => `${t.kind}:${t.id}`)
+    .join('|')}`;
+
+  const { data, error } = useCached(cacheKey, () => {
+    const [first] = effectiveTargets;
+    if (first === undefined) return Promise.resolve([]);
+    return effectiveTargets.length > 1
+      ? fetchCombinedHistory(effectiveTargets)
+      : fetchRecordHistory(first);
+  });
 
   if (error) return <div className="empty-state">{T15.changeLogFailed}</div>;
   if (data === null) return <div className="empty-state">…</div>;

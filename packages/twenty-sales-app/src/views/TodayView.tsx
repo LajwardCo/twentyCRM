@@ -10,6 +10,7 @@ import {
   setTaskStatus,
   type Task,
 } from '../api/records';
+import { RemindersCard } from '../components/RemindersCard';
 import {
   IconCheck,
   IconClock,
@@ -17,6 +18,7 @@ import {
   IconMoney,
   IconTasks,
 } from '../components/icons';
+import { TodaySuggestionsCard } from '../components/TodaySuggestionsCard';
 import {
   endOfToday,
   formatMoney,
@@ -26,6 +28,7 @@ import {
   totalsAreEmpty,
 } from '../lib/format';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
+import { refreshReminders } from '../lib/reminderStore';
 import { navigate } from '../lib/router';
 import { STAGE_LABELS, T, TASK_TYPE_LABELS } from '../lib/strings';
 import { TASK_TYPE_ICONS } from './TaskView';
@@ -151,6 +154,7 @@ export const TodayView = ({ user }: TodayViewProps) => {
     }, 330);
     try {
       await setTaskStatus(task.id, 'DONE');
+      void refreshReminders();
       await refresh();
     } catch {
       setDoneCount((c) => c - 1);
@@ -316,6 +320,8 @@ export const TodayView = ({ user }: TodayViewProps) => {
 
       <div className="dash-grid">
         <div className="stack">
+          <RemindersCard />
+          <TodaySuggestionsCard user={user} leads={leads} openTasks={tasks} />
           <div className="card anim d2">
             <div
               className="card-pad"

@@ -953,6 +953,132 @@ textarea {
   box-shadow: var(--sh-1);
 }
 
+/* ============ Deal card (products · offers · sales order) ============ */
+
+.deal-tab-count {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--lapis-50);
+  color: var(--lapis-700);
+  font-size: 10.5px;
+  font-weight: 750;
+  line-height: 16px;
+  vertical-align: 1px;
+}
+
+.deal-tab-count.over {
+  background: var(--hot-bg);
+  color: var(--hot);
+}
+
+.deal-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--line-soft);
+}
+
+.deal-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.deal-stat span {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 650;
+}
+
+.deal-stat b {
+  font-size: 13px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deal-body {
+  margin-top: 12px;
+}
+
+.deal-body > div[hidden] {
+  display: none;
+}
+
+/* ---- sales orders issued into Usystems Core ---- */
+
+.so-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.so-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line-soft);
+  flex-wrap: wrap;
+}
+
+.so-row-main {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.so-row-code {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.so-row-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.so-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* the free-text breakdown under a line in the issue sheet */
+.so-line-details {
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--line);
+  background: var(--card);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  resize: vertical;
+}
+
+.so-line-details:focus {
+  outline: 0;
+  border-style: solid;
+  border-color: var(--lapis-500);
+  box-shadow: 0 0 0 3px rgba(59, 106, 232, 0.15);
+}
+
 /* ============ KPI ============ */
 
 .stats {
@@ -2977,6 +3103,46 @@ table.leads tbody tr:hover {
   color: var(--ink-2);
 }
 
+.jdp-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.jdp-seg {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-2);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.jdp-seg:hover {
+  background: var(--lapis-50);
+}
+
+.jdp-seg.on {
+  background: var(--lapis-600);
+  border-color: var(--lapis-600);
+  color: #fff;
+}
+
+/* the same date in the other calendar, so a switch is never a guess */
+.jdp-alt {
+  margin-inline-start: auto;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .jdp-time input {
   width: auto;
   flex: 0 0 auto;
@@ -4442,6 +4608,30 @@ table.leads tbody tr:hover {
   font-weight: 700;
 }
 
+/* The row that creates a record instead of picking one. It sits under the
+   matches, so a rule and the accent colour keep it from being read as one more
+   name in the list. */
+.ssel-option.create {
+  color: var(--lapis-600);
+  font-weight: 650;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  margin-top: 3px;
+  padding-top: 10px;
+}
+
+.ssel-option.create > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* On the dark card --lapis-600 is barely readable, and this row is a call to
+   action rather than decoration. */
+[data-theme='dark'] .ssel-option.create {
+  color: #7c9ff7;
+}
+
 .ssel-hint {
   margin-inline-start: auto;
   color: var(--ink-3);
@@ -4453,6 +4643,36 @@ table.leads tbody tr:hover {
   padding: 11px;
   font-size: 12.5px;
   color: var(--ink-3);
+}
+
+/* Toolbar and chip-row uses: the picker sits beside buttons rather than
+   filling a .fld, so it needs a bounded width and the smaller control metrics
+   the surrounding `.btn.sm` row is drawn at. */
+.ssel-inline {
+  width: auto;
+  min-width: 150px;
+  max-width: 100%;
+}
+
+.ssel-inline .ssel-input {
+  padding: 6px 10px;
+  padding-inline-end: 28px;
+  font-size: 12.5px;
+}
+
+.ssel-inline .ssel-caret,
+.ssel-inline .ssel-clear {
+  inset-inline-end: 6px;
+}
+
+/* The control is deliberately narrow so it fits a toolbar, but the names and
+   emails inside it are not -- pinning the list to the control's width wrapped
+   every row onto two lines. It hangs off the start edge instead. */
+.ssel-inline .ssel-list {
+  inset-inline: 0 auto;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(320px, 86vw);
 }
 
 /* The meta rows are right-aligned key/value pairs; the picker needs a real
@@ -4526,3 +4746,335 @@ table.leads tbody tr:hover {
 
 .demo-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--lapis-600); animation: demo-spin 0.8s linear infinite; margin: 0 auto; }
 @keyframes demo-spin { to { transform: rotate(360deg); } }
+/* ---------- files: preview + manager ---------- */
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.file-preview audio,
+.file-preview video {
+  width: 100%;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+.file-preview video {
+  max-height: 60dvh;
+}
+.file-preview.image img {
+  max-width: 100%;
+  max-height: 60dvh;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  object-fit: contain;
+  background: var(--paper);
+}
+.file-preview.pdf iframe {
+  width: 100%;
+  height: 55dvh;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: #fff;
+}
+.file-preview.compact.pdf iframe,
+.file-preview.compact video,
+.file-preview.compact.image img {
+  max-height: 260px;
+  height: 260px;
+}
+.file-preview.none {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+}
+.file-preview-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--warm);
+  background: var(--warm-bg);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+.file-row-player td {
+  background: var(--paper);
+  padding: 10px 14px !important;
+}
+.file-play {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--lapis-800);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+.file-play.on {
+  background: var(--lapis-800);
+  color: #fff;
+  border-color: var(--lapis-800);
+}
+.file-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.file-meta .k {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.file-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.file-card .grow {
+  min-width: 0;
+}
+.file-card .name {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ---- reminders ---- */
+.rem-badge {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--hot);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 750;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+.rem-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--warm);
+  background: var(--warm-bg);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.rem-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.rem-row .rem-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rem-row .rem-bell {
+  color: var(--warm);
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rem-row .rem-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.rem-row .rem-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+
+.rem-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-inline-start: 26px;
+}
+
+.rem-actions .btn.sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.rem-upcoming {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.rem-upcoming .lead-chip {
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rem-upcoming .num {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+
+.rem-section-lbl {
+  padding: 8px 18px 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  letter-spacing: 0.2px;
+}
+
+/* ============ today suggestions (TodaySuggestionsCard) ============ */
+
+.suggest-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.suggest-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.suggest-spark {
+  display: inline-flex;
+  color: var(--warm);
+  flex-shrink: 0;
+}
+
+.suggest-refresh {
+  width: 32px;
+  height: 32px;
+}
+
+.suggest-refresh.spinning svg {
+  animation: suggest-spin 0.9s linear infinite;
+}
+
+@keyframes suggest-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.suggest-note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 0 16px 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--lapis-50);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.suggest-note p {
+  margin: 0;
+  flex: 1;
+}
+
+.suggest-note .suggest-spark {
+  margin-top: 4px;
+}
+
+.suggest-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--lapis-100);
+  color: var(--lapis-800);
+}
+
+.suggest-ico.kind-task {
+  background: var(--hot-bg);
+  color: var(--hot);
+}
+
+.suggest-ico.kind-contract {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.suggest-ico.kind-follow_up {
+  background: var(--warm-bg);
+  color: var(--warm);
+}
+
+.suggest-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.suggest-why {
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.rem-push-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.rem-push-status .btn {
+  flex-shrink: 0;
+}

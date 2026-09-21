@@ -6,6 +6,7 @@ import {
   type Referrer,
 } from '../api/records';
 import { type CatalogProduct } from '../api/catalog';
+import { type FileRecord } from '../api/files';
 import {
   isFilterActive,
   type FilterField,
@@ -13,6 +14,8 @@ import {
   type FilterState,
   type FilterValue,
 } from './filters';
+import { TFILES } from './fileStrings';
+import { EXTENSIONS_BY_KIND, FILE_TYPE_OPTIONS, previewKindOf } from './fileType';
 import {
   COMPETITOR_STATUS_LABELS,
   COMPETITOR_THREAT_LABELS,
@@ -95,9 +98,21 @@ export const effectiveOpenOnly = (
   state: FilterState,
 ): boolean => openOnly && !isFilterActive(state.stage);
 
+// The business-type clause filters opportunities through their related
+// company: `{ company: { businessType: { in: [...] } } }`. The server exposes
+// this because a to-one relation's filter input nests the target object's own
+// filterable fields.
+const businessTypeServerFilter = (
+  value: FilterValue,
+): Record<string, unknown> | undefined =>
+  value.kind === 'multiEnum' && value.values.length > 0
+    ? { company: { businessType: { in: value.values } } }
+    : undefined;
+
 export const leadFilterFields = (
   members: Member[],
   referrers: Referrer[],
+  businessTypes: string[] = [],
 ): FilterField<LeadSummary>[] => [
   {
     key: 'stage',
@@ -159,6 +174,19 @@ export const leadFilterFields = (
     })),
     buildServerFilter: enumWithNoneServerFilter('referrerId'),
   },
+  // Only offered when the workspace actually records business types; an empty
+  // option list would just be a dead filter group.
+  ...(businessTypes.length > 0
+    ? [
+        {
+          key: 'businessType',
+          label: T7.fBusinessType,
+          kind: 'multiEnum' as const,
+          options: businessTypes.map((value) => ({ value, label: value })),
+          buildServerFilter: businessTypeServerFilter,
+        },
+      ]
+    : []),
   {
     key: 'value',
     label: T7.fValue,
@@ -430,5 +458,82 @@ export const competitorFilterFields = (): FilterField<CompetitorRow>[] => [
     label: T7.fCreated,
     kind: 'dateRange',
     get: (competitor) => competitor.createdAt,
+  },
+];
+
+// ---------- files ----------
+
+// The Files manager is server-paged (see api/files.ts), so every field here
+// carries a server clause. `type` only exists once attachment.fileType is
+// provisioned; naming an unknown field would fail the whole query.
+export const fileFilterFields = (schema: {
+  hasFileType: boolean;
+}): FilterField<FileRecord>[] => [
+  ...(schema.hasFileType
+    ? [
+        {
+          key: 'type',
+          label: TFILES.fType,
+          kind: 'multiEnum',
+          serverPath: 'fileType',
+          get: (file: FileRecord) => file.fileType ?? NONE,
+          options: [
+            ...FILE_TYPE_OPTIONS.map((option) => ({
+              value: option.value,
+              label: option.label,
+            })),
+            { value: NONE, label: TFILES.untyped },
+          ],
+          buildServerFilter: enumWithNoneServerFilter('fileType'),
+        } satisfies FilterField<FileRecord>,
+      ]
+    : []),
+  {
+    key: 'kind',
+    label: TFILES.fKind,
+    kind: 'multiEnum',
+    get: (file) => previewKindOf(file.file?.[0]?.extension, file.file?.[0]?.label),
+    options: [
+      { value: 'audio', label: TFILES.kindAudio },
+      { value: 'video', label: TFILES.kindVideo },
+      { value: 'image', label: TFILES.kindImage },
+      { value: 'pdf', label: TFILES.kindPdf },
+    ],
+    // A FILES field only takes RawJsonFilter (is/like), evaluated as
+    // `file::text LIKE`, so a kind becomes an OR over the exact
+    // `"extension": "<ext>"` fragments Postgres prints for jsonb. Both the
+    // dotted form (path.extname, API uploads, case kept) and the bare
+    // lowercase form (QR uploads) exist in the data, and `like` is
+    // case-sensitive, hence four patterns per extension.
+    buildServerFilter: (value) => {
+      if (value.kind !== 'multiEnum') return undefined;
+      const patterns = value.values
+        .flatMap(
+          (kind) =>
+            EXTENSIONS_BY_KIND[kind as keyof typeof EXTENSIONS_BY_KIND] ?? [],
+        )
+        .flatMap((extension) => [
+          `.${extension}`,
+          extension,
+          `.${extension.toUpperCase()}`,
+          extension.toUpperCase(),
+        ])
+        .map((stored) => ({ file: { like: `%"extension": "${stored}"%` } }));
+      return patterns.length > 0 ? { or: patterns } : undefined;
+    },
+  },
+  {
+    key: 'name',
+    label: TFILES.fName,
+    kind: 'text',
+    serverPath: 'name',
+    get: (file) => file.name,
+  },
+  {
+    key: 'date',
+    label: TFILES.fDate,
+    kind: 'dateRange',
+    serverPath: 'createdAt',
+    get: (file) => file.createdAt,
   },
 ];

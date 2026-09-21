@@ -1,11 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { type CurrentUser } from '../api/auth';
+import { useRemindersProvisioned } from '../api/remindersSupport';
 import logoSquare from '../assets/usystems-square.png';
 import { jalaliToday } from '../lib/jalali';
+import {
+  startReminderStore,
+  stopReminderStore,
+  useReminders,
+} from '../lib/reminderStore';
 import { reportNavItems } from '../lib/reports';
 import { goBackOr, navigate, useRoute } from '../lib/router';
-import { T, T2, T3, T4 } from '../lib/strings';
+import { T, T2, T3, T4, T_REMIND } from '../lib/strings';
 import {
   dockAdd,
   getDockablePage,
@@ -14,6 +20,7 @@ import {
 } from '../lib/workbench';
 import { Dock } from './Dock';
 import {
+  IconBell,
   IconChevronDown,
   IconLogout,
   IconMoon,
@@ -24,6 +31,7 @@ import {
 import { MobileMenu } from './MobileMenu';
 import { MobileNav } from './MobileNav';
 import { activeNavKey, navItemsFor } from './navItems';
+import { RemindersSheet } from './RemindersSheet';
 
 // fallback dock labels when a view hasn't announced one yet
 const routeDockDefaults = (
@@ -66,11 +74,24 @@ export const AppShell = ({
   const dockItems = useDock();
   const active = activeNavKey(route.parts);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
 
   // a back/forward navigation should never leave the sheet covering the page
   useEffect(() => {
     setMenuOpen(false);
+    setRemindersOpen(false);
   }, [route.path]);
+
+  // The shell is the one mount that outlives every page, so the reminder
+  // poll lives here; it only starts once the server is known to have the
+  // fields (the query filters on remindAt and would fail loudly otherwise).
+  const remindersProvisioned = useRemindersProvisioned();
+  const { fired: firedReminders } = useReminders();
+  useEffect(() => {
+    if (remindersProvisioned !== true) return;
+    startReminderStore(user.workspaceMemberId);
+    return () => stopReminderStore();
+  }, [remindersProvisioned, user.workspaceMemberId]);
 
   // pages worth minimizing: anything that isn't the dashboard itself
   const minimizable = route.parts.length > 0 && route.parts[0] !== 'today';
@@ -162,6 +183,19 @@ export const AppShell = ({
                 <IconChevronDown size={16} />
               </button>
             )}
+            {remindersProvisioned === true && (
+              <button
+                className="icon-btn"
+                onClick={() => setRemindersOpen(true)}
+                title={T_REMIND.reminders}
+                aria-label={T_REMIND.bellAria}
+              >
+                <IconBell size={16} />
+                {firedReminders.length > 0 && (
+                  <span className="rem-badge">{firedReminders.length}</span>
+                )}
+              </button>
+            )}
             <button
               className="icon-btn"
               onClick={onOpenPalette}
@@ -193,8 +227,11 @@ export const AppShell = ({
           onLogout={onLogout}
           onToggleTheme={onToggleTheme}
           onOpenPalette={onOpenPalette}
+          reminderCount={remindersProvisioned === true ? firedReminders.length : null}
+          onOpenReminders={() => setRemindersOpen(true)}
         />
       )}
+      {remindersOpen && <RemindersSheet onClose={() => setRemindersOpen(false)} />}
     </div>
   );
 };

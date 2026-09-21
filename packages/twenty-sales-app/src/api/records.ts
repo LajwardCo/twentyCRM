@@ -11,7 +11,7 @@ import { isPhoneAppsFieldProvisioned } from './phoneAppsSupport';
 
 // ---------- shared types ----------
 
-export type TaskType = 'CALL' | 'MEETING' | 'DEMO' | 'VISIT' | 'OTHER';
+export type TaskType = 'CALL' | 'MEETING' | 'DEMO' | 'VISIT' | 'REMINDER' | 'OTHER';
 
 export type Task = {
   id: string;
@@ -19,6 +19,10 @@ export type Task = {
   status: 'TODO' | 'IN_PROGRESS' | 'DONE' | null;
   taskType: TaskType | null;
   dueAt: string | null;
+  // Null on servers that predate provision-reminders.mjs; the record API
+  // answers an unknown selected field with null, so selecting them is safe.
+  remindAt?: string | null;
+  reminderDismissedAt?: string | null;
   createdAt: string;
   bodyV2: { markdown: string | null } | null;
   assignee?: {
@@ -393,6 +397,8 @@ export const fetchLeadTasks = async (opportunityId: string): Promise<Task[]> => 
               status
               taskType
               dueAt
+              remindAt
+              reminderDismissedAt
               createdAt
               bodyV2 { markdown }
             }
@@ -462,6 +468,8 @@ const OPEN_TASKS_PAGE_QUERY = `query MyOpenTasks($filter: TaskFilterInput, $limi
         status
         taskType
         dueAt
+        remindAt
+        reminderDismissedAt
         createdAt
         bodyV2 { markdown }
         assignee { id name { firstName lastName } }
@@ -548,6 +556,8 @@ export const fetchTasksForCalendar = async (
             status
             taskType
             dueAt
+            remindAt
+            reminderDismissedAt
             createdAt
             bodyV2 { markdown }
             taskTargets {
@@ -576,15 +586,27 @@ export const fetchTasksForCalendar = async (
   return data.tasks.edges.map((e) => e.node);
 };
 
+// dismissReminder: finishing a task also silences its reminder so it leaves
+// the bell at once. Opt-in because the key is rejected by servers that have
+// not run provision-reminders.mjs -- callers pass it only when provisioned.
 export const setTaskStatus = async (
   taskId: string,
   status: 'TODO' | 'DONE',
+  options: { dismissReminder?: boolean } = {},
 ): Promise<void> => {
   await coreQuery(
     `mutation SetTaskStatus($id: UUID!, $data: TaskUpdateInput!) {
       updateTask(id: $id, data: $data) { id }
     }`,
-    { id: taskId, data: { status } },
+    {
+      id: taskId,
+      data: {
+        status,
+        ...(status === 'DONE' && options.dismissReminder
+          ? { reminderDismissedAt: new Date().toISOString() }
+          : {}),
+      },
+    },
   );
 };
 
@@ -598,6 +620,8 @@ export const fetchTask = async (taskId: string): Promise<Task> => {
         status
         taskType
         dueAt
+        remindAt
+        reminderDismissedAt
         createdAt
         bodyV2 { markdown }
         assignee { id name { firstName lastName } }
@@ -641,6 +665,8 @@ export const createTaskForLead = async (input: {
   status: 'TODO' | 'DONE';
   taskType?: TaskType;
   dueAt: string | null;
+  // undefined = leave the key out entirely (unprovisioned servers reject it)
+  remindAt?: string | null;
   assigneeId: string;
   target: LeadTargetIds;
 }): Promise<string> => {
@@ -655,6 +681,7 @@ export const createTaskForLead = async (input: {
         dueAt: input.dueAt,
         assigneeId: input.assigneeId,
         ...(input.taskType ? { taskType: input.taskType } : {}),
+        ...(input.remindAt !== undefined ? { remindAt: input.remindAt } : {}),
         ...(input.bodyMarkdown
           ? { bodyV2: { markdown: input.bodyMarkdown } }
           : {}),
@@ -1219,6 +1246,29 @@ export const fetchCompanyOptions = async (): Promise<
   return data.companies.edges.map((e) => e.node);
 };
 
+// Distinct business types actually in use, for the leads filter. businessType
+// is a free-text field on Company (no fixed option set), so the picker offers
+// the values that exist rather than a hardcoded list. Instances that never
+// provisioned the field make the query throw -- callers wrap in .catch(() => [])
+// so an absent field simply hides the filter instead of blanking the screen.
+export const fetchBusinessTypes = async (): Promise<string[]> => {
+  const data = await coreQuery<{
+    companies: { edges: { node: { businessType: string | null } }[] };
+  }>(
+    `query BusinessTypes {
+      companies(first: ${PAGE_SIZE}, orderBy: [{ name: AscNullsLast }]) {
+        edges { node { businessType } }
+      }
+    }`,
+  );
+  const distinct = new Set<string>();
+  for (const edge of data.companies.edges) {
+    const value = (edge.node.businessType ?? '').trim();
+    if (value !== '') distinct.add(value);
+  }
+  return [...distinct].sort((a, b) => a.localeCompare(b, 'fa'));
+};
+
 // Referrers/partners a lead can be attributed to (relation target of
 // Opportunity.referrer). Defensive: the partner object may be absent on some
 // environments, so callers get an empty list rather than a hard failure.
@@ -1389,6 +1439,21 @@ const fetchLegacyLeadsMarketers = async (
 
 // ---------- pricing: deal products + quotations ----------
 
+// The server's frozen pricing computation for a line priced from a pricing
+// version (see deal-product-price-calculation.service.ts). Only the parts the
+// UI reads are typed.
+export type DealLinePriceSnapshot = {
+  packageName?: string | null;
+  versionNumber?: number;
+  breakdown?: {
+    factor: string;
+    quantity: number;
+    matchedBand?: { amount: number } | null;
+    subtotal: number;
+    billingFrequency?: 'MONTHLY' | 'HOURLY' | 'ANNUAL';
+  }[];
+};
+
 export type DealProductLine = {
   id: string;
   name: string;
@@ -1398,6 +1463,10 @@ export type DealProductLine = {
   installPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   annualPrice: { amountMicros: number | null; currencyCode: string | null } | null;
   product: { id: string; name: string } | null;
+  // Absent on an instance whose provisioning predates each field.
+  factorQuantities?: Record<string, number> | null;
+  priceOverrides?: LinePriceOverridesPayload | null;
+  priceSnapshot?: DealLinePriceSnapshot | null;
 };
 
 export type QuotationRow = {
@@ -1413,8 +1482,11 @@ export type QuotationRow = {
 export const fetchLeadPricing = async (
   opportunityId: string,
 ): Promise<{ dealProducts: DealProductLine[]; quotations: QuotationRow[] }> => {
-  const [dealProducts, quotations] = await Promise.all([
-    coreQuery<{ dealProducts: { edges: { node: DealProductLine }[] } }>(
+  // The pricing detail fields each arrived with their own provisioning
+  // script; an instance missing one is retried without it, and the line
+  // details simply say less. Same pattern as fetchProducts.
+  const runDealProducts = async (optionalFields: string[]) => {
+    const d = await coreQuery<{ dealProducts: { edges: { node: DealProductLine }[] } }>(
       `query LeadDealProducts($oppId: UUID!) {
         dealProducts(filter: { opportunityId: { eq: $oppId } }, first: 50) {
           edges {
@@ -1427,14 +1499,32 @@ export const fetchLeadPricing = async (
               installPrice { amountMicros currencyCode }
               annualPrice { amountMicros currencyCode }
               product { id name }
+              ${optionalFields.join('\n              ')}
             }
           }
         }
       }`,
       { oppId: opportunityId },
-    )
-      .then((d) => d.dealProducts.edges.map((e) => e.node))
-      .catch(() => [] as DealProductLine[]),
+    );
+    return d.dealProducts.edges.map((e) => e.node);
+  };
+  const fetchDealProducts = async (): Promise<DealProductLine[]> => {
+    let groups = [['factorQuantities'], ['priceOverrides'], ['priceSnapshot']];
+    for (;;) {
+      try {
+        return await runDealProducts(groups.flat());
+      } catch (error) {
+        const remaining = groups.filter(
+          (group) => missingProductFieldFromError(error, group) === undefined,
+        );
+        if (remaining.length === groups.length) return [];
+        groups = remaining;
+      }
+    }
+  };
+
+  const [dealProducts, quotations] = await Promise.all([
+    fetchDealProducts(),
     coreQuery<{ quotations: { edges: { node: QuotationRow }[] } }>(
       `query LeadQuotations($oppId: UUID!) {
         quotations(filter: { opportunityId: { eq: $oppId } }, first: 50) {
@@ -1607,6 +1697,14 @@ export type DoneTask = {
   taskType: TaskType | null;
   bodyV2: { markdown: string | null } | null;
   assignee: { id: string; name: { firstName: string; lastName: string } } | null;
+  taskTargets?: {
+    edges: {
+      node: {
+        opportunity: { id: string; name: string } | null;
+        company: { id: string; name: string } | null;
+      };
+    }[];
+  };
 };
 
 // assigneeId omitted = every seller's done tasks since sinceIso (used for
@@ -1626,6 +1724,14 @@ const DONE_TASKS_PAGE_QUERY = `query DoneTasksSince($filter: TaskFilterInput, $l
         taskType
         bodyV2 { markdown }
         assignee { id name { firstName lastName } }
+        taskTargets {
+          edges {
+            node {
+              opportunity { id name }
+              company { id name }
+            }
+          }
+        }
       }
     }
     pageInfo { hasNextPage endCursor }
@@ -1904,6 +2010,7 @@ export const createQuickTask = async (input: {
   status: 'TODO' | 'DONE';
   taskType?: TaskType;
   dueAt: string | null;
+  remindAt?: string | null;
   assigneeId: string;
 }): Promise<string> => {
   const created = await coreQuery<{ createTask: { id: string } }>(
@@ -1917,6 +2024,7 @@ export const createQuickTask = async (input: {
         dueAt: input.dueAt,
         assigneeId: input.assigneeId,
         ...(input.taskType ? { taskType: input.taskType } : {}),
+        ...(input.remindAt !== undefined ? { remindAt: input.remindAt } : {}),
       },
     },
   );

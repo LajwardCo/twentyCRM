@@ -14,7 +14,9 @@ import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
 import { toPersianDigits } from './lib/jalali';
+import { disablePushSubscription, ensurePushSubscription } from './lib/push';
 import { navigate, useRoute } from './lib/router';
+import { TFILES } from './lib/fileStrings';
 import { T, T5, TDEMO } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
@@ -32,6 +34,8 @@ import { DailyReportView } from './views/DailyReportView';
 import { DemoSystemsView } from './views/DemoSystemsView';
 import { DemoDetailView } from './views/DemoDetailView';
 import { NewDemoView } from './views/NewDemoView';
+import { FileDetailView } from './views/FileDetailView';
+import { FilesView } from './views/FilesView';
 import { CompanyView, NoteView, PersonView } from './views/EntityViews';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
@@ -93,6 +97,9 @@ export const App = () => {
       // screen they land on is already attributed to them.
       startAudit(user);
       setSession({ status: 'ready', user });
+      // Keeps this device's push registration current for sellers who
+      // already granted permission; a no-op for everyone else.
+      void ensurePushSubscription();
     } catch {
       setSession({ status: 'anonymous' });
     }
@@ -180,6 +187,8 @@ export const App = () => {
 
   const handleLogout = () => {
     recordSignOut('user');
+    // Must run before the token goes: the server call needs it.
+    void disablePushSubscription();
     logout();
     invalidateCache();
     setSession({ status: 'anonymous' });
@@ -221,6 +230,16 @@ export const App = () => {
     view = <TasksView user={user} />;
   } else if (section === 'calendar') {
     view = <CalendarView user={user} />;
+  } else if (section === 'files' && param) {
+    view = <FileDetailView fileId={param} />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/files')}>
+        <IconBack size={15} />
+        {TFILES.backToFiles}
+      </button>
+    );
+  } else if (section === 'files') {
+    view = <FilesView />;
   } else if (section === 'note' && param) {
     view = <NoteView noteId={param} />;
     bar = backButton;

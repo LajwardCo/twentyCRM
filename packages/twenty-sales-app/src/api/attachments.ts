@@ -1,3 +1,9 @@
+import {
+  type AttachmentSchema,
+  attachmentSchemaFrom,
+  attachmentSelection,
+  withFileType,
+} from '../lib/attachmentSchema';
 import { coreQuery, loadTokens, metadataQuery } from './client';
 
 // Upload flow: uploadFilesFieldFile (multipart, needs the FieldMetadata id of
@@ -17,13 +23,30 @@ export type TaskAttachment = {
   id: string;
   name: string | null;
   createdAt: string;
+  // Only present once attachment.fileType has been provisioned.
+  fileType?: string | null;
   file: AttachmentFile[] | null;
 };
 
-let attachmentFileFieldId: string | null = null;
+export type AttachmentMetadata = AttachmentSchema & {
+  fileFieldId: string;
+};
 
-const getAttachmentFileFieldId = async (): Promise<string> => {
-  if (attachmentFileFieldId) return attachmentFileFieldId;
+let attachmentMetadata: Promise<AttachmentMetadata> | null = null;
+
+// One metadata round trip per session answers both "which field id do uploads
+// target" and "is fileType provisioned here" (see lib/attachmentSchema.ts).
+export const getAttachmentMetadata = (): Promise<AttachmentMetadata> => {
+  if (attachmentMetadata === null) {
+    attachmentMetadata = loadAttachmentMetadata().catch((error) => {
+      attachmentMetadata = null;
+      throw error;
+    });
+  }
+  return attachmentMetadata;
+};
+
+const loadAttachmentMetadata = async (): Promise<AttachmentMetadata> => {
   const data = await metadataQuery<{
     objects: {
       edges: {
@@ -50,15 +73,15 @@ const getAttachmentFileFieldId = async (): Promise<string> => {
     .find((n) => n.nameSingular === 'attachment');
   const fileField = attachment?.fields.edges.find((e) => e.node.name === 'file');
   if (!fileField) throw new Error('attachment.file field not found');
-  attachmentFileFieldId = fileField.node.id;
-  return attachmentFileFieldId;
+  const fieldNames = attachment?.fields.edges.map((e) => e.node.name) ?? [];
+  return { fileFieldId: fileField.node.id, ...attachmentSchemaFrom(fieldNames) };
 };
 
 // graphql-multipart-request-spec upload
 const uploadFile = async (
   file: File,
 ): Promise<{ id: string; url: string }> => {
-  const fieldMetadataId = await getAttachmentFileFieldId();
+  const { fileFieldId: fieldMetadataId } = await getAttachmentMetadata();
   const tokens = loadTokens();
 
   const form = new FormData();
@@ -100,21 +123,27 @@ export const uploadTaskAttachment = async (input: {
   file: File;
   taskId: string;
   opportunityId?: string | null;
+  fileType?: string | null;
 }): Promise<void> => {
   const uploaded = await uploadFile(input.file);
+  const schema = await getAttachmentMetadata();
   await coreQuery(
     `mutation CreateAttachment($data: AttachmentCreateInput!) {
       createAttachment(data: $data) { id }
     }`,
     {
-      data: {
-        name: input.file.name,
-        file: [{ fileId: uploaded.id, label: input.file.name }],
-        targetTaskId: input.taskId,
-        ...(input.opportunityId
-          ? { targetOpportunityId: input.opportunityId }
-          : {}),
-      },
+      data: withFileType(
+        {
+          name: input.file.name,
+          file: [{ fileId: uploaded.id, label: input.file.name }],
+          targetTaskId: input.taskId,
+          ...(input.opportunityId
+            ? { targetOpportunityId: input.opportunityId }
+            : {}),
+        },
+        schema,
+        input.fileType,
+      ),
     },
   );
 };
@@ -210,6 +239,7 @@ export const removeViaPublicToken = async (
 export const fetchTaskAttachments = async (
   taskId: string,
 ): Promise<TaskAttachment[]> => {
+  const schema = await getAttachmentMetadata();
   const data = await coreQuery<{
     attachments: { edges: { node: TaskAttachment }[] };
   }>(
@@ -217,10 +247,7 @@ export const fetchTaskAttachments = async (
       attachments(filter: { targetTaskId: { eq: $taskId } }, first: 30) {
         edges {
           node {
-            id
-            name
-            createdAt
-            file { fileId label extension url }
+            ${attachmentSelection(schema)}
           }
         }
       }

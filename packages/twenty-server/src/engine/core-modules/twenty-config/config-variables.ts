@@ -438,6 +438,34 @@ export class ConfigVariables {
   WHATSAPP_BUSINESS_ACCOUNT_ID: string | undefined = undefined;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.USYSTEMS_SETTINGS,
+    description:
+      'Base URL of the Usystems Core backend, e.g. https://platform.usystems.af',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  USYSTEMS_API_BASE_URL: string | undefined = undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.USYSTEMS_SETTINGS,
+    description:
+      'Developer API key (Usystems Settings → Developer API) with the contacts.read, contacts.write, sales_orders.read and sales_orders.write scopes',
+    type: ConfigVariableType.STRING,
+    isSensitive: true,
+  })
+  @IsOptional()
+  USYSTEMS_API_KEY: string | undefined = undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.USYSTEMS_SETTINGS,
+    description:
+      'Product code of the Usystems tenant the orders are issued into (the first path segment of its API URLs)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  USYSTEMS_PRODUCT_CODE: string | undefined = undefined;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.EMAIL_SETTINGS,
     description: 'SMTP host for sending emails',
     type: ConfigVariableType.STRING,

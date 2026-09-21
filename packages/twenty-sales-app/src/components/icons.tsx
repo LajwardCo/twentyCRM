@@ -378,3 +378,9 @@ export const IconShield = ({ size }: IconProps) => (
     <path d="m9 12 2 2 4-4" />
   </svg>
 );
+
+export const IconPaperclip = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="m21 11.5-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.2a1.8 1.8 0 0 1-2.6-2.6L15.5 6.7" />
+  </svg>
+);

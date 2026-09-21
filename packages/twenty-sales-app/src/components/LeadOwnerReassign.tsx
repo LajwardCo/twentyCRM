@@ -4,6 +4,7 @@ import { type Member } from '../api/admin';
 import { fetchLeads, type LeadSummary, updateLead } from '../api/records';
 import { personName } from '../lib/format';
 import { T11 } from '../lib/strings';
+import { SearchSelect } from './SearchSelect';
 
 // Admin-only lead reassignment. Leads stay attached to sellers who have left
 // or been reassigned, and nothing else in the app can move them -- a seller
@@ -110,18 +111,21 @@ export const LeadOwnerReassign = ({ members, onDone }: Props) => {
           </div>
           <div className="fld">
             <label>{T11.reassignPickOwner}</label>
-            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              <option value="">{T11.reassignPickOwner}</option>
-              {members
+            <SearchSelect
+              value={ownerId}
+              onChange={setOwnerId}
+              options={members
                 // Reassigning to the current owner is a no-op that reads like
                 // it worked, so it isn't offered.
                 .filter((member) => member.id !== selected.owner?.id)
-                .map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {personName(member)}
-                  </option>
-                ))}
-            </select>
+                .map((member) => ({
+                  value: member.id,
+                  label: personName(member),
+                  hint: member.userEmail ?? '',
+                }))}
+              emptyLabel={T11.reassignPickOwner}
+              ariaLabel={T11.reassignPickOwner}
+            />
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button

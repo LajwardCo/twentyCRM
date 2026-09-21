@@ -12,9 +12,15 @@
  *     own error states) instead of the browser's dinosaur.
  *   - Hashed build assets are stale-while-revalidate: instant launch, with the
  *     new bundle picked up in the background for the next start.
+ *
+ * Web Push: the server's every-minute sweep (twenty-server
+ * sales-crm/push-reminders) sends a reminder payload; `push` shows it as a
+ * system notification and `notificationclick` opens the lead. When the app is
+ * open and focused the in-app store has already rung the same reminder (same
+ * tag), so the push is dropped there to avoid a double alert.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `sales-shell-${VERSION}`;
 const ASSET_CACHE = `sales-assets-${VERSION}`;
 const SHELL_URL = '/sales/index.html';
@@ -119,4 +125,87 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(staleWhileRevalidate(request));
+});
+
+// ---------- web push (reminders) ----------
+
+const APP_URL = '/sales/';
+
+const formatReminderTime = (iso) => {
+  if (!iso) return '';
+  try {
+    // Afghan calendar, Dari digits -- the same rendering the app itself uses.
+    return new Intl.DateTimeFormat('fa-AF-u-ca-persian-nu-arabext', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+};
+
+const parsePushPayload = (event) => {
+  try {
+    return event.data ? event.data.json() : null;
+  } catch {
+    return null;
+  }
+};
+
+const hasFocusedClient = async () => {
+  const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  return clients.some((client) => client.focused && client.visibilityState === 'visible');
+};
+
+self.addEventListener('push', (event) => {
+  const payload = parsePushPayload(event);
+  if (!payload || payload.kind !== 'reminder') return;
+
+  event.waitUntil(
+    (async () => {
+      if (await hasFocusedClient()) return;
+
+      const body = [payload.leadName, formatReminderTime(payload.remindAt)]
+        .filter(Boolean)
+        .join(' · ');
+
+      await self.registration.showNotification(payload.title || 'یادآوری', {
+        body,
+        tag: payload.taskId,
+        renotify: true,
+        icon: '/sales/icon-192.png',
+        badge: '/sales/icon-192.png',
+        dir: 'rtl',
+        lang: 'fa',
+        data: { url: payload.url || APP_URL },
+      });
+    })(),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || APP_URL;
+  const target = new URL(url, self.location.origin).href;
+
+  event.waitUntil(
+    (async () => {
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      // Prefer an already-open app tab: focus it and route inside it rather
+      // than spawning a second copy of the app.
+      const existing = clients.find((client) => client.url.includes(APP_URL));
+      if (existing) {
+        await existing.focus();
+        if ('navigate' in existing) {
+          try {
+            await existing.navigate(target);
+            return;
+          } catch {
+            // cross-origin or unsupported: fall through to openWindow
+          }
+        }
+      }
+      await self.clients.openWindow(target);
+    })(),
+  );
 });

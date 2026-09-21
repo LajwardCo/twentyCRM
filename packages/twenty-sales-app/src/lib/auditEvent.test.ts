@@ -273,7 +273,7 @@ describe('dedupeKeyOf', () => {
 
 describe('isWatermarkedSection', () => {
   it('marks the screens that show customer data or money', () => {
-    for (const section of ['lead', 'leads', 'contacts', 'reports', 'audit']) {
+    for (const section of ['lead', 'leads', 'contacts', 'reports', 'audit', 'files']) {
       expect(isWatermarkedSection(section)).toBe(true);
     }
   });

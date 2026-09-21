@@ -170,6 +170,7 @@ export const TASK_TYPE_LABELS: Record<string, string> = {
   MEETING: 'جلسه',
   DEMO: 'دمو',
   VISIT: 'بازدید',
+  REMINDER: 'یادآوری',
   OTHER: 'دیگر',
 };
 
@@ -296,12 +297,15 @@ export const T2 = {
   quickTaskTitleLbl: 'عنوان',
   quickTaskTypeLbl: 'نوع کار',
   quickTaskDueLbl: 'موعد',
+  quickTaskDetailsLbl: 'جزئیات',
+  quickTaskDetailsPlaceholder: 'یادداشت‌ها و جزئیات کار…',
   quickTaskMarkDone: 'پایان یافته',
   quickTaskSave: 'ذخیره',
   quickTaskSaving: 'در حال ذخیره…',
   quickTaskOpenFull: 'باز کردن کامل ←',
   quickTaskTitleRequired: 'عنوان را وارد کنید',
   quickTaskSaveFailed: 'ذخیره ناموفق بود',
+  leadAddTask: 'کار جدید',
 };
 
 // catalog management: Product / Package / Pricing Version / Discount Rule
@@ -476,6 +480,10 @@ export const PARTNER_TYPE_LABELS: Record<string, string> = {
   MARKETER: 'بازاریاب',
   SELLER: 'فروشنده',
   PARTNER: 'شریک',
+  // Anyone at all can introduce a lead -- a customer, a friend, a doctor met
+  // once at a clinic -- and forcing one of the three roles above on them made
+  // the type field a lie. This is the catch-all for those.
+  OTHER: 'سایر / عمومی',
 };
 
 export const LINE_STATUS_LABELS: Record<string, string> = {
@@ -722,6 +730,7 @@ export const T7 = {
   fValue: 'ارزش',
   fCreated: 'تاریخ ثبت',
   fHasContact: 'شخص تماس دارد',
+  fBusinessType: 'نوع فعالیت',
   fNoOwner: 'بدون مسئول',
   fNoStage: 'بدون مرحله',
   fNoSource: 'بدون منبع',
@@ -765,8 +774,12 @@ export const T8 = {
   // --- extra contacts on a lead / company ---
   addContactAction: 'افزودن مخاطب',
   addContactTitle: 'افزودن مخاطب',
+  contactTabSelect: 'انتخاب از این شرکت',
   contactTabNew: 'مخاطب جدید',
   contactTabExisting: 'مخاطب موجود',
+  contactSelectHint: 'یکی از مخاطب‌های این شرکت را برای این وظیفه انتخاب کنید.',
+  contactSelectEmpty: 'این شرکت هنوز مخاطبی ندارد — یک مخاطب جدید اضافه کنید.',
+  contactSelect: 'انتخاب',
   contactFirstNameLbl: 'نام *',
   contactLastNameLbl: 'تخلص',
   contactJobTitleLbl: 'سمت',
@@ -937,9 +950,16 @@ export const T13 = {
   partnerDeleted: 'حذف شد ✓',
   partnerDeleteFailed: 'حذف ناموفق بود',
   noPartners: 'هنوز بازاریابی ثبت نشده',
+
+  // quick-add, from a picker that doesn't have the name it needs yet
+  addReferrerInline: 'ثبت معرف جدید',
+  addMarketerInline: 'ثبت بازاریاب جدید',
+  quickAddPartnerTitle: 'ثبت معرف / بازاریاب جدید',
+  quickAddPartnerHint: 'همین‌جا ثبت می‌شود و در فهرست معرف‌ها هم می‌آید',
+  quickAddPartnerSave: 'ثبت و انتخاب',
+  quickAddPartnerUnsupported: 'ثبت معرف روی این نسخه فعال نیست',
   partnersLoadFailed: 'فهرست بارگیری نشد',
   partnerLeadsCount: 'لید',
-  newPartnerInline: '+ ثبت معرف جدید',
   partnersUnsupported:
     'این بخش روی این نسخه فعال نیست — اسکریپت provision-external-partners اجرا نشده',
 
@@ -1008,6 +1028,8 @@ export const T15 = {
   changeArrow: '←',
   byActor: 'توسط',
   showFullHistory: 'نمایش کامل سابقه',
+  fullHistoryHint: 'همهٔ تغییرات این لید و رکوردهای مرتبط با آن (شرکت و شخص تماس).',
+  ownerLbl: 'مسئول لید',
 
   // --- editing a lead's identity (LeadEditModal) ---
   editLead: 'ویرایش لید',
@@ -1060,6 +1082,128 @@ export const T17 = {
   searchSelectPlaceholder: 'جستجو یا انتخاب…',
   searchSelectNoMatch: 'موردی پیدا نشد',
   searchSelectClear: 'پاک کردن انتخاب',
+  searchSelectCreate: 'افزودن مورد جدید',
+};
+
+// --- Usystems Core: issuing a sales order from a lead ---
+export const T18 = {
+  salesOrderSection: 'سفارش فروش (Usystems)',
+  salesOrderHint:
+    'یک سفارش فروش رسمی با شماره و مهلت اعتبار در Usystems Core صادر کنید و PDF آن را برای مشتری بفرستید.',
+  notConfigured: 'اتصال به Usystems Core تنظیم نشده است (Settings → Admin Panel → Config Variables).',
+  notProvisioned: 'فیلدهای اتصال Usystems روی این نسخه فراهم نشده‌اند (provision-usystems-link.mjs).',
+  noOrderYet: 'هنوز سفارش فروشی برای این لید صادر نشده است.',
+  latestOrder: 'آخرین سفارش',
+  validUntil: 'معتبر تا',
+  expired: 'منقضی شده',
+  issueOrder: 'صدور سفارش فروش',
+  reissueOrder: 'صدور سفارش جدید',
+  printPdf: 'چاپ',
+  downloadPdf: 'دانلود PDF',
+  preparing: 'در حال آماده‌سازی…',
+  printFailed: 'آماده‌سازی سند ناموفق بود.',
+  orderDate: 'تاریخ',
+  orderTotal: 'جمع',
+  ordersList: 'سفارش‌های صادرشده',
+  popupBlocked: 'مرورگر پنجرهٔ چاپ را مسدود کرد؛ اجازهٔ باز شدن پنجره را بدهید.',
+
+  // modal
+  issueTitle: 'صدور سفارش فروش',
+  clientStep: 'مشتری در Usystems Core',
+  clientHint: 'برای صدور سفارش، مشتری باید در Usystems Core ثبت شده باشد.',
+  searchClient: 'جستجوی مشتری (نام، تلفن، ایمیل)…',
+  searching: 'در حال جستجو…',
+  noClientFound: 'مشتری‌ای پیدا نشد.',
+  linkClient: 'انتخاب',
+  linkedClient: 'مشتری متصل',
+  changeClient: 'تغییر',
+  registerClient: 'ثبت مشتری در Usystems Core',
+  registerClientHint: 'با نام و مشخصات شرکت این لید یک مشتری جدید ساخته می‌شود.',
+  registering: 'در حال ثبت…',
+  registerFailed: 'ثبت مشتری ناموفق بود.',
+  linesStep: 'اقلام سفارش',
+  linesHint: 'از محصولات لید پر شده است؛ می‌توانید ویرایش کنید.',
+  lineDescription: 'شرح',
+  lineQty: 'تعداد',
+  lineUnitPrice: 'قیمت واحد',
+  lineUnit: 'واحد',
+  lineDetails: 'جزئیات',
+  lineDetailsHint: 'زیر نام قلم روی سند چاپ می‌شود؛ هر سطر یک مورد.',
+  detailPackage: 'بسته',
+  detailVersion: 'نسخه',
+  detailInstall: 'نصب',
+  detailAnnual: 'سالانه',
+  detailDiscount: 'تخفیف',
+  addLine: 'افزودن قلم',
+  removeLine: 'حذف',
+  noLines: 'حداقل یک قلم لازم است.',
+  currency: 'ارز',
+  documentDate: 'تاریخ سفارش',
+  validUntilField: 'معتبر تا (مهلت پیشنهاد)',
+  validUntilHint: 'مشتری تا این تاریخ می‌تواند با همین قیمت‌ها سفارش را بپذیرد.',
+  memo: 'یادداشت روی سند',
+  total: 'جمع',
+  issue: 'صدور',
+  issuing: 'در حال صدور…',
+  issued: 'سفارش فروش صادر شد',
+  issueFailed: 'صدور سفارش ناموفق بود.',
+  linkSaveFailed: 'سفارش صادر شد اما ثبت آن روی لید ناموفق بود.',
+};
+
+// ---- reminders ----
+export const T_REMIND = {
+  reminder: 'یادآوری',
+  reminders: 'یادآوری‌ها',
+  setReminder: 'یادآوری بگذار',
+  notifyMe: 'به من یادآوری کن',
+  presetNone: 'بدون یادآوری',
+  presetAt: 'در همان زمان',
+  preset15m: '۱۵ دقیقه قبل',
+  preset1h: '۱ ساعت قبل',
+  preset1d: '۱ روز قبل',
+  presetCustom: 'زمان دیگر',
+  remindAtLbl: 'زمان یادآوری',
+  titleLbl: 'موضوع',
+  whenLbl: 'موعد',
+  noteLbl: 'یادداشت (اختیاری)',
+  defaultTitle: (leadName: string) => `پیگیری ${leadName}`,
+  titleRequired: 'موضوع یادآوری را بنویسید',
+  saved: 'یادآوری ثبت شد ✓',
+  saveFailed: 'ثبت یادآوری ناموفق بود',
+  save: 'ثبت یادآوری',
+  saving: 'در حال ثبت…',
+  firedHeading: 'یادآوری‌های رسیده',
+  upcomingHeading: 'امروز بعداً',
+  empty: 'یادآوری فعالی ندارید',
+  done: 'انجام شد',
+  snooze: 'تعویق',
+  snoozeHour: '۱ ساعت بعد',
+  snoozeTomorrow: 'فردا ۹ صبح',
+  dismiss: 'رد',
+  allTasks: 'همه کارها',
+  bellAria: 'یادآوری‌ها',
+  remindPrefix: 'یادآوری',
+  actionFailed: 'انجام نشد؛ دوباره تلاش کنید',
+  notifyHint: 'اگر مرورگر اجازه دهد، در زمان یادآوری اعلان دریافت می‌کنید.',
+  pushOn: 'اعلان‌های پس‌زمینه فعال است — حتی وقتی برنامه بسته باشد یادآوری می‌گیرید.',
+  pushOff: 'برای دریافت یادآوری وقتی برنامه بسته است، اعلان‌ها را فعال کنید.',
+  pushEnable: 'فعال‌سازی اعلان‌ها',
+  pushBlocked: 'اعلان‌ها در مرورگر مسدود شده‌اند؛ از تنظیمات مرورگر اجازه دهید.',
+  pushUnsupported: 'این مرورگر یا سرور از اعلان پس‌زمینه پشتیبانی نمی‌کند؛ یادآوری‌ها فقط داخل برنامه نمایش داده می‌شوند.',
+};
+
+// --- the Deal card: products + offers + sales order under one roof ---
+export const T19 = {
+  dealSection: 'معامله',
+  tabProducts: 'محصولات',
+  tabOffers: 'پیشنهادها',
+  tabOrder: 'سفارش فروش',
+  stripLines: 'جمع اقلام',
+  stripAgreed: 'قیمت توافق‌شده',
+  stripOpenOffers: 'پیشنهاد باز',
+  stripOrder: 'سفارش فروش',
+  stripValidUntil: 'معتبر تا',
+  stripExpired: 'منقضی',
 };
 
 // --- demo systems (نسخه نمایشی) ---

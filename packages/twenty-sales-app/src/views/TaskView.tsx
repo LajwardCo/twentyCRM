@@ -21,6 +21,7 @@ import {
   type TaskType,
 } from '../api/records';
 import { ActionBar, type ActionBarItem } from '../components/ActionBar';
+import { AddContactModal } from '../components/AddContactModal';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { QuickTaskModal } from '../components/QuickTaskModal';
@@ -49,9 +50,15 @@ import {
   T,
   T5,
   T6,
+  T8,
   TASK_TYPE_LABELS,
   TEMP_LABELS,
 } from '../lib/strings';
+
+// Task types that are worked against a specific person — the seller should be
+// able to pick or add the contact right on the task, and that choice becomes
+// the lead's point of contact (and puts the person on the company).
+const CONTACT_TASK_TYPES: TaskType[] = ['CALL', 'DEMO', 'VISIT'];
 
 type TaskViewProps = {
   taskId: string;
@@ -129,6 +136,7 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
     toLocalInputValue(new Date(presetIso(1))),
   );
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const wrapUpRef = useRef<HTMLDivElement | null>(null);
@@ -283,6 +291,11 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
 
   const TypeIcon = TASK_TYPE_ICONS[task.taskType ?? 'OTHER'] ?? IconCheck;
   const isDone = task.status === 'DONE';
+  // Show the contact picker for call/demo/visit tasks that have a company to
+  // hang the person on.
+  const canPickContact =
+    CONTACT_TASK_TYPES.includes((task.taskType ?? 'OTHER') as TaskType) &&
+    lead?.company != null;
   const lastActivities = (data?.leadTasks ?? [])
     .filter((t) => t.id !== task.id && t.bodyV2?.markdown)
     .slice(0, 2);
@@ -553,7 +566,19 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
                   </div>
                   <div className="c-row">
                     <span>{T.contactPerson}</span>
-                    <b>{personName(lead.pointOfContact)}</b>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <b>{personName(lead.pointOfContact)}</b>
+                      {canPickContact && (
+                        <button
+                          className="btn line sm"
+                          onClick={() => setContactModalOpen(true)}
+                        >
+                          {lead.pointOfContact
+                            ? T6.editAction
+                            : T8.addContactAction}
+                        </button>
+                      )}
+                    </span>
                   </div>
                   <div className="c-row">
                     <span>{T.phone}</span>
@@ -654,6 +679,24 @@ export const TaskView = ({ taskId, user }: TaskViewProps) => {
           opportunityId={lead?.id ?? null}
           onUploaded={onAttachmentUploaded}
           onClose={() => setUploadModalOpen(false)}
+        />
+      )}
+
+      {contactModalOpen && lead?.company && (
+        <AddContactModal
+          companyId={lead.company.id}
+          promoteForLeadId={lead.id}
+          enableSelectExisting
+          currentPrimaryId={lead.pointOfContact?.id}
+          onClose={() => setContactModalOpen(false)}
+          onSaved={async (message) => {
+            setContactModalOpen(false);
+            invalidateCache('today:');
+            invalidateCache(`task:${taskId}`);
+            invalidateCache(`lead:${lead.id}`);
+            await refresh();
+            showToast(message);
+          }}
         />
       )}
 

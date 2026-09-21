@@ -1258,6 +1258,11 @@ export const TDEMO = {
   currency: 'واحد پول',
   inventory: 'فعال‌سازی انبار و موجودی',
   inventoryHint: 'محصولات نمونه همراه با موجودی اولیه ساخته می‌شوند',
+  demoContentTitle: 'محتوای نمایشی (قابل انتخاب)',
+  optStorefront: 'فروشگاه آنلاین (Storefront)',
+  optLogo: 'لوگوی صفحه ورود',
+  optBackground: 'تصویر پس‌زمینه ورود',
+  optDocuments: 'اسناد نمونه (فروش، انبار، هزینه)',
 
   // step 3
   duration: 'مدت اعتبار',

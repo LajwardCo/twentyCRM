@@ -16,6 +16,7 @@ import {
   type Referrer,
 } from '../api/records';
 import { setLeadPrimaryContact } from '../api/contacts';
+import { fetchMembers, type Member } from '../api/admin';
 import { phoneEntries } from '../lib/phones';
 import {
   fetchDiscountRules,
@@ -50,6 +51,7 @@ import {
   T6,
   T8,
   T13,
+  T15,
   T16,
 } from '../lib/strings';
 import { AddContactModal } from './AddContactModal';
@@ -454,6 +456,9 @@ type MetaCardProps = {
   lead: LeadSummary;
   referrers?: Referrer[];
   editable?: boolean;
+  // Whether the responsible (owner) row may be reassigned here. Off for
+  // external users, who can neither see the member list nor move a lead.
+  ownerEditable?: boolean;
   onSaveLead?: (patch: Record<string, unknown>) => Promise<void>;
   // Refetch the partner list after the referrer row creates a new one, so the
   // picker can show the name it just saved.
@@ -464,11 +469,20 @@ export const MetaCard = ({
   lead,
   referrers = [],
   editable = false,
+  ownerEditable = false,
   onSaveLead,
   onReferrersChanged,
 }: MetaCardProps) => {
   // Non-null while the referrer row's "add new" dialog is open.
   const [newReferrerName, setNewReferrerName] = useState<string | null>(null);
+
+  // The member list only matters when this card may reassign the lead; sellers
+  // reassigning is a legitimate handoff and the server enforces access either
+  // way, so this is gated on the caller's flag rather than an admin check.
+  const { data: members } = useCached(
+    ownerEditable ? 'members' : 'members:skip',
+    ownerEditable ? fetchMembers : () => Promise.resolve([] as Member[]),
+  );
 
   const { data: marketer, refresh: refreshMarketer } = useCached(
     `marketer:${lead.id}`,
@@ -476,6 +490,20 @@ export const MetaCard = ({
   );
 
   const canEdit = editable && !!onSaveLead;
+  const canEditOwner = canEdit && ownerEditable;
+
+  // The current owner is always kept in the list even when the fetched page of
+  // members doesn't contain them (bounded query, or a deactivated member), so
+  // the row opens on the real name rather than a blank.
+  const ownerOptions: MetaOption[] = [
+    ...(members ?? []).map((member) => ({
+      value: member.id,
+      label: personName(member),
+    })),
+    ...(lead.owner && !(members ?? []).some((m) => m.id === lead.owner?.id)
+      ? [{ value: lead.owner.id, label: personName(lead.owner) }]
+      : []),
+  ];
 
   const sourceOptions: MetaOption[] = [
     { value: '', label: '—' },
@@ -553,6 +581,15 @@ export const MetaCard = ({
     <div className="card card-pad anim">
       <h3>{T2.metaSection}</h3>
       <div className="contact-rows">
+        <EditableMetaRow
+          label={T15.ownerLbl}
+          display={lead.owner ? personName(lead.owner) : '—'}
+          currentValue={lead.owner?.id ?? ''}
+          options={ownerOptions}
+          editable={canEditOwner}
+          searchable
+          onSave={(value) => onSaveLead!({ ownerId: value || null })}
+        />
         <EditableMetaRow
           label="منبع لید"
           display={SOURCE_LABELS[lead.leadSource ?? ''] ?? '—'}

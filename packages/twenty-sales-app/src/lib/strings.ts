@@ -1024,6 +1024,8 @@ export const T15 = {
   changeArrow: '←',
   byActor: 'توسط',
   showFullHistory: 'نمایش کامل سابقه',
+  fullHistoryHint: 'همهٔ تغییرات این لید و رکوردهای مرتبط با آن (شرکت و شخص تماس).',
+  ownerLbl: 'مسئول لید',
 
   // --- editing a lead's identity (LeadEditModal) ---
   editLead: 'ویرایش لید',

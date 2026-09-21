@@ -27,6 +27,7 @@ import {
   IconAI,
   IconBell,
   IconCheck,
+  IconClock,
   IconEdit,
   IconMail,
   IconNote,
@@ -38,6 +39,7 @@ import {
   IconWhatsApp,
 } from '../components/icons';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
+import { FullTimelineModal } from '../components/FullTimelineModal';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
 import { LeadDealCard } from '../components/LeadDealCard';
@@ -139,6 +141,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [override, setOverride] = useState<Partial<LeadSummary>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
   const remindersProvisioned = useRemindersProvisioned();
   const [tlFilter, setTlFilter] = useState<TimelineFilter>('all');
@@ -518,6 +521,15 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           </div>
         </div>
         <div className="hero-actions">
+          <button
+            className="btn line sm"
+            type="button"
+            aria-label={T15.showFullHistory}
+            title={T15.showFullHistory}
+            onClick={() => setShowTimeline(true)}
+          >
+            <IconClock size={13} /> {T15.showFullHistory}
+          </button>
           <button
             className="btn line sm"
             type="button"
@@ -1083,11 +1095,16 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             lead={lead}
             referrers={referrers}
             editable
+            ownerEditable={!isExternalUser(user)}
             onSaveLead={saveLeadField}
             onReferrersChanged={reloadReferrers}
           />
         </div>
       </div>
+
+      {showTimeline && (
+        <FullTimelineModal lead={lead} onClose={() => setShowTimeline(false)} />
+      )}
 
       {showReminder && (
         <ReminderModal

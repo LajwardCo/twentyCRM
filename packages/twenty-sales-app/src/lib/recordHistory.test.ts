@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   type ActivityRow,
+  type AuditEntry,
   humanizeActivity,
+  mergeAuditEntries,
   parseActivityName,
   toAuditEntries,
 } from './recordHistory';
@@ -175,5 +177,44 @@ describe('toAuditEntries', () => {
     ]);
 
     expect(entries.map((e) => e.id)).toEqual(['new', 'old']);
+  });
+});
+
+describe('mergeAuditEntries', () => {
+  const entry = (id: string, at: string): AuditEntry => ({
+    id,
+    at,
+    action: 'updated',
+    objectName: 'opportunity',
+    actor: 'x',
+    subject: null,
+    changes: [],
+  });
+
+  it('interleaves several records\' logs newest first', () => {
+    const lead = [entry('l2', '2026-05-01T00:00:00.000Z'), entry('l1', '2026-01-01T00:00:00.000Z')];
+    const company = [entry('c1', '2026-03-01T00:00:00.000Z')];
+
+    expect(mergeAuditEntries([lead, company], 60).map((e) => e.id)).toEqual([
+      'l2',
+      'c1',
+      'l1',
+    ]);
+  });
+
+  it('dedupes a row that appears in two streams (linked note on lead + its own)', () => {
+    const shared = entry('shared', '2026-04-01T00:00:00.000Z');
+    const merged = mergeAuditEntries([[shared], [shared]], 60);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0].id).toBe('shared');
+  });
+
+  it('caps the merged log to the limit', () => {
+    const stream = Array.from({ length: 5 }, (_, i) =>
+      entry(`e${i}`, `2026-0${i + 1}-01T00:00:00.000Z`),
+    );
+
+    expect(mergeAuditEntries([stream], 2).map((e) => e.id)).toEqual(['e4', 'e3']);
   });
 });

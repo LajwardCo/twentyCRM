@@ -222,3 +222,21 @@ export const toAuditEntries = (rows: ActivityRow[]): AuditEntry[] =>
     .map(humanizeActivity)
     .filter((entry): entry is AuditEntry => entry !== null)
     .sort((a, b) => b.at.localeCompare(a.at));
+
+// Fold several records' change logs into one. The same activity id can appear
+// in more than one stream (a linked note rides both its own timeline and the
+// lead's), so rows are deduped by id before the merged log is sorted newest
+// first and capped.
+export const mergeAuditEntries = (
+  streams: AuditEntry[][],
+  limit: number,
+): AuditEntry[] => {
+  const seen = new Set<string>();
+  const merged: AuditEntry[] = [];
+  for (const entry of streams.flat()) {
+    if (seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    merged.push(entry);
+  }
+  return merged.sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+};

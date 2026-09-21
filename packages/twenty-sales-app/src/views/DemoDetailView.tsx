@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { getDemo, regenerateDemoCredentials, type DemoStatus } from '../api/demoSystems';
+import {
+  getDemo,
+  getDemoDetails,
+  regenerateDemoCredentials,
+  type DemoDetails,
+  type DemoStatus,
+} from '../api/demoSystems';
 import { IconPresentation } from '../components/icons';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
@@ -43,6 +49,7 @@ const CopyRow = ({ label, value, mono }: { label: string; value: string; mono?: 
 
 export const DemoDetailView = ({ demoId }: { demoId: string }) => {
   const [demo, setDemo] = useState<DemoStatus | null>(null);
+  const [details, setDetails] = useState<DemoDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const pollTimer = useRef<number | undefined>(undefined);
@@ -69,6 +76,23 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
       window.clearTimeout(pollTimer.current);
     };
   }, [demoId]);
+
+  // Once the tenant is provisioned, pull a live snapshot from the fleet (Core):
+  // real status, expiry, and how much catalog was seeded.
+  useEffect(() => {
+    if (demo?.status !== 'ready') return;
+    let cancelled = false;
+    getDemoDetails(demoId)
+      .then((snapshot) => {
+        if (!cancelled) setDetails(snapshot);
+      })
+      .catch(() => {
+        // Snapshot is supplementary; the rest of the page still renders.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [demo?.status, demoId]);
 
   const handleRegenerate = async () => {
     setRegenerating(true);
@@ -186,6 +210,58 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
               </div>
             </div>
           </div>
+
+          {details && details.provisioned && (
+            <div className="card card-pad fieldset anim d3" style={{ marginTop: 12 }}>
+              <legend>{TDEMO.snapshotTitle}</legend>
+              <div className="demo-meta-grid">
+                {details.live && (
+                  <div>
+                    <span>{TDEMO.liveStatus}</span>
+                    <b>
+                      <span
+                        className={`demo-status-badge ${
+                          details.live.expired ? 's-expired' : details.live.active ? 's-ready' : 's-queued'
+                        }`}
+                      >
+                        {details.live.expired
+                          ? TDEMO.statusExpired
+                          : details.live.active
+                            ? TDEMO.liveActive
+                            : TDEMO.liveLocked}
+                      </span>
+                    </b>
+                  </div>
+                )}
+                {details.catalog && (
+                  <>
+                    <div>
+                      <span>{TDEMO.products}</span>
+                      <b>
+                        {details.catalog.products != null
+                          ? toPersianDigits(String(details.catalog.products))
+                          : '—'}
+                      </b>
+                    </div>
+                    <div>
+                      <span>{TDEMO.services}</span>
+                      <b>
+                        {details.catalog.services != null
+                          ? toPersianDigits(String(details.catalog.services))
+                          : '—'}
+                      </b>
+                    </div>
+                  </>
+                )}
+                {details.workspace?.currency && (
+                  <div>
+                    <span>{TDEMO.currency}</span>
+                    <b>{details.workspace.currency}</b>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </>
       )}
     </main>

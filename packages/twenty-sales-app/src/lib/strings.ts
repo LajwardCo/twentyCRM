@@ -1315,4 +1315,13 @@ export const TDEMO = {
   failedHint: 'ساخت این نسخه ناموفق بود. لطفاً دوباره تلاش کنید.',
   backToList: 'بازگشت به فهرست',
   demoBadge: 'نمایشی',
+
+  // live snapshot (fetched from the fleet server)
+  snapshotTitle: 'اطلاعات زندهٔ نسخه نمایشی',
+  liveStatus: 'وضعیت',
+  liveActive: 'فعال',
+  liveLocked: 'قفل‌شده',
+  products: 'محصولات',
+  services: 'خدمات',
+  workspaceName: 'نام فضای کاری',
 };

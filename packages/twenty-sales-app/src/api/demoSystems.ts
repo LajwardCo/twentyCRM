@@ -116,5 +116,34 @@ export const listDemos = (scope: 'mine' | 'all' = 'mine'): Promise<DemoStatus[]>
 export const getDemo = (id: number | string): Promise<DemoStatus> =>
   request('GET', `/${id}`);
 
+// Live snapshot of the provisioned demo tenant, read fresh from the fleet (Core).
+export type DemoDetails = {
+  id: number;
+  subdomain: string;
+  status: string;
+  provisioned: boolean;
+  live: {
+    active: boolean;
+    deleted: boolean;
+    expired: boolean;
+    expires_at: string | null;
+    auto_delete_at: string | null;
+    days_left: number | null;
+    constellation_type: string;
+  } | null;
+  workspace: {
+    name: string;
+    code: string;
+    language: string;
+    calendar: string;
+    week_start_day: string;
+    currency: string | null;
+  } | null;
+  catalog: { products: number | null; services: number | null } | null;
+};
+
+export const getDemoDetails = (id: number | string): Promise<DemoDetails> =>
+  request('GET', `/${id}/details`);
+
 export const regenerateDemoCredentials = (id: number | string): Promise<DemoStatus> =>
   request('POST', `/${id}/regenerate-credentials`);

@@ -293,10 +293,21 @@ export const T2 = {
 
   // quick task modal (restored — required by QuickTaskModal.tsx)
   quickTaskNewTitle: 'کار جدید',
+  quickTaskAddToLead: 'افزودن کار',
+  quickTaskBarLabel: 'کار جدید',
   quickTaskEditTitle: 'ویرایش کار',
   quickTaskTitleLbl: 'عنوان',
   quickTaskTypeLbl: 'نوع کار',
   quickTaskDueLbl: 'موعد',
+  quickTaskDetailsLbl: 'جزئیات',
+  quickTaskDetailsPlaceholder: 'یادداشت‌ها و جزئیات کار…',
+  quickTaskAssigneeLbl: 'مسئول',
+  quickTaskNoAssignee: 'بدون مسئول',
+  quickTaskAttachLbl: 'فایل‌ها (اختیاری)',
+  quickTaskAttachBtn: 'افزودن فایل',
+  quickTaskRemoveFile: 'حذف فایل',
+  quickTaskUploading: (index: string, total: string): string =>
+    `در حال آپلود فایل ${index} از ${total}…`,
   quickTaskMarkDone: 'پایان یافته',
   quickTaskSave: 'ذخیره',
   quickTaskSaving: 'در حال ذخیره…',

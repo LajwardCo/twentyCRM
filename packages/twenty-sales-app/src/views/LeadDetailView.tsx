@@ -6,7 +6,6 @@ import { useRemindersProvisioned } from '../api/remindersSupport';
 import {
   CONVERTIBLE_STAGES,
   createNoteForLead,
-  createTaskForLead,
   fetchLead,
   fetchLeadNotes,
   fetchLeadTasks,
@@ -35,12 +34,12 @@ import {
   IconScript,
   IconSms,
   IconSummary,
+  IconTasks,
   IconTrash,
   IconWhatsApp,
 } from '../components/icons';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { FullTimelineModal } from '../components/FullTimelineModal';
-import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
 import { LeadDealCard } from '../components/LeadDealCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
@@ -62,7 +61,6 @@ import {
   formatMoney,
   fullPhone,
   personName,
-  toLocalInputValue,
 } from '../lib/format';
 import {
   formatJalaliDate,
@@ -105,6 +103,17 @@ type TimelineEntry =
   | { kind: 'note'; at: string; note: Note };
 
 type TimelineFilter = 'all' | 'tasks' | 'notes' | 'changes';
+
+// Default due date for a task added from the lead: tomorrow (as YYYY-MM-DD in
+// local time), which the drawer then pins to 09:00.
+const tomorrowIso = (): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
 
 const CallIcon = () => <IconPhone size={16} />;
 
@@ -153,14 +162,10 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
   const [noteDraft, setNoteDraft] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
-  const [followUpDraft, setFollowUpDraft] = useState('');
-  const [followUpDate, setFollowUpDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    d.setHours(9, 0, 0, 0);
-    return toLocalInputValue(d);
-  });
-  const [followUpBusy, setFollowUpBusy] = useState(false);
+  // Add a task from the lead page via a drawer, so details, an assignee, files
+  // (and a finished status) can be entered here instead of jumping to the
+  // task's own page.
+  const [addingTask, setAddingTask] = useState(false);
 
   const [referrers, setReferrers] = useState<Referrer[]>([]);
   const [editingAmount, setEditingAmount] = useState(false);
@@ -336,27 +341,6 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
     }
   };
 
-  const addFollowUp = async () => {
-    if (!lead || followUpDraft.trim() === '') return;
-    setFollowUpBusy(true);
-    try {
-      await createTaskForLead({
-        title: followUpDraft.trim(),
-        status: 'TODO',
-        dueAt: new Date(followUpDate).toISOString(),
-        assigneeId: user.workspaceMemberId,
-        target: { opportunityId: lead.id, companyId: lead.company?.id },
-      });
-      setFollowUpDraft('');
-      showToast('پیگیری ثبت شد ✓');
-      await reload();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : T.loadFailed);
-    } finally {
-      setFollowUpBusy(false);
-    }
-  };
-
   // Soft delete only: the record leaves the pipeline but stays in the CRM's
   // trash, and the reason is filed on it first.
   const confirmDelete = async (reason: string) => {
@@ -478,7 +462,13 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       onClick: () => setShowReminder(true),
     },
     {
-      // short label: five slots on a 360px screen leave ~60px each
+      key: 'task',
+      label: T2.quickTaskBarLabel,
+      icon: IconTasks,
+      onClick: () => setAddingTask(true),
+    },
+    {
+      // short label: slots on a 360px screen leave ~60px each
       key: 'ai',
       label: 'دستیار',
       icon: IconAI,
@@ -764,27 +754,9 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
                 {noteBusy ? T.saving : T.saveNote}
               </button>
             </div>
-            <div className="f2">
-              <div className="fld" style={{ marginBottom: 8 }}>
-                <label>{T.followUpWhat}</label>
-                <input
-                  placeholder={T.followUpPlaceholder}
-                  value={followUpDraft}
-                  onChange={(e) => setFollowUpDraft(e.target.value)}
-                />
-              </div>
-              <div className="fld" style={{ marginBottom: 8 }}>
-                <label>{T.when}</label>
-                <JalaliDatePicker value={followUpDate} onChange={setFollowUpDate} />
-              </div>
-            </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button
-                className="btn line sm"
-                disabled={followUpBusy || followUpDraft.trim() === ''}
-                onClick={addFollowUp}
-              >
-                {followUpBusy ? T.saving : `＋ ${T.addFollowUp}`}
+              <button className="btn line sm" onClick={() => setAddingTask(true)}>
+                {`＋ ${T2.quickTaskAddToLead}`}
               </button>
               {remindersProvisioned === true && (
                 <button className="btn line sm" onClick={() => setShowReminder(true)}>
@@ -1163,6 +1135,22 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             invalidateCache('leads:');
             void reload();
             showToast('ذخیره شد ✓');
+          }}
+        />
+      )}
+
+      {addingTask && (
+        <QuickTaskModal
+          mode="create-lead"
+          dateIso={tomorrowIso()}
+          assigneeId={user.workspaceMemberId}
+          target={{ opportunityId: lead.id, companyId: lead.company?.id }}
+          allowAssigneePick={user.isAdmin}
+          onClose={() => setAddingTask(false)}
+          onSaved={async () => {
+            setAddingTask(false);
+            showToast('کار ثبت شد ✓');
+            await reload();
           }}
         />
       )}

@@ -5078,3 +5078,9 @@ table.leads tbody tr:hover {
 .rem-push-status .btn {
   flex-shrink: 0;
 }
+
+/* --- Demo content toggles (wizard step 2) --------------------------------- */
+.demo-content-toggles { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.demo-toggles-title { font-size: 12.5px; font-weight: 700; color: var(--ink-2); margin-bottom: 4px; }
+.demo-toggle { font-size: 13px; }
+.demo-toggle span { color: var(--ink); }

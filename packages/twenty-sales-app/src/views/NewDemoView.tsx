@@ -27,6 +27,10 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
 ];
 
 const CURRENCIES = ['AFN', 'USD'];
+
+// Business types that ship a rich demo dataset (custom fields, images,
+// storefront, branding, documents) whose pieces the agent can toggle.
+const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store'];
 const LANGUAGES: { code: string; label: string }[] = [
   { code: 'fa', label: TDEMO.langFa },
   { code: 'en', label: TDEMO.langEn },
@@ -77,6 +81,10 @@ export const NewDemoView = () => {
   const [language, setLanguage] = useState('fa');
   const [currency, setCurrency] = useState('AFN');
   const [inventoryEnabled, setInventoryEnabled] = useState(true);
+  const [enableStorefront, setEnableStorefront] = useState(true);
+  const [enableLogo, setEnableLogo] = useState(true);
+  const [enableBackground, setEnableBackground] = useState(true);
+  const [seedDocuments, setSeedDocuments] = useState(true);
   const [expiryDate, setExpiryDate] = useState(addDaysKey(14));
   const [notes, setNotes] = useState('');
   const [agreementAccepted, setAgreementAccepted] = useState(false);
@@ -151,6 +159,10 @@ export const NewDemoView = () => {
       notes: notes.trim(),
       duration_days: durationDays,
       agreement_accepted: agreementAccepted,
+      enable_storefront: enableStorefront,
+      enable_logo: enableLogo,
+      enable_background: enableBackground,
+      seed_documents: seedDocuments,
     };
     try {
       const demo = await createDemo(input);
@@ -272,6 +284,28 @@ export const NewDemoView = () => {
                 <span className="demo-check-hint">{TDEMO.inventoryHint}</span>
               </span>
             </label>
+
+            {RICH_DEMO_TYPES.includes(businessType) && (
+              <div className="demo-content-toggles">
+                <div className="demo-toggles-title">{TDEMO.demoContentTitle}</div>
+                <label className="demo-check-row demo-toggle">
+                  <input type="checkbox" checked={enableStorefront} onChange={(e) => setEnableStorefront(e.target.checked)} />
+                  <span>{TDEMO.optStorefront}</span>
+                </label>
+                <label className="demo-check-row demo-toggle">
+                  <input type="checkbox" checked={enableLogo} onChange={(e) => setEnableLogo(e.target.checked)} />
+                  <span>{TDEMO.optLogo}</span>
+                </label>
+                <label className="demo-check-row demo-toggle">
+                  <input type="checkbox" checked={enableBackground} onChange={(e) => setEnableBackground(e.target.checked)} />
+                  <span>{TDEMO.optBackground}</span>
+                </label>
+                <label className="demo-check-row demo-toggle" style={{ marginBottom: 0 }}>
+                  <input type="checkbox" checked={seedDocuments} onChange={(e) => setSeedDocuments(e.target.checked)} />
+                  <span>{TDEMO.optDocuments}</span>
+                </label>
+              </div>
+            )}
           </div>
         )}
 

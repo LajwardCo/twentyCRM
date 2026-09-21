@@ -46,6 +46,11 @@ export type CreateDemoInput = {
   notes: string;
   duration_days: number;
   agreement_accepted: boolean;
+  // Demo-content toggles (rich business types only, e.g. mobile store).
+  enable_storefront?: boolean;
+  enable_logo?: boolean;
+  enable_background?: boolean;
+  seed_documents?: boolean;
 };
 
 export class DemoApiError extends Error {

@@ -1212,3 +1212,102 @@ export const T19 = {
   stripValidUntil: 'معتبر تا',
   stripExpired: 'منقضی',
 };
+
+// --- demo systems (نسخه نمایشی) ---
+export const TDEMO = {
+  navDemos: 'سیستم‌های نمایشی',
+  pageTitle: 'سیستم‌های نمایشی',
+  pageSub: 'ساخت نسخه نمایشی برای ارائه به مشتریان',
+  newDemo: 'نسخه نمایشی جدید',
+  myDemos: 'نمایشی‌های من',
+  allDemos: 'همه',
+  empty: 'هنوز نسخه نمایشی نساخته‌اید',
+  emptyHint: 'برای ارائه به مشتری، یک نسخه نمایشی بسازید.',
+  loadError: 'بارگیری فهرست ناموفق بود',
+
+  // steps
+  step1: 'نوع کسب‌وکار',
+  step2: 'تنظیمات',
+  step3: 'مدت و انقضا',
+  step4: 'توافق‌نامه',
+  stepLabel: 'مرحله',
+
+  // step 1
+  businessType: 'نوع کسب‌وکار',
+  businessName: 'نام کسب‌وکار',
+  businessNamePh: 'مثلاً موبایل‌فروشی احمد',
+  bizMobile: 'موبایل‌فروشی',
+  bizAppliances: 'لوازم خانگی',
+  bizOther: 'سایر / تجارت عمومی',
+  bizMobileDesc: 'گوشی، لوازم جانبی و خدمات تعمیر',
+  bizAppliancesDesc: 'یخچال، ماشین لباسشویی و لوازم بزرگ',
+  bizOtherDesc: 'کاتالوگ عمومی حسابداری و انبار',
+
+  // step 2
+  subdomain: 'آدرس زیردامنه',
+  subdomainPh: 'مثلاً ahmad-mobile',
+  subdomainHint: 'نشانی نسخه نمایشی شما:',
+  subdomainChecking: 'در حال بررسی…',
+  subdomainAvailable: 'قابل استفاده است',
+  subdomainTaken: 'این نشانی قبلاً گرفته شده',
+  subdomainRequired: 'آدرس زیردامنه لازم است',
+  language: 'زبان',
+  langFa: 'دری',
+  langEn: 'انگلیسی',
+  langPs: 'پشتو',
+  currency: 'واحد پول',
+  inventory: 'فعال‌سازی انبار و موجودی',
+  inventoryHint: 'محصولات نمونه همراه با موجودی اولیه ساخته می‌شوند',
+
+  // step 3
+  duration: 'مدت اعتبار',
+  days7: '۷ روز',
+  days14: '۱۴ روز',
+  days30: '۳۰ روز',
+  daysCustom: 'دلخواه',
+  customDays: 'تعداد روز',
+  expiryNote:
+    'پس از این مدت، دسترسی به نسخه نمایشی قفل می‌شود و اندکی بعد به‌طور خودکار حذف می‌گردد.',
+  notes: 'یادداشت (اختیاری)',
+  notesPh: 'این نسخه برای کدام مشتری است؟',
+
+  // step 4 agreement
+  agreementTitle: 'توافق‌نامه استفاده',
+  agreementBody:
+    'این نسخه فقط برای ارائه و نمایش به مشتری ساخته می‌شود. می‌پذیرم که نشانی و اطلاعات ورود این نسخه نمایشی را مستقیماً در اختیار مشتری قرار نمی‌دهم و تنها در جریان ارائه از آن استفاده می‌کنم.',
+  agreementAccept: 'شرایط بالا را می‌پذیرم',
+  agreementRequired: 'برای ادامه باید توافق‌نامه را بپذیرید',
+  reviewTitle: 'بازبینی',
+
+  // buttons
+  next: 'بعدی',
+  back: 'قبلی',
+  create: 'ساخت نسخه نمایشی',
+  creating: 'در حال ساخت…',
+  createError: 'ساخت نسخه نمایشی ناموفق بود',
+
+  // status / detail
+  statusQueued: 'در صف',
+  statusProvisioning: 'در حال آماده‌سازی',
+  statusReady: 'آماده',
+  statusFailed: 'ناموفق',
+  statusExpired: 'منقضی',
+  statusDeleted: 'حذف‌شده',
+  preparing: 'نسخه نمایشی در حال ساخت است… این کار ممکن است چند دقیقه طول بکشد.',
+  readyTitle: 'نسخه نمایشی آماده است',
+  loginUrl: 'نشانی ورود',
+  username: 'نام کاربری',
+  password: 'رمز عبور',
+  copy: 'کپی',
+  copied: 'کپی شد',
+  openDemo: 'باز کردن نسخه نمایشی',
+  regenerate: 'ساخت رمز جدید',
+  regenerating: 'در حال ساخت رمز…',
+  expiresOn: 'انقضا',
+  daysLeft: 'روز باقی مانده',
+  presentationOnlyBadge: 'فقط برای ارائه',
+  createdBy: 'سازنده',
+  failedHint: 'ساخت این نسخه ناموفق بود. لطفاً دوباره تلاش کنید.',
+  backToList: 'بازگشت به فهرست',
+  demoBadge: 'نمایشی',
+};

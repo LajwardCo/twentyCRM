@@ -1674,6 +1674,14 @@ export type DoneTask = {
   taskType: TaskType | null;
   bodyV2: { markdown: string | null } | null;
   assignee: { id: string; name: { firstName: string; lastName: string } } | null;
+  taskTargets?: {
+    edges: {
+      node: {
+        opportunity: { id: string; name: string } | null;
+        company: { id: string; name: string } | null;
+      };
+    }[];
+  };
 };
 
 // assigneeId omitted = every seller's done tasks since sinceIso (used for
@@ -1693,6 +1701,14 @@ const DONE_TASKS_PAGE_QUERY = `query DoneTasksSince($filter: TaskFilterInput, $l
         taskType
         bodyV2 { markdown }
         assignee { id name { firstName lastName } }
+        taskTargets {
+          edges {
+            node {
+              opportunity { id name }
+              company { id name }
+            }
+          }
+        }
       }
     }
     pageInfo { hasNextPage endCursor }

@@ -33,7 +33,7 @@ type Bucket = {
   tasks: Task[];
 };
 
-const taskLead = (task: Task) => {
+const taskLead = (task: Task | DoneTask) => {
   const targets = task.taskTargets?.edges ?? [];
   for (const { node } of targets) {
     if (node.opportunity) return node.opportunity;
@@ -374,6 +374,26 @@ export const TasksView = ({ user }: TasksViewProps) => {
               </span>
               <div className="t-main" onClick={() => navigate(`/task/${task.id}`)}>
                 <div className="t-title" style={{ color: 'var(--ink-3)' }}>{task.title}</div>
+                <div className="t-sub">
+                  {task.taskType && (
+                    <span className="pill stage" style={{ fontSize: 10.5, padding: '1px 8px' }}>
+                      {TASK_TYPE_LABELS[task.taskType]}
+                    </span>
+                  )}
+                  {(() => {
+                    const lead = taskLead(task);
+                    return lead ? (
+                      <span className="lead-chip">{lead.name}</span>
+                    ) : (
+                      <span>{T.noLead}</span>
+                    );
+                  })()}
+                  {allScope && task.assignee && (
+                    <span className="pill" style={{ fontSize: 10.5, padding: '1px 8px' }}>
+                      {task.assignee.name.firstName} {task.assignee.name.lastName}
+                    </span>
+                  )}
+                </div>
               </div>
               <span className="due later num">{formatJalaliDate(task.updatedAt)}</span>
             </div>

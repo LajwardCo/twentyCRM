@@ -32,7 +32,7 @@ const CURRENCIES = ['AFN', 'USD'];
 
 // Business types that ship a rich demo dataset (custom fields, images,
 // storefront, branding, documents) whose pieces the agent can toggle.
-const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'snooker_club', 'car_rental'];
+const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'home_appliances', 'snooker_club', 'car_rental'];
 const LANGUAGES: { code: string; label: string }[] = [
   { code: 'fa', label: TDEMO.langFa },
   { code: 'en', label: TDEMO.langEn },

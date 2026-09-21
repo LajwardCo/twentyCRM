@@ -12,12 +12,15 @@ const STATUS_LABEL: Record<DemoStatus['status'], string> = {
   ready: TDEMO.statusReady,
   failed: TDEMO.statusFailed,
   expired: TDEMO.statusExpired,
+  stopped: TDEMO.statusStopped,
   deleted: TDEMO.statusDeleted,
 };
 
 const BIZ_LABEL: Record<string, string> = {
   mobile_store: TDEMO.bizMobile,
   home_appliances: TDEMO.bizAppliances,
+  snooker_club: TDEMO.bizSnooker,
+  car_rental: TDEMO.bizCarRental,
   other: TDEMO.bizOther,
 };
 

@@ -4726,7 +4726,7 @@ table.leads tbody tr:hover {
 .demo-status-badge.s-ready { background: var(--ok-bg); color: var(--ok); }
 .demo-status-badge.s-failed { background: var(--hot-bg); color: var(--hot); }
 .demo-status-badge.s-provisioning, .demo-status-badge.s-queued { background: var(--warm-bg); color: #9a6b00; }
-.demo-status-badge.s-expired, .demo-status-badge.s-deleted { background: var(--line-soft); color: var(--ink-3); }
+.demo-status-badge.s-expired, .demo-status-badge.s-stopped, .demo-status-badge.s-deleted { background: var(--line-soft); color: var(--ink-3); }
 .demo-status-badge.s-demo { background: var(--lapis-100); color: var(--lapis-700); }
 
 .demo-days-pill { font-size: 12px; font-weight: 700; color: var(--lapis-700); background: var(--lapis-50); padding: 4px 10px; border-radius: 20px; white-space: nowrap; }

@@ -120,4 +120,12 @@ export class DemoSystemsService {
   regenerateCredentials(id: number | string) {
     return this.request('POST', `${id}/regenerate-credentials/`);
   }
+
+  stopDemo(id: number | string) {
+    return this.request('POST', `${id}/stop/`);
+  }
+
+  removeDemo(id: number | string) {
+    return this.request('POST', `${id}/remove/`);
+  }
 }

@@ -13,7 +13,7 @@ export type DemoBusinessType =
 
 export type DemoStatus = {
   id: number;
-  status: 'queued' | 'provisioning' | 'ready' | 'failed' | 'expired' | 'deleted';
+  status: 'queued' | 'provisioning' | 'ready' | 'failed' | 'expired' | 'stopped' | 'deleted';
   business_name: string;
   business_type: DemoBusinessType;
   subdomain: string;
@@ -159,3 +159,11 @@ export const getDemoDetails = (id: number | string): Promise<DemoDetails> =>
 
 export const regenerateDemoCredentials = (id: number | string): Promise<DemoStatus> =>
   request('POST', `/${id}/regenerate-credentials`);
+
+// Deactivate the tenant now (agent-initiated early end).
+export const stopDemo = (id: number | string): Promise<DemoStatus> =>
+  request('POST', `/${id}/stop`);
+
+// Tear the demo down: soft-delete the tenant + mark it removed.
+export const removeDemo = (id: number | string): Promise<DemoStatus> =>
+  request('POST', `/${id}/remove`);

@@ -4,6 +4,8 @@ import {
   getDemo,
   getDemoDetails,
   regenerateDemoCredentials,
+  removeDemo,
+  stopDemo,
   type DemoDetails,
   type DemoStatus,
 } from '../api/demoSystems';
@@ -15,7 +17,19 @@ import { TDEMO } from '../lib/strings';
 const BIZ_LABEL: Record<string, string> = {
   mobile_store: TDEMO.bizMobile,
   home_appliances: TDEMO.bizAppliances,
+  snooker_club: TDEMO.bizSnooker,
+  car_rental: TDEMO.bizCarRental,
   other: TDEMO.bizOther,
+};
+
+const STATUS_LABEL: Record<DemoStatus['status'], string> = {
+  queued: TDEMO.statusQueued,
+  provisioning: TDEMO.statusProvisioning,
+  ready: TDEMO.statusReady,
+  failed: TDEMO.statusFailed,
+  expired: TDEMO.statusExpired,
+  stopped: TDEMO.statusStopped,
+  deleted: TDEMO.statusDeleted,
 };
 
 const daysLeft = (expiresAt: string | null): number | null => {
@@ -52,6 +66,8 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
   const [details, setDetails] = useState<DemoDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const pollTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
@@ -112,6 +128,28 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
     }
   };
 
+  const handleStop = async () => {
+    if (!window.confirm(TDEMO.stopConfirm)) return;
+    setStopping(true);
+    try {
+      setDemo(await stopDemo(demoId));
+    } catch {
+      /* keep the current view */
+    }
+    setStopping(false);
+  };
+
+  const handleRemove = async () => {
+    if (!window.confirm(TDEMO.removeConfirm)) return;
+    setRemoving(true);
+    try {
+      await removeDemo(demoId);
+      navigate('/demos');
+    } catch {
+      setRemoving(false);
+    }
+  };
+
   if (error !== null) {
     return (
       <main className="page">
@@ -145,7 +183,7 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
             {BIZ_LABEL[demo.business_type] ?? demo.business_type}
             {' · '}
             <span className={`demo-status-badge s-${demo.status}`}>
-              {demo.status === 'ready' ? TDEMO.statusReady : demo.status === 'failed' ? TDEMO.statusFailed : ''}
+              {STATUS_LABEL[demo.status]}
             </span>
           </div>
         </div>
@@ -188,6 +226,12 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
               </a>
               <button className="btn line" onClick={handleRegenerate} disabled={regenerating}>
                 {regenerating ? TDEMO.regenerating : TDEMO.regenerate}
+              </button>
+              <button className="btn line" onClick={handleStop} disabled={stopping || removing}>
+                {stopping ? TDEMO.stopping : TDEMO.stopDemo}
+              </button>
+              <button className="btn line danger" onClick={handleRemove} disabled={removing || stopping}>
+                {removing ? TDEMO.removing : TDEMO.removeDemo}
               </button>
             </div>
           </div>
@@ -263,6 +307,31 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
             </div>
           )}
         </>
+      )}
+
+      {(demo.status === 'stopped' || demo.status === 'expired') && (
+        <div className="card card-pad anim">
+          <div className="demo-presentation-note" style={{ marginBottom: 12 }}>
+            🔒 {TDEMO.stoppedNote}
+          </div>
+          <div className="demo-detail-actions">
+            <button className="btn line danger" onClick={handleRemove} disabled={removing}>
+              {removing ? TDEMO.removing : TDEMO.removeDemo}
+            </button>
+            <button className="btn line" onClick={() => navigate('/demos')}>
+              {TDEMO.backToList}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {demo.status === 'deleted' && (
+        <div className="card card-pad anim">
+          <div className="sub">{TDEMO.stoppedNote}</div>
+          <button className="btn line" style={{ marginTop: 12 }} onClick={() => navigate('/demos')}>
+            {TDEMO.backToList}
+          </button>
+        </div>
       )}
     </main>
   );

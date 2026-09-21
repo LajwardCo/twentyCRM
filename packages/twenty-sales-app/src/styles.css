@@ -5084,3 +5084,7 @@ table.leads tbody tr:hover {
 .demo-toggles-title { font-size: 12.5px; font-weight: 700; color: var(--ink-2); margin-bottom: 4px; }
 .demo-toggle { font-size: 13px; }
 .demo-toggle span { color: var(--ink); }
+
+/* --- Demo custom-branding preview (wizard settings) ----------------------- */
+.demo-brand-preview { margin-top: 6px; max-height: 48px; max-width: 100%; border-radius: 6px; border: 1px solid var(--line); object-fit: contain; background: var(--line-soft); }
+.demo-content-toggles input[type="file"] { font-size: 12px; }

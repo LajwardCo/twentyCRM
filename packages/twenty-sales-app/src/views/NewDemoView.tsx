@@ -85,6 +85,11 @@ export const NewDemoView = () => {
   const [enableLogo, setEnableLogo] = useState(true);
   const [enableBackground, setEnableBackground] = useState(true);
   const [seedDocuments, setSeedDocuments] = useState(true);
+  const [multiInventory, setMultiInventory] = useState(true);
+  const [multiCurrency, setMultiCurrency] = useState(true);
+  const [multiLot, setMultiLot] = useState(true);
+  const [customLogo, setCustomLogo] = useState<string>('');
+  const [customBackground, setCustomBackground] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState(addDaysKey(14));
   const [notes, setNotes] = useState('');
   const [agreementAccepted, setAgreementAccepted] = useState(false);
@@ -101,6 +106,23 @@ export const NewDemoView = () => {
 
   const preview = useMemo(() => previewSubdomain(subdomain), [subdomain]);
   const durationDays = useMemo(() => daysFromKey(expiryDate), [expiryDate]);
+
+  // Read a chosen image as a data URL for the custom login logo/background.
+  const pickImage = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (value: string) => void,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError(TDEMO.imageTooLarge);
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setter(typeof reader.result === 'string' ? reader.result : '');
+    reader.readAsDataURL(file);
+  };
 
   // Debounced availability check while typing the subdomain (step 2).
   useEffect(() => {
@@ -163,6 +185,11 @@ export const NewDemoView = () => {
       enable_logo: enableLogo,
       enable_background: enableBackground,
       seed_documents: seedDocuments,
+      multi_inventory: multiInventory,
+      multi_currency: multiCurrency,
+      multi_lot: multiLot,
+      ...(customLogo ? { custom_logo: customLogo } : {}),
+      ...(customBackground ? { custom_background: customBackground } : {}),
     };
     try {
       const demo = await createDemo(input);
@@ -284,6 +311,34 @@ export const NewDemoView = () => {
                 <span className="demo-check-hint">{TDEMO.inventoryHint}</span>
               </span>
             </label>
+
+            <div className="demo-content-toggles">
+              <div className="demo-toggles-title">{TDEMO.settingsTitle}</div>
+              <label className="demo-check-row demo-toggle">
+                <input type="checkbox" checked={multiInventory} onChange={(e) => setMultiInventory(e.target.checked)} />
+                <span>{TDEMO.optMultiInventory}</span>
+              </label>
+              <label className="demo-check-row demo-toggle">
+                <input type="checkbox" checked={multiCurrency} onChange={(e) => setMultiCurrency(e.target.checked)} />
+                <span>{TDEMO.optMultiCurrency}</span>
+              </label>
+              <label className="demo-check-row demo-toggle">
+                <input type="checkbox" checked={multiLot} onChange={(e) => setMultiLot(e.target.checked)} />
+                <span>{TDEMO.optMultiLot}</span>
+              </label>
+              <div className="f2" style={{ marginTop: 8 }}>
+                <div className="fld" style={{ marginBottom: 0 }}>
+                  <label>{TDEMO.optCustomLogo}</label>
+                  <input type="file" accept="image/*" onChange={(e) => pickImage(e, setCustomLogo)} />
+                  {customLogo && <img src={customLogo} className="demo-brand-preview" alt="logo" />}
+                </div>
+                <div className="fld" style={{ marginBottom: 0 }}>
+                  <label>{TDEMO.optCustomBackground}</label>
+                  <input type="file" accept="image/*" onChange={(e) => pickImage(e, setCustomBackground)} />
+                  {customBackground && <img src={customBackground} className="demo-brand-preview" alt="background" />}
+                </div>
+              </div>
+            </div>
 
             {RICH_DEMO_TYPES.includes(businessType) && (
               <div className="demo-content-toggles">

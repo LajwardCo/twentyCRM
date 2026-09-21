@@ -51,6 +51,13 @@ export type CreateDemoInput = {
   enable_logo?: boolean;
   enable_background?: boolean;
   seed_documents?: boolean;
+  // Capability settings (any type).
+  multi_inventory?: boolean;
+  multi_currency?: boolean;
+  multi_lot?: boolean;
+  // Custom login branding as base64 / data-URL (any type). Optional.
+  custom_logo?: string;
+  custom_background?: string;
 };
 
 export class DemoApiError extends Error {

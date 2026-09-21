@@ -2,11 +2,16 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 // Thin server-side client for the Usystems Core "partner demos" API. It holds
 // the Core API key so the browser never sees it, and forwards the sales agent's
-// requests to platform.usystems.af. Config comes from env (mirrors the direct
-// process.env usage in call-transcription.service.ts):
-//   USYSTEMS_CORE_URL         e.g. https://platform.usystems.af
-//   USYSTEMS_DEMO_API_KEY     a DeveloperApp key with the `demos.write` scope
-//   USYSTEMS_DEMO_PRODUCT_CODE the caller tenant's ref_product code (URL segment)
+// requests to platform.usystems.af. Config comes from env, reusing the existing
+// CRM↔Core connection so no new secrets need provisioning on the box:
+//   URL:     USYSTEMS_CORE_URL     (default: the Core public host below)
+//   key:     USYSTEMS_DEMO_API_KEY, else the existing USYSTEMS_API_KEY
+//            (that DeveloperApp just needs the `demos.write` scope added)
+//   tenant:  USYSTEMS_DEMO_PRODUCT_CODE, else USYSTEMS_PRODUCT_CODE, else the
+//            hamagan `accounting` product the key belongs to.
+const DEFAULT_CORE_URL = 'https://backend.platform.usystems.af';
+const DEFAULT_PRODUCT_CODE = 'accounting';
+
 type CoreConfig = {
   baseUrl: string;
   apiKey: string;
@@ -16,9 +21,19 @@ type CoreConfig = {
 @Injectable()
 export class DemoSystemsService {
   private getConfig(): CoreConfig {
-    const baseUrl = (process.env.USYSTEMS_CORE_URL ?? '').trim().replace(/\/$/, '');
-    const apiKey = (process.env.USYSTEMS_DEMO_API_KEY ?? '').trim();
-    const productCode = (process.env.USYSTEMS_DEMO_PRODUCT_CODE ?? '').trim();
+    const baseUrl = (process.env.USYSTEMS_CORE_URL ?? DEFAULT_CORE_URL)
+      .trim()
+      .replace(/\/$/, '');
+    const apiKey = (
+      process.env.USYSTEMS_DEMO_API_KEY ??
+      process.env.USYSTEMS_API_KEY ??
+      ''
+    ).trim();
+    const productCode = (
+      process.env.USYSTEMS_DEMO_PRODUCT_CODE ??
+      process.env.USYSTEMS_PRODUCT_CODE ??
+      DEFAULT_PRODUCT_CODE
+    ).trim();
 
     if (!baseUrl || !apiKey || !productCode) {
       throw new HttpException(

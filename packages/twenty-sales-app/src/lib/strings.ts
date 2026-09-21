@@ -770,8 +770,12 @@ export const T8 = {
   // --- extra contacts on a lead / company ---
   addContactAction: 'افزودن مخاطب',
   addContactTitle: 'افزودن مخاطب',
+  contactTabSelect: 'انتخاب از این شرکت',
   contactTabNew: 'مخاطب جدید',
   contactTabExisting: 'مخاطب موجود',
+  contactSelectHint: 'یکی از مخاطب‌های این شرکت را برای این وظیفه انتخاب کنید.',
+  contactSelectEmpty: 'این شرکت هنوز مخاطبی ندارد — یک مخاطب جدید اضافه کنید.',
+  contactSelect: 'انتخاب',
   contactFirstNameLbl: 'نام *',
   contactLastNameLbl: 'تخلص',
   contactJobTitleLbl: 'سمت',

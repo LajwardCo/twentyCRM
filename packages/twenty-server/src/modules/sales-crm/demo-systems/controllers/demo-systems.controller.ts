@@ -76,4 +76,16 @@ export class DemoSystemsController {
   async regenerate(@Param('id') id: string) {
     return this.demoSystemsService.regenerateCredentials(id);
   }
+
+  @Post(':id/stop')
+  @UseGuards(NoPermissionGuard)
+  async stop(@Param('id') id: string) {
+    return this.demoSystemsService.stopDemo(id);
+  }
+
+  @Post(':id/remove')
+  @UseGuards(NoPermissionGuard)
+  async remove(@Param('id') id: string) {
+    return this.demoSystemsService.removeDemo(id);
+  }
 }

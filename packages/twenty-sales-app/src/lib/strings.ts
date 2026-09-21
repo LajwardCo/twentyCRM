@@ -1308,6 +1308,7 @@ export const TDEMO = {
   statusReady: 'آماده',
   statusFailed: 'ناموفق',
   statusExpired: 'منقضی',
+  statusStopped: 'متوقف‌شده',
   statusDeleted: 'حذف‌شده',
   preparing: 'نسخه نمایشی در حال ساخت است… این کار ممکن است چند دقیقه طول بکشد.',
   readyTitle: 'نسخه نمایشی آماده است',
@@ -1326,6 +1327,15 @@ export const TDEMO = {
   failedHint: 'ساخت این نسخه ناموفق بود. لطفاً دوباره تلاش کنید.',
   backToList: 'بازگشت به فهرست',
   demoBadge: 'نمایشی',
+
+  // stop / remove actions
+  stopDemo: 'توقف نسخه نمایشی',
+  stopping: 'در حال توقف…',
+  stopConfirm: 'این نسخه نمایشی متوقف می‌شود و مشتری دیگر نمی‌تواند وارد شود. ادامه می‌دهید؟',
+  stoppedNote: 'این نسخه نمایشی متوقف شده و دیگر در دسترس نیست.',
+  removeDemo: 'حذف نسخه نمایشی',
+  removing: 'در حال حذف…',
+  removeConfirm: 'این نسخه نمایشی و تمام داده‌های آن برای همیشه حذف می‌شود. این کار قابل بازگشت نیست. ادامه می‌دهید؟',
 
   // live snapshot (fetched from the fleet server)
   snapshotTitle: 'اطلاعات زندهٔ نسخه نمایشی',

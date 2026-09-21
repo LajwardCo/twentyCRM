@@ -1246,6 +1246,29 @@ export const fetchCompanyOptions = async (): Promise<
   return data.companies.edges.map((e) => e.node);
 };
 
+// Distinct business types actually in use, for the leads filter. businessType
+// is a free-text field on Company (no fixed option set), so the picker offers
+// the values that exist rather than a hardcoded list. Instances that never
+// provisioned the field make the query throw -- callers wrap in .catch(() => [])
+// so an absent field simply hides the filter instead of blanking the screen.
+export const fetchBusinessTypes = async (): Promise<string[]> => {
+  const data = await coreQuery<{
+    companies: { edges: { node: { businessType: string | null } }[] };
+  }>(
+    `query BusinessTypes {
+      companies(first: ${PAGE_SIZE}, orderBy: [{ name: AscNullsLast }]) {
+        edges { node { businessType } }
+      }
+    }`,
+  );
+  const distinct = new Set<string>();
+  for (const edge of data.companies.edges) {
+    const value = (edge.node.businessType ?? '').trim();
+    if (value !== '') distinct.add(value);
+  }
+  return [...distinct].sort((a, b) => a.localeCompare(b, 'fa'));
+};
+
 // Referrers/partners a lead can be attributed to (relation target of
 // Opportunity.referrer). Defensive: the partner object may be absent on some
 // environments, so callers get an empty list rather than a hard failure.

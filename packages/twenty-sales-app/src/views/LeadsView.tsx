@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchMembers } from '../api/admin';
 import { type CurrentUser } from '../api/auth';
 import {
+  fetchBusinessTypes,
   fetchLeads,
   fetchReferrers,
   OPEN_STAGES,
@@ -84,16 +85,21 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
   // Option lists for the filter sheet. Both are small, cached, and shared with
   // other screens; a failure here must not take the leads list down with it.
   const { data: filterOptions } = useCached('lead-filter-options', async () => {
-    const [members, referrers] = await Promise.all([
+    const [members, referrers, businessTypes] = await Promise.all([
       fetchMembers().catch(() => []),
       fetchReferrers().catch(() => []),
+      fetchBusinessTypes().catch(() => []),
     ]);
-    return { members, referrers };
+    return { members, referrers, businessTypes };
   });
 
   const fields = useMemo(
     () =>
-      leadFilterFields(filterOptions?.members ?? [], filterOptions?.referrers ?? []),
+      leadFilterFields(
+        filterOptions?.members ?? [],
+        filterOptions?.referrers ?? [],
+        filterOptions?.businessTypes ?? [],
+      ),
     [filterOptions],
   );
 

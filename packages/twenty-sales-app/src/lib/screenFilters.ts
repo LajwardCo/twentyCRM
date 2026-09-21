@@ -98,9 +98,21 @@ export const effectiveOpenOnly = (
   state: FilterState,
 ): boolean => openOnly && !isFilterActive(state.stage);
 
+// The business-type clause filters opportunities through their related
+// company: `{ company: { businessType: { in: [...] } } }`. The server exposes
+// this because a to-one relation's filter input nests the target object's own
+// filterable fields.
+const businessTypeServerFilter = (
+  value: FilterValue,
+): Record<string, unknown> | undefined =>
+  value.kind === 'multiEnum' && value.values.length > 0
+    ? { company: { businessType: { in: value.values } } }
+    : undefined;
+
 export const leadFilterFields = (
   members: Member[],
   referrers: Referrer[],
+  businessTypes: string[] = [],
 ): FilterField<LeadSummary>[] => [
   {
     key: 'stage',
@@ -162,6 +174,19 @@ export const leadFilterFields = (
     })),
     buildServerFilter: enumWithNoneServerFilter('referrerId'),
   },
+  // Only offered when the workspace actually records business types; an empty
+  // option list would just be a dead filter group.
+  ...(businessTypes.length > 0
+    ? [
+        {
+          key: 'businessType',
+          label: T7.fBusinessType,
+          kind: 'multiEnum' as const,
+          options: businessTypes.map((value) => ({ value, label: value })),
+          buildServerFilter: businessTypeServerFilter,
+        },
+      ]
+    : []),
   {
     key: 'value',
     label: T7.fValue,

@@ -299,6 +299,13 @@ export const T2 = {
   quickTaskDueLbl: 'موعد',
   quickTaskDetailsLbl: 'جزئیات',
   quickTaskDetailsPlaceholder: 'یادداشت‌ها و جزئیات کار…',
+  quickTaskAssigneeLbl: 'مسئول',
+  quickTaskNoAssignee: 'بدون مسئول',
+  quickTaskAttachLbl: 'فایل‌ها (اختیاری)',
+  quickTaskAttachBtn: 'افزودن فایل',
+  quickTaskRemoveFile: 'حذف فایل',
+  quickTaskUploading: (index: string, total: string): string =>
+    `در حال آپلود فایل ${index} از ${total}…`,
   quickTaskMarkDone: 'پایان یافته',
   quickTaskSave: 'ذخیره',
   quickTaskSaving: 'در حال ذخیره…',

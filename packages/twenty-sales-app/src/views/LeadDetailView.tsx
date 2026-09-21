@@ -35,6 +35,7 @@ import {
   IconScript,
   IconSms,
   IconSummary,
+  IconTasks,
   IconTrash,
   IconWhatsApp,
 } from '../components/icons';
@@ -481,7 +482,13 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
       onClick: () => setShowReminder(true),
     },
     {
-      // short label: five slots on a 360px screen leave ~60px each
+      key: 'task',
+      label: T2.leadAddTask,
+      icon: IconTasks,
+      onClick: () => setAddingTask(true),
+    },
+    {
+      // short label: slots on a 360px screen leave ~60px each
       key: 'ai',
       label: 'دستیار',
       icon: IconAI,
@@ -1206,6 +1213,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
         <LeadTaskDrawer
           target={{ opportunityId: lead.id, companyId: lead.company?.id }}
           assigneeId={user.workspaceMemberId}
+          allowAssigneePick={user.isAdmin}
           initialTitle={followUpDraft.trim()}
           initialDueValue={followUpDate}
           onClose={() => setAddingTask(false)}

@@ -76,6 +76,7 @@ import { ChannelSyncModule } from 'src/modules/connected-account/channel-sync/ch
 import { DashboardModule } from 'src/modules/dashboard/dashboard.module';
 import { SendEmailModule } from 'src/modules/messaging/message-outbound-manager/send-email.module';
 import { WhatsappModule } from 'src/modules/sales-crm/whatsapp/whatsapp.module';
+import { DemoSystemsModule } from 'src/modules/sales-crm/demo-systems/demo-systems.module';
 import { ClientConfigModule } from './client-config/client-config.module';
 import { EventLogsViewerModule } from './event-logs/event-logs-viewer.module';
 import { FileModule } from './file/file.module';
@@ -132,6 +133,7 @@ import { TaskUploadModule } from './file/task-upload/task-upload.module';
     ChannelSyncModule,
     SendEmailModule,
     WhatsappModule,
+    DemoSystemsModule,
     FileStorageModule.forRoot(),
     LoggerModule.forRootAsync({
       useFactory: loggerModuleFactory,

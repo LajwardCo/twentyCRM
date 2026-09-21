@@ -1,0 +1,115 @@
+import { loadTokens } from './client';
+
+// Talks to the twenty-server proxy (/rest/sales/demo-systems/*), which forwards
+// to the Usystems Core partner API with the server-held key. Same bearer-token
+// pattern as api/ai.ts.
+
+export type DemoBusinessType = 'mobile_store' | 'home_appliances' | 'other';
+
+export type DemoStatus = {
+  id: number;
+  status: 'queued' | 'provisioning' | 'ready' | 'failed' | 'expired' | 'deleted';
+  business_name: string;
+  business_type: DemoBusinessType;
+  subdomain: string;
+  workspace_url: string;
+  login_url: string;
+  admin_username: string;
+  admin_password: string;
+  agent_email: string;
+  agent_name: string;
+  language: string;
+  currency: string;
+  inventory_enabled: boolean;
+  duration_days: number;
+  expires_at: string | null;
+  auto_delete_at: string | null;
+  ready_at: string | null;
+  error_public: string;
+  created_at: string;
+};
+
+export type SubdomainCheck = {
+  subdomain: string;
+  available: boolean;
+  status: string;
+  message: string;
+};
+
+export type CreateDemoInput = {
+  business_name: string;
+  business_type: DemoBusinessType;
+  subdomain: string;
+  language: string;
+  currency: string;
+  inventory_enabled: boolean;
+  notes: string;
+  duration_days: number;
+  agreement_accepted: boolean;
+};
+
+export class DemoApiError extends Error {
+  code?: string;
+  status: number;
+  fields?: Record<string, string[]>;
+  constructor(message: string, status: number, code?: string, fields?: Record<string, string[]>) {
+    super(message);
+    this.name = 'DemoApiError';
+    this.status = status;
+    this.code = code;
+    this.fields = fields;
+  }
+}
+
+const BASE = '/rest/sales/demo-systems';
+
+const request = async <T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> => {
+  const tokens = loadTokens();
+  const response = await fetch(`${BASE}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${tokens?.accessToken ?? ''}`,
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await response.text();
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { detail: text };
+  }
+
+  if (!response.ok) {
+    const code = data?.code as string | undefined;
+    // Field-level DRF errors come back as { field: [messages] }.
+    const fields: Record<string, string[]> = {};
+    if (data && typeof data === 'object' && !code && !data.detail && !data.message) {
+      for (const [k, v] of Object.entries(data)) {
+        if (Array.isArray(v)) fields[k] = v.map(String);
+      }
+    }
+    const message =
+      data?.detail || data?.message ||
+      (Object.keys(fields).length ? Object.values(fields)[0][0] : `Request failed (${response.status})`);
+    throw new DemoApiError(message, response.status, code, Object.keys(fields).length ? fields : undefined);
+  }
+  return data as T;
+};
+
+export const checkDemoSubdomain = (subdomain: string): Promise<SubdomainCheck> =>
+  request('POST', '/check-subdomain', { subdomain });
+
+export const createDemo = (input: CreateDemoInput): Promise<DemoStatus> =>
+  request('POST', '', input);
+
+export const listDemos = (scope: 'mine' | 'all' = 'mine'): Promise<DemoStatus[]> =>
+  request('GET', scope === 'all' ? '?scope=all' : '');
+
+export const getDemo = (id: number | string): Promise<DemoStatus> =>
+  request('GET', `/${id}`);
+
+export const regenerateDemoCredentials = (id: number | string): Promise<DemoStatus> =>
+  request('POST', `/${id}/regenerate-credentials`);

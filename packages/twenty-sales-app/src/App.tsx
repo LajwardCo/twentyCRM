@@ -15,7 +15,7 @@ import { invalidateCache } from './lib/cache';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
 import { toPersianDigits } from './lib/jalali';
 import { navigate, useRoute } from './lib/router';
-import { T, T5 } from './lib/strings';
+import { T, T5, TDEMO } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { ContactsView } from './views/ContactsView';
@@ -29,6 +29,9 @@ import { PackageCatalogDetailView, ProductCatalogDetailView } from './views/Cata
 import { CompetitorDetailView } from './views/CompetitorDetailView';
 import { CompetitorsView } from './views/CompetitorsView';
 import { DailyReportView } from './views/DailyReportView';
+import { DemoSystemsView } from './views/DemoSystemsView';
+import { DemoDetailView } from './views/DemoDetailView';
+import { NewDemoView } from './views/NewDemoView';
 import { CompanyView, NoteView, PersonView } from './views/EntityViews';
 import { LoginView } from './views/LoginView';
 import { NewLeadView } from './views/NewLeadView';
@@ -259,6 +262,24 @@ export const App = () => {
     bar = backButton;
   } else if (section === 'catalog') {
     view = <CatalogView />;
+  } else if (section === 'demos' && param === 'new') {
+    view = <NewDemoView />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/demos')}>
+        <IconBack size={15} />
+        {TDEMO.navDemos}
+      </button>
+    );
+  } else if (section === 'demos') {
+    view = <DemoSystemsView />;
+  } else if (section === 'demo' && param) {
+    view = <DemoDetailView demoId={param} />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/demos')}>
+        <IconBack size={15} />
+        {TDEMO.navDemos}
+      </button>
+    );
   } else if (section === 'partners') {
     view = <PartnersView />;
   } else if (section === 'audit') {

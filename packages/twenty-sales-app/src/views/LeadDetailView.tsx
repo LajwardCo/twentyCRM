@@ -50,6 +50,7 @@ import { MoneyInput } from '../components/MoneyInput';
 import { NoteEditModal } from '../components/NoteEditModal';
 import { LeadEditModal } from '../components/LeadEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
+import { LeadTaskDrawer } from '../components/LeadTaskDrawer';
 import { RecordHistory } from '../components/RecordHistory';
 import { ReminderModal } from '../components/ReminderModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
@@ -164,6 +165,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
   const [amountInput, setAmountInput] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<CurrencyCode>('AFN');
 
+  // Full task-create drawer opened from the lead page.
+  const [addingTask, setAddingTask] = useState(false);
   // Quick edit / delete for the lead and for anything on its timeline.
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -574,13 +577,29 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
           {/* open tasks under this lead */}
           {openTasks.length > 0 && (
             <div className="card anim d1">
-              <div className="card-pad" style={{ paddingBottom: 6 }}>
+              <div
+                className="card-pad"
+                style={{
+                  paddingBottom: 6,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
                 <h3>
                   {T2.openTasks}{' '}
                   <span className="num" style={{ color: 'var(--ink-3)', fontWeight: 600 }}>
                     ({toPersianDigits(openTasks.length)})
                   </span>
                 </h3>
+                <button
+                  type="button"
+                  className="btn line sm"
+                  onClick={() => setAddingTask(true)}
+                >
+                  ＋ {T2.leadAddTask}
+                </button>
               </div>
               {openTasks.map((task) => (
                 <div className="task" key={task.id}>
@@ -735,7 +754,23 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
 
           {/* quick add */}
           <div className="card card-pad anim d3">
-            <h3>ثبت سریع</h3>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <h3>ثبت سریع</h3>
+              <button
+                type="button"
+                className="btn line sm"
+                onClick={() => setAddingTask(true)}
+              >
+                ＋ {T2.leadAddTask}
+              </button>
+            </div>
             <div className="fld" style={{ marginTop: 10 }}>
               <textarea
                 placeholder={T.notePlaceholder}
@@ -1146,6 +1181,22 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             invalidateCache('leads:');
             void reload();
             showToast('ذخیره شد ✓');
+          }}
+        />
+      )}
+
+      {addingTask && lead && (
+        <LeadTaskDrawer
+          target={{ opportunityId: lead.id, companyId: lead.company?.id }}
+          assigneeId={user.workspaceMemberId}
+          initialTitle={followUpDraft.trim()}
+          initialDueValue={followUpDate}
+          onClose={() => setAddingTask(false)}
+          onSaved={async () => {
+            setAddingTask(false);
+            setFollowUpDraft('');
+            showToast('کار ثبت شد ✓');
+            await reload();
           }}
         />
       )}

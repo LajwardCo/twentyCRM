@@ -297,12 +297,15 @@ export const T2 = {
   quickTaskTitleLbl: 'عنوان',
   quickTaskTypeLbl: 'نوع کار',
   quickTaskDueLbl: 'موعد',
+  quickTaskDetailsLbl: 'جزئیات',
+  quickTaskDetailsPlaceholder: 'یادداشت‌ها و جزئیات کار…',
   quickTaskMarkDone: 'پایان یافته',
   quickTaskSave: 'ذخیره',
   quickTaskSaving: 'در حال ذخیره…',
   quickTaskOpenFull: 'باز کردن کامل ←',
   quickTaskTitleRequired: 'عنوان را وارد کنید',
   quickTaskSaveFailed: 'ذخیره ناموفق بود',
+  leadAddTask: 'کار جدید',
 };
 
 // catalog management: Product / Package / Pricing Version / Discount Rule
@@ -727,6 +730,7 @@ export const T7 = {
   fValue: 'ارزش',
   fCreated: 'تاریخ ثبت',
   fHasContact: 'شخص تماس دارد',
+  fBusinessType: 'نوع فعالیت',
   fNoOwner: 'بدون مسئول',
   fNoStage: 'بدون مرحله',
   fNoSource: 'بدون منبع',

@@ -59,6 +59,23 @@ describe('leadFilterFields', () => {
     });
   });
 
+  // Business type lives on the related company, so it filters through the
+  // opportunity's `company` relation rather than a column on the lead itself.
+  it('filters business type through the company relation', () => {
+    const fields = leadFilterFields(members, [], ['رستوران', 'داروخانه']);
+    const state: FilterState = {
+      businessType: { kind: 'multiEnum', values: ['داروخانه'] },
+    };
+    expect(buildGraphQLFilter(fields, state)).toEqual({
+      and: [{ company: { businessType: { in: ['داروخانه'] } } }],
+    });
+  });
+
+  it('offers no business-type field when the workspace records none', () => {
+    const fields = leadFilterFields(members, [], []);
+    expect(fields.some((field) => field.key === 'businessType')).toBe(false);
+  });
+
   it('maps "has contact" to a presence check on the relation', () => {
     expect(
       buildGraphQLFilter(leadFields(), {

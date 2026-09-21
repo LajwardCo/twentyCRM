@@ -65,6 +65,12 @@ export class DemoSystemsController {
     return this.demoSystemsService.getDemo(id);
   }
 
+  @Get(':id/details')
+  @UseGuards(NoPermissionGuard)
+  async details(@Param('id') id: string) {
+    return this.demoSystemsService.getDemoDetails(id);
+  }
+
   @Post(':id/regenerate-credentials')
   @UseGuards(NoPermissionGuard)
   async regenerate(@Param('id') id: string) {

@@ -113,6 +113,10 @@ export class DemoSystemsService {
     return this.request('GET', `${id}/`);
   }
 
+  getDemoDetails(id: number | string) {
+    return this.request('GET', `${id}/details/`);
+  }
+
   regenerateCredentials(id: number | string) {
     return this.request('POST', `${id}/regenerate-credentials/`);
   }

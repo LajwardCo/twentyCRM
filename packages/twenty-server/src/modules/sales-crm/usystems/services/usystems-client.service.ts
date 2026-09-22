@@ -217,6 +217,12 @@ export class UsystemsClientService {
     return this.request('GET', 'currencies/');
   }
 
+  // Core's items endpoint returns products and services alike (Item is the
+  // unified base). The seller's key needs the `items.read` scope.
+  searchItems(query: string): Promise<{ count: number; results: unknown[] }> {
+    return this.request('GET', 'items/search/', { query: { query, limit: 20 } });
+  }
+
   issueSalesOrder(input: IssueSalesOrderInput): Promise<{
     sales_order: UsystemsSalesOrder;
     sales_items: unknown[];

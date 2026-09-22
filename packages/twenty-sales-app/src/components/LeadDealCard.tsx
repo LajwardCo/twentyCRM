@@ -1,7 +1,14 @@
 import { useState } from 'react';
 
 import { type LeadOffer } from '../api/offers';
-import { type DealProductLine, fetchLeadPricing, type LeadSummary } from '../api/records';
+import {
+  type DealProductLine,
+  fetchLeadPricing,
+  fetchProducts,
+  type LeadSummary,
+  type ProductOption,
+} from '../api/records';
+import { splitDealLineCadence } from '../lib/salesOrderLineDetails';
 import { type LeadUsystemsLink } from '../api/usystems';
 import { useCached } from '../lib/cache';
 import {
@@ -50,11 +57,22 @@ export const LeadDealCard = ({ lead, currentUserId, contactPhone, contactEmail, 
 
   // Same cache key the pricing tab uses, so the strip costs no extra request.
   const { data: pricing } = useCached(`pricing:${lead.id}`, () => fetchLeadPricing(lead.id));
+  // Same cache key the pricing tab uses, so the split costs no extra request.
+  const { data: products } = useCached('products', fetchProducts);
   const lines: DealProductLine[] = pricing?.dealProducts ?? [];
-  const totalInstall = lines.reduce<CurrencyTotals>(
-    (totals, line) =>
-      addCurrencyTotals(totals, line.installPrice?.amountMicros, line.installPrice?.currencyCode),
-    {},
+  // installPrice folds the monthly metrics into it; keep one-time and recurring
+  // apart even in the strip total (see splitDealLineCadence).
+  const cadenceTotals = lines.reduce(
+    (acc, line) => {
+      const product = (products ?? []).find((p: ProductOption) => p.id === line.product?.id);
+      const split = splitDealLineCadence(line, product);
+      return {
+        oneTime: addCurrencyTotals(acc.oneTime, split.oneTimeMicros, split.currencyCode),
+        monthly: addCurrencyTotals(acc.monthly, split.monthlyMicros, split.currencyCode),
+        annual: addCurrencyTotals(acc.annual, split.annualMicros, split.currencyCode),
+      };
+    },
+    { oneTime: {} as CurrencyTotals, monthly: {} as CurrencyTotals, annual: {} as CurrencyTotals },
   );
 
   const openOffers = offers.filter((o) => o.offerStatus === 'PROPOSED').length;
@@ -115,7 +133,19 @@ export const LeadDealCard = ({ lead, currentUserId, contactPhone, contactEmail, 
       <div className="deal-strip">
         <div className="deal-stat">
           <span>{T19.stripLines}</span>
-          <b className="num">{totalsAreEmpty(totalInstall) ? '—' : formatMoneyTotals(totalInstall)}</b>
+          <b className="num">
+            {totalsAreEmpty(cadenceTotals.oneTime) ? '—' : formatMoneyTotals(cadenceTotals.oneTime)}
+          </b>
+          {!totalsAreEmpty(cadenceTotals.monthly) && (
+            <span className="num" style={{ fontSize: 10, color: 'var(--ink-3)' }}>
+              ماهانه {formatMoneyTotals(cadenceTotals.monthly)}
+            </span>
+          )}
+          {!totalsAreEmpty(cadenceTotals.annual) && (
+            <span className="num" style={{ fontSize: 10, color: 'var(--ink-3)' }}>
+              سالانه {formatMoneyTotals(cadenceTotals.annual)}
+            </span>
+          )}
         </div>
         <div className="deal-stat">
           <span>{T19.stripAgreed}</span>

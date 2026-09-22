@@ -84,6 +84,14 @@ export class UsystemsController {
     return this.pass(() => this.usystemsClient.listCurrencies());
   }
 
+  // Search the tenant's Core catalog (products AND services) so the seller can
+  // add sales-order lines from the real catalog, not only the deal's products.
+  @Get('items/search')
+  @UseGuards(NoPermissionGuard)
+  searchItems(@Query('q') q?: string) {
+    return this.pass(() => this.usystemsClient.searchItems(q ?? ''));
+  }
+
   @Post('sales-orders')
   @UseGuards(NoPermissionGuard)
   issueSalesOrder(@Body() body: IssueSalesOrderInput) {

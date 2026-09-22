@@ -328,13 +328,25 @@ export const DealLinePricingEditor = ({
           <div className="sub" style={{ marginBottom: 6 }}>
             {T4.estimateSection}
           </div>
+          {/* One-time (fixed install) and recurring (monthly + hourly) are
+              shown as separate figures, never merged into one "install" total. */}
           <div className="contact-rows">
-            <div className="c-row">
-              <span>{T4.estimateInstallLbl}</span>
-              <b className="num">
-                {formatMoney(estimate.installTotal * 1_000_000, currencyCode)}
-              </b>
-            </div>
+            {estimate.fixedInstall > 0 && (
+              <div className="c-row">
+                <span>{T4.estimateOneTimeLbl}</span>
+                <b className="num">
+                  {formatMoney(estimate.fixedInstall * 1_000_000, currencyCode)}
+                </b>
+              </div>
+            )}
+            {estimate.monthly + estimate.hourly > 0 && (
+              <div className="c-row">
+                <span>{T4.estimateMonthlyLbl}</span>
+                <b className="num">
+                  {formatMoney((estimate.monthly + estimate.hourly) * 1_000_000, currencyCode)}
+                </b>
+              </div>
+            )}
             {estimate.annualTotal > 0 && (
               <div className="c-row">
                 <span>{T4.estimateAnnualLbl}</span>

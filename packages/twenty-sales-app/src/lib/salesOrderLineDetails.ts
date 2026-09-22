@@ -63,6 +63,52 @@ const metricLine = (
   return `${parts.join(' ')}${per ? ` (${per})` : ''}`;
 };
 
+export type CadenceSplit = {
+  // All in micros, matching DealProductLine amounts.
+  oneTimeMicros: number; // fixed one-time install / setup fee
+  monthlyMicros: number; // sub-annual recurring (monthly + hourly metrics)
+  annualMicros: number; // annual fixed + annual metrics
+  currencyCode: string | null;
+};
+
+// Separate a deal line's one-time charge from its recurring charges. The server
+// folds monthly + hourly metrics INTO installPrice (see
+// product-fixed-plus-metrics-price.util.ts), so a line's "install price" is
+// really one-time + monthly. We recover the split from the line's own fixed
+// install part, guaranteeing consistency: oneTime + monthly === installPrice and
+// annual === annualPrice, so no total ever changes -- only its presentation.
+export const splitDealLineCadence = (
+  line: DealProductLine,
+  product: Product | undefined,
+): CadenceSplit => {
+  const currencyCode =
+    line.priceOverrides?.currencyCode ??
+    line.installPrice?.currencyCode ??
+    line.annualPrice?.currencyCode ??
+    null;
+  const installMicros = line.installPrice?.amountMicros ?? 0;
+  const annualMicros = line.annualPrice?.amountMicros ?? 0;
+
+  const hasMetrics =
+    (line.priceSnapshot?.breakdown?.length ?? 0) > 0 ||
+    Object.keys(line.factorQuantities ?? {}).length > 0;
+
+  // No metrics: the whole install charge is a one-time fee; nothing recurs.
+  if (!hasMetrics) {
+    return { oneTimeMicros: installMicros, monthlyMicros: 0, annualMicros, currencyCode };
+  }
+
+  // With metrics, installPrice = fixed install (one-time) + monthly + hourly.
+  // The fixed part is the one-time fee; the remainder is the recurring part.
+  const fixedInstallUnits = fixedPart('install', line, product, currencyCode) ?? 0;
+  const oneTimeMicros = Math.min(
+    Math.max(Math.round(fixedInstallUnits * 1_000_000), 0),
+    installMicros,
+  );
+  const monthlyMicros = Math.max(0, installMicros - oneTimeMicros);
+  return { oneTimeMicros, monthlyMicros, annualMicros, currencyCode };
+};
+
 export const describeDealLine = (line: DealProductLine, product: Product | undefined): string[] => {
   const out: string[] = [];
   const currencyCode =

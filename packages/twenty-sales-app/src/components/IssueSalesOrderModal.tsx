@@ -8,19 +8,26 @@ import {
   registerUsystemsContact,
   saveCompanyUsystemsContactId,
   searchUsystemsContacts,
+  searchUsystemsItems,
   type UsystemsContact,
   type UsystemsCurrency,
   UsystemsError,
+  type UsystemsItem,
 } from '../api/usystems';
 import { formatMoney } from '../lib/format';
 import { formatJalaliDate } from '../lib/jalali';
 import {
+  buildPayloadLines,
+  CADENCE_ORDER,
+  cadenceLabel,
   defaultValidUntil,
   type DraftLine,
   draftLinesFromDeal,
   type DraftProduct,
-  draftTotal,
   emptyLine,
+  type LineCadence,
+  lineFromItem,
+  summarizeDraft,
   today,
   validDraftLines,
 } from '../lib/salesOrderDraft';
@@ -97,6 +104,14 @@ export const IssueSalesOrderModal = ({
   const [documentDate, setDocumentDate] = useState(today());
   const [validUntil, setValidUntil] = useState(defaultValidUntil());
   const [memo, setMemo] = useState('');
+  // How many months the deal covers (multiplies the monthly recurring lines) and
+  // any extra negotiated discount on the whole order.
+  const [months, setMonths] = useState(1);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  // Add lines from the tenant's real Core catalog (products + services).
+  const [itemQuery, setItemQuery] = useState('');
+  const [itemResults, setItemResults] = useState<UsystemsItem[]>([]);
+  const [itemSearching, setItemSearching] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -187,23 +202,67 @@ export const IssueSalesOrderModal = ({
     () => currencies.find((c) => c.id === currencyId) ?? null,
     [currencies, currencyId],
   );
-  const payloadLines = validDraftLines(lines);
-  const total = draftTotal(lines);
-  const canIssue = client !== null && payloadLines.length > 0 && !issuing && validUntil !== '';
+  const validLines = validDraftLines(lines);
+  const summary = useMemo(
+    () => summarizeDraft(lines, months, discountPercent),
+    [lines, months, discountPercent],
+  );
+  const canIssue = client !== null && validLines.length > 0 && !issuing && validUntil !== '';
+  const currencyCode = currency?.code ?? null;
+  const money = (amount: number): string => formatMoney(Math.round(amount * 1_000_000), currencyCode);
+
+  // Debounced catalog search (products + services from Core).
+  useEffect(() => {
+    const q = itemQuery.trim();
+    if (q.length < 2) {
+      setItemResults([]);
+      return;
+    }
+    let cancelled = false;
+    setItemSearching(true);
+    const handle = setTimeout(() => {
+      void searchUsystemsItems(q)
+        .then((rows) => {
+          if (!cancelled) setItemResults(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setItemResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setItemSearching(false);
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [itemQuery]);
+
+  const addItem = (item: UsystemsItem) => {
+    setLines((prev) => [...prev, lineFromItem(item)]);
+    setItemQuery('');
+    setItemResults([]);
+  };
 
   const issue = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!client || payloadLines.length === 0) return;
+    if (!client || validLines.length === 0) return;
     setIssuing(true);
     setError(null);
+    // Restate the contracted months and extra discount in the memo -- Core has
+    // no order-level field for either, and they explain the line amounts.
+    const notes = [memo.trim()];
+    if (months > 1) notes.push(`${T18.contractMonths}: ${months}`);
+    if (discountPercent > 0) notes.push(`${T18.extraDiscount}: ${discountPercent}%`);
+    const fullMemo = notes.filter((note) => note !== '').join(' · ');
     try {
       const order = await issueSalesOrder({
         contactId: client.id,
         currencyId: currencyId ?? undefined,
         documentDate,
         validUntil,
-        memo: memo.trim() || undefined,
-        lines: payloadLines,
+        memo: fullMemo || undefined,
+        lines: buildPayloadLines(lines, months, discountPercent),
       });
       onIssued(order);
     } catch (err) {
@@ -333,6 +392,20 @@ export const IssueSalesOrderModal = ({
                   ×
                 </button>
               </div>
+              {/* One-time vs monthly vs annual: monthly lines are multiplied by
+                  the contracted months in the total. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <label className="t-sub" htmlFor={`cad-${line.key}`}>{T18.lineCadence}</label>
+                <select
+                  id={`cad-${line.key}`}
+                  value={line.cadence}
+                  onChange={(e) => updateLine(line.key, { cadence: e.target.value as LineCadence })}
+                >
+                  {CADENCE_ORDER.map((cadence) => (
+                    <option key={cadence} value={cadence}>{cadenceLabel(cadence)}</option>
+                  ))}
+                </select>
+              </div>
               {/* What the line is made of; printed under the item name. */}
               <textarea
                 aria-label={T18.lineDetails}
@@ -345,16 +418,100 @@ export const IssueSalesOrderModal = ({
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        {/* Add a line from the tenant's real catalog -- products AND services. */}
+        <div className="fld" style={{ marginTop: 10 }}>
+          <input
+            value={itemQuery}
+            placeholder={T18.catalogSearch}
+            onChange={(e) => setItemQuery(e.target.value)}
+            data-testid="usystems-item-search"
+          />
+          {itemSearching && <div className="sub">{T18.searching}</div>}
+          {itemResults.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+              {itemResults.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className="c-row"
+                  style={{ alignItems: 'center', textAlign: 'start', cursor: 'pointer', width: '100%' }}
+                  onClick={() => addItem(item)}
+                >
+                  <span>
+                    <span className={`pill ${item.type === 'service' ? '' : 'ok'}`} style={{ marginInlineEnd: 6 }}>
+                      {item.type === 'service' ? T18.itemService : T18.itemProduct}
+                    </span>
+                    <b>{item.name}</b>
+                  </span>
+                  <span className="num t-sub">{money(Number(item.sales_price) || 0)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginTop: 8 }}>
           <button type="button" className="btn line sm" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
             {T18.addLine}
           </button>
-          <span>
-            {T18.total}:{' '}
-            <b className="num">{formatMoney(total * 1_000_000, currency?.code ?? null)}</b>
-          </span>
         </div>
-        {payloadLines.length === 0 && <div className="sub">{T18.noLines}</div>}
+        {validLines.length === 0 && <div className="sub">{T18.noLines}</div>}
+
+        {/* Contracted months (multiplies the monthly lines) + any extra discount. */}
+        <div className="form-grid" style={{ marginTop: 12 }}>
+          <div className="fld">
+            <label htmlFor="so-months">{T18.contractMonths}</label>
+            <input
+              id="so-months"
+              type="number"
+              min={1}
+              step={1}
+              value={months}
+              onChange={(e) => setMonths(Math.max(1, Math.round(Number(e.target.value) || 1)))}
+            />
+          </div>
+          <div className="fld">
+            <label htmlFor="so-discount">{T18.extraDiscount} (%)</label>
+            <input
+              id="so-discount"
+              type="number"
+              min={0}
+              max={100}
+              step="any"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+            />
+          </div>
+        </div>
+
+        {/* One-time and monthly recurring shown separately -- even in the total. */}
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {summary.oneTime > 0 && (
+            <div className="c-row"><span>{T18.sumOneTime}</span><b className="num">{money(summary.oneTime)}</b></div>
+          )}
+          {summary.monthly > 0 && (
+            <div className="c-row">
+              <span>{T18.sumMonthly}{months > 1 ? ` × ${months} ${T18.monthsUnit}` : ''}</span>
+              <b className="num">{money(summary.monthlyContract)}</b>
+            </div>
+          )}
+          {summary.annual > 0 && (
+            <div className="c-row"><span>{T18.sumAnnual}</span><b className="num">{money(summary.annual)}</b></div>
+          )}
+          {summary.discount > 0 && (
+            <div className="c-row">
+              <span>{T18.extraDiscount} ({discountPercent}%)</span>
+              <b className="num">− {money(summary.discount)}</b>
+            </div>
+          )}
+          <div
+            className="c-row"
+            style={{ borderTop: '1px solid var(--line, #e5e5e5)', paddingTop: 6, marginTop: 2 }}
+          >
+            <span><b>{T18.grandTotal}</b></span>
+            <b className="num">{money(summary.grandTotal)}</b>
+          </div>
+        </div>
 
         <div className="form-grid" style={{ marginTop: 12 }}>
           <div className="fld">

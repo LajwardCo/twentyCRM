@@ -147,6 +147,26 @@ export const fetchUsystemsCurrencies = async (): Promise<UsystemsCurrency[]> => 
   return data.results;
 };
 
+// A Core catalog item: a product OR a service (Item is the unified base in
+// Usystems). Used to add sales-order lines from the tenant's real catalog.
+export type UsystemsItem = {
+  id: number;
+  name: string;
+  code: string | null;
+  type: string; // 'product' | 'service' | ...
+  status: string;
+  sales_price: number | null;
+  qty_on_hand: number | null;
+};
+
+export const searchUsystemsItems = async (query: string): Promise<UsystemsItem[]> => {
+  const data = await request<{ results: UsystemsItem[] }>(
+    'GET',
+    `items/search?q=${encodeURIComponent(query)}`,
+  );
+  return data.results;
+};
+
 type RawSalesOrder = {
   id?: number;
   code: string;

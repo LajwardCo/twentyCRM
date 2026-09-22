@@ -40,6 +40,7 @@ import {
   totalsAreEmpty,
 } from '../lib/format';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
+import { splitDealLineCadence } from '../lib/salesOrderLineDetails';
 import {
   LINE_STATUS_LABELS,
   MARKETER_LABELS,
@@ -767,16 +768,21 @@ export const PricingCard = ({
 
   const lines = pricing?.dealProducts ?? [];
   const quotes = pricing?.quotations ?? [];
-  // A lead can hold lines quoted in different currencies, so the total is kept
-  // per currency rather than added up and labelled with the first line's code.
-  const totalInstall = lines.reduce<CurrencyTotals>(
-    (totals, line) =>
-      addCurrencyTotals(
-        totals,
-        line.installPrice?.amountMicros,
-        line.installPrice?.currencyCode,
-      ),
-    {},
+  // A lead can hold lines quoted in different currencies, so totals are kept
+  // per currency. installPrice folds the monthly metrics into it, so one-time
+  // and recurring are split apart (splitDealLineCadence) and kept separate even
+  // in the total.
+  const cadenceTotals = lines.reduce(
+    (acc, line) => {
+      const product = (products ?? []).find((p: ProductOption) => p.id === line.product?.id);
+      const split = splitDealLineCadence(line, product);
+      return {
+        oneTime: addCurrencyTotals(acc.oneTime, split.oneTimeMicros, split.currencyCode),
+        monthly: addCurrencyTotals(acc.monthly, split.monthlyMicros, split.currencyCode),
+        annual: addCurrencyTotals(acc.annual, split.annualMicros, split.currencyCode),
+      };
+    },
+    { oneTime: {} as CurrencyTotals, monthly: {} as CurrencyTotals, annual: {} as CurrencyTotals },
   );
 
   const body = (
@@ -856,54 +862,86 @@ export const PricingCard = ({
           <div className="sub" style={{ marginBottom: 6 }}>
             {T2.dealProducts}
           </div>
-          {lines.map((line) => (
-            <div key={line.id} className="task" style={{ padding: '9px 2px' }}>
-              <div className="t-main" style={{ cursor: 'default' }}>
-                <div className="t-title" style={{ fontSize: 13 }}>
-                  {line.product?.name ?? line.name}
-                  {line.quantity && line.quantity > 1 && (
-                    <span className="num" style={{ color: 'var(--ink-3)' }}>
-                      {' '}
-                      × {toPersianDigits(line.quantity)}
-                    </span>
-                  )}
-                </div>
-                <div className="t-sub">
-                  {line.lineStatus && (
-                    <span className="pill stage" style={{ fontSize: 10.5 }}>
-                      {LINE_STATUS_LABELS[line.lineStatus] ?? line.lineStatus}
-                    </span>
-                  )}
-                  {(line.discountPercent ?? 0) > 0 && (
-                    <span className="num">
-                      {T2.discount} {toPersianDigits(line.discountPercent ?? 0)}٪
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                <div className="deal-val num" style={{ fontSize: 12.5 }}>
-                  {formatMoney(line.installPrice?.amountMicros, line.installPrice?.currencyCode)}
-                </div>
-                {(line.annualPrice?.amountMicros ?? 0) > 0 && (
-                  <div className="num" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
-                    سالانه {formatMoney(line.annualPrice?.amountMicros, line.annualPrice?.currencyCode)}
+          {lines.map((line) => {
+            const product = (products ?? []).find((p: ProductOption) => p.id === line.product?.id);
+            const split = splitDealLineCadence(line, product);
+            return (
+              <div key={line.id} className="task" style={{ padding: '9px 2px' }}>
+                <div className="t-main" style={{ cursor: 'default' }}>
+                  <div className="t-title" style={{ fontSize: 13 }}>
+                    {line.product?.name ?? line.name}
+                    {line.quantity && line.quantity > 1 && (
+                      <span className="num" style={{ color: 'var(--ink-3)' }}>
+                        {' '}
+                        × {toPersianDigits(line.quantity)}
+                      </span>
+                    )}
                   </div>
-                )}
+                  <div className="t-sub">
+                    {line.lineStatus && (
+                      <span className="pill stage" style={{ fontSize: 10.5 }}>
+                        {LINE_STATUS_LABELS[line.lineStatus] ?? line.lineStatus}
+                      </span>
+                    )}
+                    {(line.discountPercent ?? 0) > 0 && (
+                      <span className="num">
+                        {T2.discount} {toPersianDigits(line.discountPercent ?? 0)}٪
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* One-time and monthly recurring shown as separate figures. */}
+                <div style={{ textAlign: 'left' }}>
+                  {split.oneTimeMicros > 0 && (
+                    <div className="deal-val num" style={{ fontSize: 12.5 }}>
+                      {formatMoney(split.oneTimeMicros, split.currencyCode)}
+                    </div>
+                  )}
+                  {split.monthlyMicros > 0 && (
+                    <div className="num" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
+                      ماهانه {formatMoney(split.monthlyMicros, split.currencyCode)}
+                    </div>
+                  )}
+                  {split.annualMicros > 0 && (
+                    <div className="num" style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>
+                      سالانه {formatMoney(split.annualMicros, split.currencyCode)}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-          {!totalsAreEmpty(totalInstall) && (
+            );
+          })}
+          {(!totalsAreEmpty(cadenceTotals.oneTime) ||
+            !totalsAreEmpty(cadenceTotals.monthly) ||
+            !totalsAreEmpty(cadenceTotals.annual)) && (
             <div
-              className="c-row"
               style={{
                 borderTop: '1px solid var(--line-soft)',
                 paddingTop: 9,
                 marginTop: 4,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
               }}
             >
-              <span>{T2.total}</span>
-              <b className="num">{formatMoneyTotals(totalInstall)}</b>
+              {!totalsAreEmpty(cadenceTotals.oneTime) && (
+                <div className="c-row">
+                  <span>{T2.total} · یک‌بار</span>
+                  <b className="num">{formatMoneyTotals(cadenceTotals.oneTime)}</b>
+                </div>
+              )}
+              {!totalsAreEmpty(cadenceTotals.monthly) && (
+                <div className="c-row">
+                  <span>{T2.total} · ماهانه</span>
+                  <b className="num">{formatMoneyTotals(cadenceTotals.monthly)}</b>
+                </div>
+              )}
+              {!totalsAreEmpty(cadenceTotals.annual) && (
+                <div className="c-row">
+                  <span>{T2.total} · سالانه</span>
+                  <b className="num">{formatMoneyTotals(cadenceTotals.annual)}</b>
+                </div>
+              )}
             </div>
           )}
         </div>

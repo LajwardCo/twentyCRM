@@ -17,7 +17,7 @@ import { toPersianDigits } from './lib/jalali';
 import { disablePushSubscription, ensurePushSubscription } from './lib/push';
 import { navigate, useRoute } from './lib/router';
 import { TFILES } from './lib/fileStrings';
-import { T, T5, TDEMO } from './lib/strings';
+import { T, T5, TDEMO, TSYS } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { ContactsView } from './views/ContactsView';
@@ -34,6 +34,9 @@ import { DailyReportView } from './views/DailyReportView';
 import { DemoSystemsView } from './views/DemoSystemsView';
 import { DemoDetailView } from './views/DemoDetailView';
 import { NewDemoView } from './views/NewDemoView';
+import { CustomerSystemsView } from './views/CustomerSystemsView';
+import { CustomerSystemDetailView } from './views/CustomerSystemDetailView';
+import { NewCustomerSystemView } from './views/NewCustomerSystemView';
 import { FileDetailView } from './views/FileDetailView';
 import { FilesView } from './views/FilesView';
 import { CompanyView, NoteView, PersonView } from './views/EntityViews';
@@ -297,6 +300,24 @@ export const App = () => {
       <button className="btn line sm" onClick={() => navigate('/demos')}>
         <IconBack size={15} />
         {TDEMO.navDemos}
+      </button>
+    );
+  } else if (section === 'systems' && param === 'new') {
+    view = <NewCustomerSystemView />;
+    bar = (
+      <button className="btn line sm" onClick={() => window.history.back()}>
+        <IconBack size={15} />
+        {TSYS.navSystems}
+      </button>
+    );
+  } else if (section === 'systems') {
+    view = <CustomerSystemsView />;
+  } else if (section === 'system' && param) {
+    view = <CustomerSystemDetailView systemId={param} />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/systems')}>
+        <IconBack size={15} />
+        {TSYS.navSystems}
       </button>
     );
   } else if (section === 'partners') {

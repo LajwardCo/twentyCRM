@@ -43,6 +43,7 @@ import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { FullTimelineModal } from '../components/FullTimelineModal';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
+import { LeadCustomerSystemCard } from '../components/LeadCustomerSystemCard';
 import { LeadDealCard } from '../components/LeadDealCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
 import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
@@ -1119,6 +1120,17 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               leadId={leadId}
               companyId={lead.company?.id ?? null}
               isWon={CONVERTIBLE_STAGES.includes(lead.stage ?? '')}
+            />
+          )}
+
+          {/* Issue a real Usystems customer system, once the lead is contracted.
+              Internal only (showMoney == not an external partner). */}
+          {showMoney && CONVERTIBLE_STAGES.includes(lead.stage ?? '') && (
+            <LeadCustomerSystemCard
+              leadId={leadId}
+              leadName={lead.name}
+              companyId={lead.company?.id ?? null}
+              companyName={lead.company?.name ?? null}
             />
           )}
 

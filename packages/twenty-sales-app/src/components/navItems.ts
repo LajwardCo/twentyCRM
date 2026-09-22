@@ -2,7 +2,7 @@ import { type CurrentUser } from '../api/auth';
 import { canSeeNavKey } from '../lib/access';
 import { TAUDIT } from '../lib/auditStrings';
 import { TFILES } from '../lib/fileStrings';
-import { T, T2, T3, T4, T7, T13, TDEMO } from '../lib/strings';
+import { T, T2, T3, T4, T7, T13, TDEMO, TSYS } from '../lib/strings';
 import {
   IconCalendar,
   IconChart,
@@ -39,6 +39,7 @@ export const NAV: readonly NavItem[] = [
   { key: 'competitors', label: 'بازیگران بازار', icon: IconFlame },
   { key: 'catalog', label: T4.catalog, icon: IconPackage },
   { key: 'demos', label: TDEMO.navDemos, icon: IconPresentation },
+  { key: 'systems', label: TSYS.navSystems, icon: IconPackage },
   { key: 'partners', label: T13.partners, icon: IconContacts },
   { key: 'admin', label: 'کاربران', icon: IconLeads },
   { key: 'audit', label: TAUDIT.auditNav, icon: IconShield },
@@ -66,6 +67,7 @@ const ROUTE_TO_NAV_KEY: Record<string, string> = {
   person: 'contacts',
   search: 'leads',
   demo: 'demos',
+  system: 'systems',
 };
 
 export const activeNavKey = (parts: string[]): string => {

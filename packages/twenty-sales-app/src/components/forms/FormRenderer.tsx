@@ -21,6 +21,7 @@ import {
   validateStep,
 } from '../../lib/forms/rendererSteps';
 import { LANGUAGE_LABELS, RESPONDENT_STRINGS } from '../../lib/forms/surveyStrings';
+import { defaultAnswers } from '../../lib/forms/defaultAnswers';
 import { DisplayBlockView } from './DisplayBlockView';
 import { type RendererServices } from './inputs/inputTypes';
 import { QuestionField } from './QuestionField';
@@ -133,6 +134,19 @@ export const FormRenderer = ({
     previousKeys.current = steps.map((candidate) => candidate.key);
   }, [steps]);
 
+  // Default values seed a fresh form only; restored drafts and corrections
+  // already carry answers and must not be overwritten.
+  useEffect(() => {
+    if (Object.keys(answers).length > 0) return;
+
+    const defaults = defaultAnswers(definition);
+
+    if (Object.keys(defaults).length > 0) onAnswersChange(defaults);
+    // Mount only: re-running after the respondent clears everything would
+    // put the defaults back against their will.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const questionsById = useMemo(() => {
     const map = new Map<string, Question>();
 
@@ -233,8 +247,20 @@ export const FormRenderer = ({
         setBanner(outcome.message);
 
         if (outcome.errors !== undefined && outcome.errors.length > 0) {
-          setShownErrors(outcome.errors);
-          focusFirstError(outcome.errors);
+          const serverErrors = outcome.errors;
+
+          setShownErrors(serverErrors);
+
+          // The server may flag a question on an earlier screen.
+          if (layout === 'paged') {
+            const errorStep = steps.findIndex((candidate) =>
+              candidate.items.some((item) => item.id === serverErrors[0].questionId),
+            );
+
+            if (errorStep >= 0) setCurrentKey(steps[errorStep].key);
+          }
+
+          focusFirstError(serverErrors);
         }
       }
     } finally {
@@ -403,13 +429,12 @@ export const FormRenderer = ({
 
       {(isLast || layout === 'continuous') && finalExtra}
 
-      {banner !== null && (
-        <div className="error-banner sv-banner" role="alert">
-          {banner}
-        </div>
-      )}
-
       <div className="sv-nav">
+        {banner !== null && (
+          <div className="error-banner sv-banner" role="alert">
+            {banner}
+          </div>
+        )}
         {layout === 'paged' && stepIndex > 0 && (
           <button type="button" className="btn line" onClick={() => goTo(stepIndex - 1)}>
             {strings.previous}

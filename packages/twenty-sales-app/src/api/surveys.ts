@@ -6,7 +6,7 @@ import {
   type PublishIssue,
 } from '@shared/surveys';
 
-import { ApiError, coreQuery, loadTokens } from './client';
+import { ApiError, coreQuery, loadTokens, renewSession } from './client';
 
 // Data access for Surveys & Forms. Record CRUD goes through the record API
 // (the server's query hooks validate every write); publishing, status
@@ -262,23 +262,32 @@ const restRequest = async <TResult>(
   body?: unknown,
   { authenticated = true }: { authenticated?: boolean } = {},
 ): Promise<TResult> => {
-  const token = authenticated ? (loadTokens()?.accessToken ?? '') : '';
-  const response = await fetch(url, {
-    method,
-    headers: {
-      Accept: 'application/json',
-      ...(authenticated ? { Authorization: `Bearer ${token}` } : {}),
-      ...(body === undefined || body instanceof FormData
-        ? {}
-        : { 'Content-Type': 'application/json' }),
-    },
-    body:
-      body === undefined
-        ? undefined
-        : body instanceof FormData
-          ? body
-          : JSON.stringify(body),
-  });
+  const send = () =>
+    fetch(url, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(authenticated
+          ? { Authorization: `Bearer ${loadTokens()?.accessToken ?? ''}` }
+          : {}),
+        ...(body === undefined || body instanceof FormData
+          ? {}
+          : { 'Content-Type': 'application/json' }),
+      },
+      body:
+        body === undefined
+          ? undefined
+          : body instanceof FormData
+            ? body
+            : JSON.stringify(body),
+    });
+  let response = await send();
+
+  // An expired access token: renew once, like the GraphQL client does.
+  if (response.status === 401 && authenticated && (await renewSession())) {
+    response = await send();
+  }
+
   const text = await response.text();
   let json: unknown = null;
 
@@ -390,26 +399,35 @@ export const listForms = async (): Promise<FormsListResult> => {
   }
 };
 
-// One request, one aliased count per form.
+// One request: Twenty refuses the same root field twice in a query
+// ("Duplicate root resolver"), so aliased per-form counts cannot work; a
+// single groupBy on formId returns every count at once.
 export const countResponsesByForm = async (
   formIds: string[],
   extraFilter = '',
 ): Promise<Record<string, number>> => {
   if (formIds.length === 0) return {};
 
-  const aliases = formIds
-    .map(
-      (formId, index) =>
-        `f${index}: surveyResponses(filter: { formId: { eq: "${formId}" } ${extraFilter} }) { totalCount }`,
-    )
-    .join('\n');
-  const data = await coreQuery<Record<string, { totalCount: number }>>(
-    `query SurveyResponseCounts { ${aliases} }`,
+  const data = await coreQuery<{
+    surveyResponsesGroupBy: { groupByDimensionValues: (string | null)[]; totalCount: number }[];
+  }>(
+    `query SurveyResponseCounts($formIds: [UUID!]) {
+      surveyResponsesGroupBy(
+        groupBy: [{ formId: true }]
+        filter: { formId: { in: $formIds } ${extraFilter} }
+      ) { groupByDimensionValues totalCount }
+    }`,
+    { formIds },
   );
+  const counts: Record<string, number> = Object.fromEntries(formIds.map((formId) => [formId, 0]));
 
-  return Object.fromEntries(
-    formIds.map((formId, index) => [formId, data[`f${index}`]?.totalCount ?? 0]),
-  );
+  for (const group of data.surveyResponsesGroupBy) {
+    const formId = group.groupByDimensionValues[0];
+
+    if (typeof formId === 'string' && formId in counts) counts[formId] = group.totalCount;
+  }
+
+  return counts;
 };
 
 export const fetchForm = async (formId: string): Promise<SurveyForm> => {
@@ -698,6 +716,8 @@ export type ResponseFilter = Partial<{
   from: string;
   to: string;
   linkage: 'LINKED' | 'UNLINKED';
+  // Spam is kept for audit but left out of normal lists and counts.
+  excludeSpam: boolean;
   search: string;
   companyId: string;
   personId: string;
@@ -724,6 +744,10 @@ export const buildResponseFilter = (
   eq('companyId', filter.companyId);
   eq('personId', filter.personId);
   eq('opportunityId', filter.opportunityId);
+
+  if (filter.excludeSpam === true && filter.reviewStatus === undefined) {
+    and.push({ reviewStatus: { in: ['NEW', 'NEEDS_REVIEW', 'REVIEWED', 'ACTIONED'] } });
+  }
 
   if (filter.city) and.push({ city: { ilike: `%${filter.city}%` } });
   if (filter.area) and.push({ area: { ilike: `%${filter.area}%` } });

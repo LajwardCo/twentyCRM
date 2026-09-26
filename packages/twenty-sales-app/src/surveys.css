@@ -382,6 +382,7 @@ textarea.sv-input {
 
 .sv-banner {
   margin: 0;
+  flex: 1 0 100%;
 }
 
 .sv-languages {

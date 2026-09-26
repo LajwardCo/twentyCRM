@@ -327,11 +327,15 @@ export class SurveyPublicService {
       submission.honeypotFilled ||
       (submission.startedAtMs !== null &&
         Date.now() - submission.startedAtMs < SURVEY_MIN_FILL_MILLISECONDS);
-    const campaignId = await this.resolveCampaignId(
-      workspaceId,
-      form.id,
-      submission.campaignCode,
-    );
+    // Staff chose the campaign when they created the invitation; a URL code
+    // is only considered for general links.
+    const campaignId =
+      invitation?.campaignId ??
+      (await this.resolveCampaignId(
+        workspaceId,
+        form.id,
+        submission.campaignCode,
+      ));
     const now = new Date().toISOString();
 
     const suggestions: SurveyCrmAction[] =

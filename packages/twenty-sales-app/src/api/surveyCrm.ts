@@ -123,16 +123,22 @@ export const searchLeads = async (
   }));
 };
 
-export const searchCrmRecords = (
+// Contacts and leads are searched within the chosen company first; when it
+// has none that match, the whole workspace is searched instead.
+export const searchCrmRecords = async (
   kind: CrmRecordKind,
   query: string,
   companyId?: string | null,
-): Promise<CrmRecordOption[]> =>
-  kind === 'company'
-    ? searchCompanies(query)
-    : kind === 'person'
-      ? searchPeople(query, companyId)
-      : searchLeads(query, companyId);
+): Promise<CrmRecordOption[]> => {
+  if (kind === 'company') return searchCompanies(query);
+
+  const search = kind === 'person' ? searchPeople : searchLeads;
+  const scoped = await search(query, companyId);
+
+  return scoped.length > 0 || companyId === undefined || companyId === null
+    ? scoped
+    : search(query, null);
+};
 
 // Leads and contacts already attached to a company, for "link existing"
 // after the business is chosen.
@@ -237,20 +243,27 @@ export const createLead = async (input: {
   personId: string | null;
   ownerId: string;
 }): Promise<{ id: string }> => {
-  const data = await coreQuery<{ createOpportunity: { id: string } }>(
-    `mutation SurveyCreateLead($data: OpportunityCreateInput!) { createOpportunity(data: $data) { id } }`,
-    {
-      data: {
-        name: input.name.trim(),
-        stage: 'NEW_LEAD',
-        ownerId: input.ownerId,
-        ...(input.companyId !== null ? { companyId: input.companyId } : {}),
-        ...(input.personId !== null ? { pointOfContactId: input.personId } : {}),
-      },
-    },
-  );
+  const base = {
+    name: input.name.trim(),
+    ownerId: input.ownerId,
+    ...(input.companyId !== null ? { companyId: input.companyId } : {}),
+    ...(input.personId !== null ? { pointOfContactId: input.personId } : {}),
+  };
+  const create = (data: Record<string, unknown>) =>
+    coreQuery<{ createOpportunity: { id: string } }>(
+      `mutation SurveyCreateLead($data: OpportunityCreateInput!) { createOpportunity(data: $data) { id } }`,
+      { data },
+    );
 
-  return data.createOpportunity;
+  // The sales pipeline starts at NEW_LEAD; a workspace with Twenty's stock
+  // stages rejects that value, so fall back to its default stage.
+  try {
+    return (await create({ ...base, stage: 'NEW_LEAD' })).createOpportunity;
+  } catch (error) {
+    if (!(error instanceof Error) || !/NEW_LEAD|stage/i.test(error.message)) throw error;
+
+    return (await create(base)).createOpportunity;
+  }
 };
 
 // Current CRM values for the fields a form maps to, keyed like the engine's

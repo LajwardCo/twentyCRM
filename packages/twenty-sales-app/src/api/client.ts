@@ -169,6 +169,9 @@ const tryRenewTokens = async (): Promise<boolean> => {
   return renewPromise;
 };
 
+// For REST callers: the same single-flight renewal the GraphQL client uses.
+export const renewSession = (): Promise<boolean> => tryRenewTokens();
+
 export const gqlRequest = async <TData>(
   endpoint: '/graphql' | '/metadata',
   query: string,

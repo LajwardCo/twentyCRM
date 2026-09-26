@@ -106,6 +106,22 @@ from the catalog, so the second currency column is simply empty and a
 negotiated rate typed into the deal-line form is not applied. Nothing breaks,
 and no redeploy is needed once the script has run.
 
+### Surveys & Forms (added 2026-09-26)
+
+Five objects (`surveyForm`, `surveyFormVersion`, `surveyResponse`,
+`surveyCampaign`, `surveyInvitation`), their relations to company / person /
+opportunity / task / workspaceMember, `task.visitOutcome` +
+`task.surveyCampaign`, and the Seller / Marketer / Partner grants (read forms,
+write responses; nobody gets destroy). Run it **after** the server image that
+contains `modules/sales-crm/surveys` is live — the publish endpoint and the
+query hooks are what keep versions immutable.
+
+```bash
+TWENTY_META=https://crm.hamagan.com/metadata TWENTY_ORIGIN=https://crm.hamagan.com TWENTY_TOKEN='<api key>' node tools/sales-crm/provision-surveys.mjs
+```
+
+Spec: `docs/superpowers/specs/2026-09-26-surveys-forms-design.md`.
+
 > ⚠️ This ordered list predates several later feature waves. Other per-feature
 > provisioning scripts now live in `tools/sales-crm/` (contact-request, task
 > type, pricing/package model, dashboard, permissions, whatsapp, etc.). Each is

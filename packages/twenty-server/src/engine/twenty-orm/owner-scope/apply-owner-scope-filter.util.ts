@@ -45,8 +45,10 @@ const buildRuleSql = (
     return null;
   }
 
+  // The alias is quoted: Postgres folds unquoted identifiers to lower case,
+  // which breaks camelCase object names such as surveyResponse.
   if (rule.kind === 'column') {
-    return `${alias}."${rule.column}" = :${MEMBER_PARAM}`;
+    return `"${alias}"."${rule.column}" = :${MEMBER_PARAM}`;
   }
 
   if (
@@ -70,7 +72,7 @@ const buildRuleSql = (
 
   // A soft-deleted partner must not keep granting access to its leads.
   return (
-    `${alias}."${rule.column}" IN (` +
+    `"${alias}"."${rule.column}" IN (` +
     `SELECT "id" FROM ${table} ` +
     `WHERE "${rule.targetMemberColumn}" = :${MEMBER_PARAM} ` +
     `AND "deletedAt" IS NULL)`

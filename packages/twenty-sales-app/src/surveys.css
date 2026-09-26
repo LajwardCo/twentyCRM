@@ -1,0 +1,579 @@
+/* Surveys & Forms — renderer (.sv-*) and shared survey chrome.
+   Uses the app's Lajward tokens; --sv-accent is the form's own accent colour
+   and only tints respondent-facing controls. */
+
+.sv-form {
+  --sv-accent: var(--lapis-600);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.sv-form-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.sv-progress {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+
+.sv-progress-bar {
+  height: 100%;
+  background: var(--sv-accent);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.sv-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sv-page > h2 {
+  font-size: 19px;
+  margin: 0;
+  outline: none;
+}
+
+.sv-page-description {
+  margin: -8px 0 0;
+  color: var(--ink-2);
+  line-height: 1.8;
+}
+
+.sv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-1);
+  transition: border-color 0.15s;
+}
+
+.sv-field.has-error {
+  border-color: var(--hot);
+}
+
+.sv-field.is-unclear {
+  border-style: dashed;
+  background: var(--warm-bg);
+}
+
+.sv-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.7;
+}
+
+.sv-number {
+  color: var(--sv-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.sv-required {
+  color: var(--hot);
+}
+
+.sv-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--warm-bg);
+  color: var(--warm);
+  margin-inline-start: auto;
+}
+
+.sv-description {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.sv-input {
+  width: 100%;
+  padding: 11px 13px;
+  min-height: 44px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+textarea.sv-input {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.8;
+}
+
+.sv-input:focus {
+  outline: 0;
+  border-color: var(--sv-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sv-accent) 20%, transparent);
+}
+
+.sv-input[aria-invalid='true'] {
+  border-color: var(--hot);
+}
+
+.sv-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sv-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sv-sub-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+
+.sv-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sv-choices-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.sv-choices-row .sv-choice {
+  flex: 1 1 120px;
+  justify-content: center;
+}
+
+.sv-choice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+  font-size: 14.5px;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.sv-choice:hover {
+  border-color: var(--sv-accent);
+}
+
+.sv-choice.on {
+  border-color: var(--sv-accent);
+  background: color-mix(in srgb, var(--sv-accent) 9%, var(--card));
+}
+
+.sv-choice input[type='radio'],
+.sv-choice input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--sv-accent);
+  flex: none;
+}
+
+.sv-choice:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sv-accent) 20%, transparent);
+}
+
+.sv-other-input {
+  flex: 1 1 100%;
+  min-height: 40px;
+}
+
+.sv-consent {
+  align-items: flex-start;
+  line-height: 1.8;
+}
+
+.sv-scale-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sv-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sv-scale-option {
+  flex: 1 0 40px;
+  min-width: 40px;
+  min-height: 44px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sv-scale-option.on {
+  background: var(--sv-accent);
+  border-color: var(--sv-accent);
+  color: #fff;
+}
+
+.sv-rating .sv-scale-option {
+  flex: 0 0 48px;
+  font-size: 22px;
+  color: var(--ink-3);
+}
+
+.sv-rating .sv-scale-option.on {
+  background: var(--card);
+  color: #e0a100;
+  border-color: #e0a100;
+}
+
+.sv-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.sv-file-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  font-size: 13px;
+}
+
+.sv-file-button {
+  align-self: flex-start;
+  position: relative;
+}
+
+.sv-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sv-hint {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.sv-warn {
+  color: var(--warm);
+}
+
+.sv-error {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hot);
+}
+
+.sv-unclear-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--warm);
+  cursor: pointer;
+}
+
+.sv-section h3 {
+  margin: 8px 0 4px;
+  font-size: 16px;
+}
+
+.sv-section p,
+.sv-paragraph {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
+.sv-heading {
+  margin: 4px 0 0;
+  font-size: 17px;
+}
+
+.sv-divider {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 4px 0;
+}
+
+.sv-image {
+  max-width: 100%;
+  border-radius: var(--r);
+}
+
+.sv-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: calc(var(--mnav-h) + var(--safe-bottom));
+  padding: 12px 0;
+  background: linear-gradient(transparent, var(--paper) 30%);
+}
+
+.sv-nav-spacer {
+  flex: 1;
+}
+
+.sv-page-count {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.sv-primary {
+  min-width: 120px;
+  min-height: 44px;
+  background: var(--sv-accent);
+}
+
+.sv-banner {
+  margin: 0;
+  flex: 1 0 100%;
+}
+
+.sv-languages {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.sv-lang {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink-2);
+  border-radius: 99px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.sv-lang.on {
+  border-color: var(--sv-accent);
+  color: var(--sv-accent);
+  font-weight: 700;
+}
+
+.sv-welcome,
+.sv-ending {
+  text-align: center;
+  padding: 48px 20px;
+  background: var(--card);
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  box-shadow: var(--sh-1);
+}
+
+.sv-welcome h1,
+.sv-ending h2 {
+  margin: 0 0 12px;
+}
+
+.sv-welcome p,
+.sv-ending p {
+  color: var(--ink-2);
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+
+.sv-ending-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+@media (max-width: 560px) {
+  .sv-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .sv-field {
+    padding: 14px 12px;
+  }
+}
+
+/* ---- shared survey chrome (staff screens) ---------------------------- */
+
+.sv-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.sv-status.s-DRAFT {
+  background: var(--line-soft);
+  color: var(--ink-2);
+}
+
+.sv-status.s-PUBLISHED {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.sv-status.s-CLOSED {
+  background: var(--warm-bg);
+  color: var(--warm);
+}
+
+.sv-status.s-ARCHIVED {
+  background: var(--hot-bg);
+  color: var(--hot);
+}
+
+.sv-save-state {
+  font-size: 12px;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sv-save-state.error {
+  color: var(--hot);
+  font-weight: 700;
+}
+
+.sv-device-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warm);
+  background: var(--warm-bg);
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+
+.sv-server-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ok);
+  background: var(--ok-bg);
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+
+.sv-picker {
+  position: relative;
+}
+
+.sv-picker-list {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.sv-picker-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.sv-picker-option:hover,
+.sv-picker-option:focus-visible {
+  background: var(--lapis-50);
+}
+
+.sv-picker-option small {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.sv-picker-create {
+  color: var(--lapis-600);
+  font-weight: 700;
+}
+
+.sv-picker-empty {
+  padding: 12px;
+  color: var(--ink-3);
+  font-size: 13px;
+}

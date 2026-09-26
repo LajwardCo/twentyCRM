@@ -635,9 +635,17 @@ export class WorkspaceUpdateQueryBuilder<
       this.internalContext,
     );
 
+    // UPDATE / DELETE statements do not declare the query alias; Postgres
+    // resolves the main table by its own name (e.g. "_surveyResponse" for a
+    // custom object), so the owner-scope condition must be qualified with it.
+    const mainAlias = this.expressionMap.mainAlias;
+    const tableReference = mainAlias?.hasMetadata
+      ? mainAlias.metadata.tableName
+      : this.alias;
+
     applyOwnerScopeFilter({
       queryBuilder: this as unknown as WhereExpressionBuilder,
-      alias: this.alias,
+      alias: tableReference,
       objectMetadataNameSingular: objectMetadata.nameSingular,
       objectMetadataId: objectMetadata.id,
       objectRecordsPermissions: this.objectRecordsPermissions,

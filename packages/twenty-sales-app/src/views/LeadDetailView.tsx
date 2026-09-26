@@ -56,6 +56,7 @@ import { LeadEditModal } from '../components/LeadEditModal';
 import { QuickTaskModal } from '../components/QuickTaskModal';
 import { LeadTaskDrawer } from '../components/LeadTaskDrawer';
 import { RecordHistory } from '../components/RecordHistory';
+import { SurveyResponsesCard } from '../components/forms/SurveyResponsesCard';
 import { ReminderModal } from '../components/ReminderModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { canSeeMoney, isExternalUser } from '../lib/access';
@@ -1143,6 +1144,8 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
               onPrimaryChanged={() => void reload()}
             />
           )}
+
+          <SurveyResponsesCard opportunityId={leadId} />
 
           {/* metadata: source, referrer, marketer, created-by */}
           <MetaCard

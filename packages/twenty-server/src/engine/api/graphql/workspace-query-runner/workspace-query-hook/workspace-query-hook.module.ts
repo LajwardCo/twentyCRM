@@ -11,6 +11,7 @@ import { DashboardQueryHookModule } from 'src/modules/dashboard/query-hooks/dash
 import { MessagingQueryHookModule } from 'src/modules/messaging/common/query-hooks/messaging-query-hook.module';
 import { NoteQueryHookModule } from 'src/modules/note/query-hooks/note-query-hook.module';
 import { SalesCrmQueryHookModule } from 'src/modules/sales-crm/query-hooks/sales-crm-query-hook.module';
+import { SurveyQueryHookModule } from 'src/modules/sales-crm/surveys/query-hooks/survey-query-hook.module';
 import { TaskQueryHookModule } from 'src/modules/task/query-hooks/task-query-hook.module';
 import { WorkspaceMemberQueryHookModule } from 'src/modules/workspace-member/query-hooks/workspace-member-query-hook.module';
 
@@ -24,6 +25,7 @@ import { WorkspaceMemberQueryHookModule } from 'src/modules/workspace-member/que
     NoteQueryHookModule,
     TaskQueryHookModule,
     SalesCrmQueryHookModule,
+    SurveyQueryHookModule,
     DiscoveryModule,
   ],
   providers: [

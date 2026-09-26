@@ -384,3 +384,29 @@ export const IconPaperclip = ({ size }: IconProps) => (
     <path d="m21 11.5-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.2 9.2a1.8 1.8 0 0 1-2.6-2.6L15.5 6.7" />
   </svg>
 );
+
+export const IconForms = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M8 8h8" />
+    <path d="M8 12h8" />
+    <path d="m8 16 1.5 1.5L12 15" />
+  </svg>
+);
+
+export const IconMegaphone = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />
+    <path d="M15 8a5 5 0 0 1 0 8" />
+    <path d="M18 5a9 9 0 0 1 0 14" />
+  </svg>
+);
+
+export const IconDoor = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M13 4h5a1 1 0 0 1 1 1v15" />
+    <path d="M3 20h18" />
+    <path d="M13 4 6 5.5V20h7z" />
+    <circle cx="10.5" cy="12.5" r=".5" />
+  </svg>
+);

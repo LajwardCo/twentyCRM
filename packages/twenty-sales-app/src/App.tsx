@@ -12,6 +12,7 @@ import { isWatermarkedSection } from './lib/auditEvent';
 import { recordSignOut, startAudit } from './lib/audit';
 import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
+import { clearSurveyDrafts } from './lib/forms/collect/staffDraft';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
 import { toPersianDigits } from './lib/jalali';
 import { disablePushSubscription, ensurePushSubscription } from './lib/push';
@@ -50,6 +51,21 @@ import { SearchResultsView } from './views/SearchResultsView';
 import { TasksView } from './views/TasksView';
 import { TaskView } from './views/TaskView';
 import { TodayView } from './views/TodayView';
+import { CampaignDetailView } from './views/forms/CampaignDetailView';
+import { CampaignsView } from './views/forms/CampaignsView';
+import { FormPreviewView } from './views/forms/FormPreviewView';
+import { FormPrintView } from './views/forms/FormPrintView';
+import { FormTemplatesView } from './views/forms/FormTemplatesView';
+import { FormWorkspaceView } from './views/forms/FormWorkspaceView';
+import { FormsListView } from './views/forms/FormsListView';
+import { PaperEntryView } from './views/forms/PaperEntryView';
+import { PublicFormView } from './views/forms/PublicFormView';
+import { ResponseDetailView } from './views/forms/ResponseDetailView';
+import { ResponsePrintView } from './views/forms/ResponsePrintView';
+import { ResponsesView } from './views/forms/ResponsesView';
+import { StaffCollectView } from './views/forms/StaffCollectView';
+import { VisitFlowView } from './views/forms/VisitFlowView';
+import { TSV } from './lib/forms/surveyStrings';
 
 type Session =
   | { status: 'loading' }
@@ -111,6 +127,7 @@ export const App = () => {
   useEffect(() => {
     setSessionExpiredHandler(() => {
       recordSignOut('session-expired');
+      clearSurveyDrafts();
       invalidateCache();
       setSession({ status: 'anonymous' });
     });
@@ -166,6 +183,12 @@ export const App = () => {
     return <PublicUploadView />;
   }
 
+  // Public survey form (#/f/<slug>?i=<invitation>&c=<campaign>): login-free,
+  // intercepted for the same reason as the upload page above.
+  if (route.parts[0] === 'f' && route.parts[1] !== undefined) {
+    return <PublicFormView slug={route.parts[1]} query={route.query} />;
+  }
+
   if (session.status === 'loading') {
     return (
       <div style={{ padding: 40, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -193,9 +216,27 @@ export const App = () => {
     // Must run before the token goes: the server call needs it.
     void disablePushSubscription();
     logout();
+    clearSurveyDrafts();
     invalidateCache();
     setSession({ status: 'anonymous' });
   };
+
+  // Print documents render without the app shell so the printed page holds
+  // only the questionnaire.
+  if (section === 'form' && param && sub === 'print') {
+    return <FormPrintView formId={param} query={route.query} />;
+  }
+
+  if (section === 'response' && param && sub === 'print') {
+    return <ResponsePrintView responseId={param} />;
+  }
+
+  const formsBack = (
+    <button className="btn line sm" onClick={() => navigate('/forms')}>
+      <IconBack size={15} />
+      {TSV.nav}
+    </button>
+  );
 
   const backButton = (
     <button className="btn line sm" onClick={() => window.history.back()}>
@@ -318,6 +359,48 @@ export const App = () => {
       <button className="btn line sm" onClick={() => navigate('/systems')}>
         <IconBack size={15} />
         {TSYS.navSystems}
+      </button>
+    );
+  } else if (section === 'forms' && param === 'new') {
+    view = <FormTemplatesView />;
+    bar = formsBack;
+  } else if (section === 'forms') {
+    view = <FormsListView />;
+  } else if (section === 'form' && param && sub === 'preview') {
+    view = <FormPreviewView formId={param} query={route.query} />;
+    bar = formsBack;
+  } else if (section === 'form' && param && sub === 'collect') {
+    view = <StaffCollectView formId={param} query={route.query} user={user} />;
+    bar = formsBack;
+  } else if (section === 'form' && param && sub === 'paper') {
+    view = <PaperEntryView formId={param} query={route.query} user={user} />;
+    bar = formsBack;
+  } else if (section === 'form' && param) {
+    view = <FormWorkspaceView key={param} formId={param} tab={sub ?? 'builder'} user={user} />;
+    bar = formsBack;
+  } else if (section === 'paper') {
+    view = <PaperEntryView formId={null} query={route.query} user={user} />;
+    bar = formsBack;
+  } else if (section === 'visit') {
+    view = <VisitFlowView query={route.query} user={user} />;
+  } else if (section === 'responses') {
+    view = <ResponsesView query={route.query} user={user} />;
+  } else if (section === 'response' && param) {
+    view = <ResponseDetailView key={param} responseId={param} user={user} />;
+    bar = (
+      <button className="btn line sm" onClick={() => window.history.back()}>
+        <IconBack size={15} />
+        {TSV.navResponses}
+      </button>
+    );
+  } else if (section === 'campaigns') {
+    view = <CampaignsView user={user} />;
+  } else if (section === 'campaign' && param) {
+    view = <CampaignDetailView key={param} campaignId={param} user={user} />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/campaigns')}>
+        <IconBack size={15} />
+        {TSV.navCampaigns}
       </button>
     );
   } else if (section === 'partners') {

@@ -7,7 +7,9 @@ import { type CurrentUser } from '../api/auth';
 // roles, see tools/sales-crm/provision-external-partners.mjs). Hiding the rest
 // of the app keeps them out of screens that would be empty, misleading, or made
 // of numbers they are not allowed to read.
-const EXTERNAL_NAV_KEYS = new Set(['today', 'calendar', 'tasks', 'leads']);
+// Field marketers also collect surveys (the server scopes survey responses to
+// the ones they collected, see OWNER_SCOPED_OBJECTS).
+const EXTERNAL_NAV_KEYS = new Set(['today', 'calendar', 'tasks', 'leads', 'visit', 'forms']);
 
 // Routes an external user may open directly, by first path segment. Anything
 // else falls back to Today rather than rendering a screen that will only
@@ -26,6 +28,12 @@ const EXTERNAL_ROUTE_SECTIONS = new Set([
   'company',
   'search',
   'upload',
+  'visit',
+  'forms',
+  'form',
+  'paper',
+  'responses',
+  'response',
 ]);
 
 export const isExternalUser = (user: CurrentUser): boolean =>

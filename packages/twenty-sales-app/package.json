@@ -17,7 +17,8 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "vazirmatn": "^33.0.3"
+    "vazirmatn": "^33.0.3",
+    "write-excel-file": "^4.1.1"
   },
   "devDependencies": {
     "@types/dompurify": "^3.0.5",

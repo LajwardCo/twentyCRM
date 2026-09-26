@@ -11,6 +11,7 @@ import { ContactPhoneLines } from '../components/ContactPhoneLines';
 import { ContactPhonesModal } from '../components/ContactPhonesModal';
 import { DeleteWithReasonDialog } from '../components/DeleteWithReasonDialog';
 import { CompanyCard } from '../components/LeadPanels';
+import { SurveyResponsesCard } from '../components/forms/SurveyResponsesCard';
 import { NoteEditModal } from '../components/NoteEditModal';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import {
@@ -203,6 +204,7 @@ export const CompanyView = ({ companyId }: { companyId: string }) => {
         <div className="stack">{leads === null ? <ViewSkeleton /> : <RelatedLeads leads={leads} />}</div>
         <div className="stack">
           <CompanyCard companyId={companyId} />
+          <SurveyResponsesCard companyId={companyId} />
         </div>
       </div>
     </main>
@@ -260,6 +262,7 @@ export const PersonView = ({ personId }: { personId: string }) => {
       <div className="detail-grid">
         <div className="stack">
           <RelatedLeads leads={leads} />
+          <SurveyResponsesCard personId={personId} />
         </div>
         <div className="stack">
           <div className="card card-pad anim d1">

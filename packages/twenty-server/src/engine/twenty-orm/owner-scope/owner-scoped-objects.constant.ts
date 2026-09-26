@@ -63,4 +63,10 @@ export const OWNER_SCOPED_OBJECTS: Record<string, OwnerScopeRule[]> = {
   // notes they wrote, not a seller's internal notes on the same lead.
   note: [{ kind: 'column', column: 'createdByWorkspaceMemberId' }],
   attachment: [{ kind: 'column', column: 'createdByWorkspaceMemberId' }],
+  // Field staff on an owner-scoped role see the survey responses they
+  // collected or typed in from paper, never the rest of the team's.
+  surveyResponse: [
+    { kind: 'column', column: 'collectorId' },
+    { kind: 'column', column: 'enteredById' },
+  ],
 };

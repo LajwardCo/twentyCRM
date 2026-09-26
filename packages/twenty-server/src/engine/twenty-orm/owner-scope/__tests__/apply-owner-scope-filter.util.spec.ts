@@ -74,6 +74,33 @@ describe('applyOwnerScopeFilter', () => {
     expect(qb.calls[0].params).toEqual({ ownerScopeWorkspaceMemberId: 'wm-1' });
   });
 
+  // Postgres folds unquoted identifiers to lower case, so an unquoted
+  // camelCase alias ("surveyResponse") would reference a table that is not in
+  // the FROM clause and every scoped query on the object would fail.
+  it('quotes the alias so camelCase object names keep their case', () => {
+    const qb = makeQb();
+
+    applyOwnerScopeFilter({
+      queryBuilder: qb as any,
+      alias: 'surveyResponse',
+      objectMetadataNameSingular: 'surveyResponse',
+      objectMetadataId: 'obj-response',
+      objectRecordsPermissions: scoped('obj-response'),
+      authContext: userCtx,
+      shouldBypassPermissionChecks: false,
+      connection: makeConnection({
+        surveyResponse: {
+          tableName: '_surveyResponse',
+          columns: ['collectorId', 'enteredById'],
+        },
+      }),
+    });
+
+    expect(qb.calls[0].sql).toBe(
+      '("surveyResponse"."collectorId" = :ownerScopeWorkspaceMemberId OR "surveyResponse"."enteredById" = :ownerScopeWorkspaceMemberId)',
+    );
+  });
+
   it('does nothing when the flag is off', () => {
     const qb = makeQb();
 
@@ -171,10 +198,10 @@ describe('applyOwnerScopeFilter', () => {
       const { sql } = qb.calls[0];
 
       expect(sql).toContain(
-        'opportunity."ownerId" = :ownerScopeWorkspaceMemberId',
+        '"opportunity"."ownerId" = :ownerScopeWorkspaceMemberId',
       );
-      expect(sql).toContain('opportunity."marketerPartnerId" IN');
-      expect(sql).toContain('opportunity."referrerId" IN');
+      expect(sql).toContain('"opportunity"."marketerPartnerId" IN');
+      expect(sql).toContain('"opportunity"."referrerId" IN');
       expect(sql.split(' OR ')).toHaveLength(3);
       expect(qb.calls[0].params).toEqual({
         ownerScopeWorkspaceMemberId: 'wm-1',

@@ -19,8 +19,12 @@ const BIZ_LABEL: Record<string, string> = {
   home_appliances: TDEMO.bizAppliances,
   snooker_club: TDEMO.bizSnooker,
   car_rental: TDEMO.bizCarRental,
+  opd: TDEMO.bizOpd,
   other: TDEMO.bizOther,
 };
+
+// Core seeds an OPD demo's doctor under this login, sharing the admin password.
+const OPD_DOCTOR_USERNAME = 'doctor';
 
 const STATUS_LABEL: Record<DemoStatus['status'], string> = {
   queued: TDEMO.statusQueued,
@@ -219,6 +223,12 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
             <CopyRow label={TDEMO.loginUrl} value={demo.login_url} />
             <CopyRow label={TDEMO.username} value={demo.admin_username} />
             {demo.admin_password ? <CopyRow label={TDEMO.password} value={demo.admin_password} /> : null}
+            {demo.business_type === 'opd' && (
+              <>
+                <CopyRow label={TDEMO.doctorUsername} value={OPD_DOCTOR_USERNAME} />
+                <div className="demo-presentation-note">{TDEMO.doctorLoginNote}</div>
+              </>
+            )}
 
             <div className="demo-detail-actions">
               <a className="btn gold" href={demo.login_url} target="_blank" rel="noreferrer">
@@ -295,6 +305,18 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
                           : '—'}
                       </b>
                     </div>
+                    {details.catalog.doctors != null && (
+                      <div>
+                        <span>{TDEMO.doctors}</span>
+                        <b>{toPersianDigits(String(details.catalog.doctors))}</b>
+                      </div>
+                    )}
+                    {details.catalog.patients != null && (
+                      <div>
+                        <span>{TDEMO.patients}</span>
+                        <b>{toPersianDigits(String(details.catalog.patients))}</b>
+                      </div>
+                    )}
                   </>
                 )}
                 {details.workspace?.currency && (

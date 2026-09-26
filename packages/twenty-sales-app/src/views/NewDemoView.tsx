@@ -25,6 +25,7 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: 'home_appliances', label: TDEMO.bizAppliances, desc: TDEMO.bizAppliancesDesc, emoji: '🧺' },
   { key: 'snooker_club', label: TDEMO.bizSnooker, desc: TDEMO.bizSnookerDesc, emoji: '🎱' },
   { key: 'car_rental', label: TDEMO.bizCarRental, desc: TDEMO.bizCarRentalDesc, emoji: '🚗' },
+  { key: 'booking', label: TDEMO.bizBooking, desc: TDEMO.bizBookingDesc, emoji: '📅' },
   { key: 'opd', label: TDEMO.bizOpd, desc: TDEMO.bizOpdDesc, emoji: '🩺' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
@@ -33,7 +34,7 @@ const CURRENCIES = ['AFN', 'USD'];
 
 // Business types that ship a rich demo dataset (custom fields, images,
 // storefront, branding, documents) whose pieces the agent can toggle.
-const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'opd'];
+const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'booking', 'opd'];
 // A clinic has no online store, and its sample "documents" are patient visits.
 const CLINIC_DEMO_TYPES: DemoBusinessType[] = ['opd'];
 const LANGUAGES: { code: string; label: string }[] = [

@@ -20,7 +20,9 @@ import {
   SURVEY_SUBMIT_RATE_LIMIT_PER_FORM,
   SURVEY_SUBMIT_RATE_LIMIT_PER_IP,
   SURVEY_SUBMIT_RATE_LIMIT_PER_IP_ANY_FORM,
+  SURVEY_UPLOAD_RATE_LIMIT_PER_FORM,
   SURVEY_UPLOAD_RATE_LIMIT_PER_IP,
+  SURVEY_UPLOAD_RATE_LIMIT_PER_WORKSPACE,
 } from 'src/modules/sales-crm/surveys/constants/survey.constants';
 import { SurveyAutomationService } from 'src/modules/sales-crm/surveys/services/survey-automation.service';
 import { SurveyInvitationService } from 'src/modules/sales-crm/surveys/services/survey-invitation.service';
@@ -82,6 +84,9 @@ const isUniqueViolation = (error: unknown): boolean =>
 @Injectable()
 export class SurveyPublicService {
   private readonly logger = new Logger(SurveyPublicService.name);
+  // Responses whose post-save steps are running here, so a concurrent replay
+  // of the same submission cannot attach the same files twice.
+  private readonly completing = new Set<string>();
 
   constructor(
     private readonly workspaceDomainsService: WorkspaceDomainsService,
@@ -178,6 +183,17 @@ export class SurveyPublicService {
         { state: resolved?.state ?? 'INVALID' },
       );
     }
+
+    // Per-address limits alone cannot bound storage (addresses are cheap), so
+    // each form and each workspace also has a ceiling.
+    await this.throttle(
+      `survey-upload-form:${resolved.workspaceId}:${resolved.form.id}`,
+      SURVEY_UPLOAD_RATE_LIMIT_PER_FORM,
+    );
+    await this.throttle(
+      `survey-upload-workspace:${resolved.workspaceId}`,
+      SURVEY_UPLOAD_RATE_LIMIT_PER_WORKSPACE,
+    );
 
     const version = Number.isInteger(versionNumber)
       ? await this.surveyRecordsService.findVersion(resolved.workspaceId, {
@@ -323,10 +339,48 @@ export class SurveyPublicService {
       fileAnswers,
     });
 
+    // Prefer the time measured on the device; a start time compared with the
+    // server clock is only a fallback and a negative gap (a phone clock ahead
+    // of the server) says nothing, so it never marks spam.
+    const elapsedMs =
+      submission.elapsedMs ??
+      (submission.startedAtMs === null
+        ? null
+        : Date.now() - submission.startedAtMs);
     const isSpam =
       submission.honeypotFilled ||
-      (submission.startedAtMs !== null &&
-        Date.now() - submission.startedAtMs < SURVEY_MIN_FILL_MILLISECONDS);
+      (elapsedMs !== null &&
+        elapsedMs >= 0 &&
+        elapsedMs < SURVEY_MIN_FILL_MILLISECONDS);
+    const claimedInvitation =
+      invitation !== undefined && invitation !== null && !isSpam
+        ? invitation
+        : null;
+
+    // Claimed before the response is stored so an invitation link can be used
+    // once even when several submissions race; spam never consumes it.
+    if (
+      claimedInvitation !== null &&
+      !(await this.surveyInvitationService.claim(
+        workspaceId,
+        claimedInvitation.id,
+      ))
+    ) {
+      const raced = await this.findResponseBySubmissionKey(
+        workspaceId,
+        submission.submissionKey,
+      );
+
+      if (raced !== null) {
+        return this.replayResult(workspaceId, form, raced);
+      }
+
+      throw new SurveyException(
+        'This form is not accepting responses',
+        SurveyExceptionCode.FORM_NOT_OPEN,
+        { state: 'CLOSED' },
+      );
+    }
     // Staff chose the campaign when they created the invitation; a URL code
     // is only considered for general links.
     const campaignId =
@@ -399,6 +453,13 @@ export class SurveyPublicService {
           )) as SurveyResponseRecord,
       );
     } catch (error) {
+      if (claimedInvitation !== null) {
+        await this.surveyInvitationService.release(
+          workspaceId,
+          claimedInvitation.id,
+        );
+      }
+
       // Two identical requests raced past the lookup above; the unique
       // submission key let exactly one of them in.
       if (isUniqueViolation(error)) {
@@ -415,30 +476,13 @@ export class SurveyPublicService {
       throw error;
     }
 
-    await this.attachUploads(
+    await this.completePendingSteps(
       workspaceId,
+      form,
       response,
-      validation.cleanAnswers,
+      definition,
       uploads,
     );
-
-    if (invitation !== undefined && invitation !== null) {
-      await this.surveyInvitationService.markUsed(workspaceId, invitation.id);
-    }
-
-    if (!isSpam && definition.automations.some((rule) => rule.enabled)) {
-      await this.surveyAutomationService
-        .run({
-          workspaceId,
-          response,
-          definition,
-          formName: form.name ?? '',
-          actor: PUBLIC_ACTOR,
-        })
-        .catch((error: unknown) =>
-          this.logger.error(`Survey automations crashed: ${error}`),
-        );
-    }
 
     return {
       ok: true,
@@ -548,6 +592,16 @@ export class SurveyPublicService {
       return { ok: true, ending: null };
     }
 
+    // A retry after a failure that happened once the response was stored:
+    // finish what the first attempt could not (attachments, automations).
+    await this.completePendingSteps(
+      workspaceId,
+      form,
+      existing,
+      version.definition,
+      null,
+    );
+
     const evaluation = evaluateForm(
       version.definition,
       existing.answers ?? {},
@@ -601,36 +655,122 @@ export class SurveyPublicService {
       : null;
   }
 
-  // Creates the attachment records and swaps each file answer's upload
-  // reference (a short-lived secret) for its permanent attachment id.
-  private async attachUploads(
+  // Everything after the response row exists. Each step is idempotent and
+  // safe to repeat: file answers already rewritten to "attachment:" refs are
+  // skipped, and automations skip actions already recorded as DONE.
+  private async completePendingSteps(
     workspaceId: string,
+    form: SurveyFormRecord,
     response: SurveyResponseRecord,
-    cleanAnswers: Record<string, AnswerValue>,
-    uploads: Record<string, PendingSurveyUpload[]>,
+    definition: FormDefinition,
+    redeemed: Record<string, PendingSurveyUpload[]> | null,
   ): Promise<void> {
-    const allUploads = Object.values(uploads).flat();
-
-    if (allUploads.length === 0) {
+    if (this.completing.has(response.id)) {
       return;
     }
 
+    this.completing.add(response.id);
+
+    try {
+      await this.attachPendingUploads(
+        workspaceId,
+        form,
+        response,
+        definition,
+        redeemed,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Survey attachments failed for ${response.id}: ${error}`,
+      );
+    } finally {
+      this.completing.delete(response.id);
+    }
+
+    if (
+      response.reviewStatus !== 'SPAM' &&
+      definition.automations.some((rule) => rule.enabled)
+    ) {
+      await this.surveyAutomationService
+        .run({
+          workspaceId,
+          response,
+          definition,
+          formName: form.name ?? '',
+          actor: PUBLIC_ACTOR,
+        })
+        .catch((error: unknown) =>
+          this.logger.error(`Survey automations crashed: ${error}`),
+        );
+    }
+  }
+
+  // Creates attachment records for uploads still referenced by a short-lived
+  // upload ref and swaps each ref for the permanent attachment id.
+  private async attachPendingUploads(
+    workspaceId: string,
+    form: SurveyFormRecord,
+    response: SurveyResponseRecord,
+    definition: FormDefinition,
+    redeemed: Record<string, PendingSurveyUpload[]> | null,
+  ): Promise<void> {
+    const questionsById = buildQuestionIndex(definition);
+    const answers = { ...(response.answers ?? {}) } as Record<
+      string,
+      AnswerValue
+    >;
+    const pendingAnswers: Record<string, FileAnswer[]> = {};
+
+    for (const [questionId, value] of Object.entries(answers)) {
+      if (
+        questionsById.get(questionId)?.type !== 'file' ||
+        !Array.isArray(value)
+      ) {
+        continue;
+      }
+
+      const pending = (value as FileAnswer[]).filter(
+        (file) => !file.ref.startsWith('attachment:'),
+      );
+
+      if (pending.length > 0) {
+        pendingAnswers[questionId] = pending;
+      }
+    }
+
+    if (Object.keys(pendingAnswers).length === 0) {
+      return;
+    }
+
+    const uploads =
+      redeemed ??
+      (await this.surveyUploadService.redeemPublicUploads({
+        workspaceId,
+        formId: form.id,
+        submissionKey: response.submissionKey ?? '',
+        fileAnswers: pendingAnswers,
+      }));
     const attachmentIds = await this.surveyUploadService.attachToResponse({
       workspaceId,
       responseId: response.id,
-      uploads: allUploads,
+      uploads: Object.values(uploads).flat(),
       actor: PUBLIC_ACTOR,
     });
 
-    const answers = { ...cleanAnswers };
-
     for (const [questionId, pending] of Object.entries(uploads)) {
-      answers[questionId] = pending.map((upload) => ({
-        ref: `attachment:${attachmentIds.get(upload.fileId) ?? ''}`,
-        name: upload.name,
-        mimeType: upload.mimeType,
-        sizeBytes: upload.sizeBytes,
-      }));
+      const kept = ((answers[questionId] ?? []) as FileAnswer[]).filter(
+        (file) => file.ref.startsWith('attachment:'),
+      );
+
+      answers[questionId] = [
+        ...kept,
+        ...pending.map((upload) => ({
+          ref: `attachment:${attachmentIds.get(upload.fileId) ?? ''}`,
+          name: upload.name,
+          mimeType: upload.mimeType,
+          sizeBytes: upload.sizeBytes,
+        })),
+      ];
     }
 
     await this.surveyRecordsService.withRepository<
@@ -639,6 +779,8 @@ export class SurveyPublicService {
     >(workspaceId, 'surveyResponse', (repository) =>
       repository.update(response.id, { answers }),
     );
+
+    response.answers = answers;
   }
 
   private async throttle(

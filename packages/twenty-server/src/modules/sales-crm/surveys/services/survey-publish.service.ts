@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { validateForPublish } from 'twenty-shared/surveys';
+import { IsNull } from 'typeorm';
 
 import { SurveyRecordsService } from 'src/modules/sales-crm/surveys/services/survey-records.service';
 import {
@@ -125,8 +126,10 @@ export class SurveyPublishService {
       );
     }
 
+    // Always validated as public-facing: the public link can be switched on
+    // later and invitations reach respondents even while it is off.
     const validation = validateForPublish(form.draftDefinition, {
-      publicEnabled: form.publicEnabled === true,
+      publicEnabled: true,
     });
 
     if (validation.errors.length > 0) {
@@ -142,38 +145,68 @@ export class SurveyPublishService {
     const printCode = `F${publicSlug.slice(0, 4).toUpperCase()}-v${versionNumber}`;
     const now = new Date().toISOString();
 
-    const version = await this.surveyRecordsService.withRepository<
-      SurveyFormVersionRecord,
-      SurveyFormVersionRecord
-    >(workspaceId, 'surveyFormVersion', async (repository) => {
-      const existing = await repository.findOne({
-        where: { formId, versionNumber },
-      });
+    // Claim the version number (and the reviewed draft) atomically: a second
+    // publisher — another tab or another server instance — fails here instead
+    // of producing a duplicate version.
+    const previousVersionNumber = form.currentVersionNumber;
+    const claimed = await this.surveyRecordsService.withRepository<
+      SurveyFormRecord,
+      { affected?: number | null }
+    >(workspaceId, 'surveyForm', (repository) =>
+      repository.update(
+        {
+          id: formId,
+          draftRevision: expectedDraftRevision,
+          currentVersionNumber:
+            previousVersionNumber === null ? IsNull() : previousVersionNumber,
+        },
+        { currentVersionNumber: versionNumber },
+      ),
+    );
 
-      if (existing !== null) {
-        throw new SurveyException(
-          'This version was just published by someone else. Reload.',
-          SurveyExceptionCode.DRAFT_CONFLICT,
+    if ((claimed.affected ?? 0) !== 1) {
+      throw new SurveyException(
+        'The form was published or edited by someone else just now. Reload.',
+        SurveyExceptionCode.DRAFT_CONFLICT,
+      );
+    }
+
+    const version = await this.surveyRecordsService
+      .withRepository<SurveyFormVersionRecord, SurveyFormVersionRecord>(
+        workspaceId,
+        'surveyFormVersion',
+        async (repository) =>
+          repository.save(
+            buildSurveyRecordValues(
+              {
+                name: `v${versionNumber}`,
+                formId,
+                versionNumber,
+                // A deep copy: the draft keeps changing, the version never does.
+                definition: JSON.parse(JSON.stringify(form.draftDefinition)),
+                publishedAt: now,
+                publishedById: actor.workspaceMemberId,
+                changeNote: changeNote.slice(0, 2000),
+                printCode,
+              },
+              actor,
+            ) as Partial<SurveyFormVersionRecord>,
+          ) as Promise<SurveyFormVersionRecord>,
+      )
+      .catch(async (error: unknown) => {
+        // Give the number back so the next attempt is not blocked.
+        await this.surveyRecordsService.withRepository<
+          SurveyFormRecord,
+          unknown
+        >(workspaceId, 'surveyForm', (repository) =>
+          repository.update(
+            { id: formId, currentVersionNumber: versionNumber },
+            { currentVersionNumber: previousVersionNumber },
+          ),
         );
-      }
 
-      return repository.save(
-        buildSurveyRecordValues(
-          {
-            name: `v${versionNumber}`,
-            formId,
-            versionNumber,
-            // A deep copy: the draft keeps changing, the version never does.
-            definition: JSON.parse(JSON.stringify(form.draftDefinition)),
-            publishedAt: now,
-            publishedById: actor.workspaceMemberId,
-            changeNote: changeNote.slice(0, 2000),
-            printCode,
-          },
-          actor,
-        ) as Partial<SurveyFormVersionRecord>,
-      ) as Promise<SurveyFormVersionRecord>;
-    });
+        throw error;
+      });
 
     await this.surveyRecordsService.withRepository<SurveyFormRecord, unknown>(
       workspaceId,
@@ -182,7 +215,6 @@ export class SurveyPublishService {
         repository.update(formId, {
           formStatus: form.formStatus === 'CLOSED' ? 'CLOSED' : 'PUBLISHED',
           publishedVersionId: version.id,
-          currentVersionNumber: versionNumber,
           hasUnpublishedChanges: false,
           publicSlug,
         }),

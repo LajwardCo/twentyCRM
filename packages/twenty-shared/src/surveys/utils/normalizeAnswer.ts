@@ -145,8 +145,10 @@ export const normalizeAnswer = (
 
       return { error: 'INVALID_VALUE' };
     }
+    // Dates are validated, never truncated: "2024-01-01T10:00+04:30" must be
+    // rejected, not silently stored as another value.
     case 'date': {
-      const text = cleanText(raw, 10);
+      const text = cleanText(raw, 40);
 
       if (text === undefined) {
         return { error: 'INVALID_DATE' };
@@ -163,7 +165,7 @@ export const normalizeAnswer = (
         : { error: 'INVALID_DATE' };
     }
     case 'time': {
-      const text = cleanText(raw, 5);
+      const text = cleanText(raw, 40);
 
       if (text === undefined) {
         return { error: 'INVALID_TIME' };
@@ -178,7 +180,7 @@ export const normalizeAnswer = (
       return isValidTime(latin) ? { value: latin } : { error: 'INVALID_TIME' };
     }
     case 'datetime': {
-      const text = cleanText(raw, 16);
+      const text = cleanText(raw, 40);
 
       if (text === undefined) {
         return { error: 'INVALID_DATE' };
@@ -190,10 +192,12 @@ export const normalizeAnswer = (
         return { value: undefined };
       }
 
-      const [datePart, timePart] = latin.split('T');
+      // Local date and time to the minute; seconds from native pickers are
+      // accepted and dropped, any zone or extra text is invalid.
+      const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(:\d{2})?$/.exec(latin);
 
-      return isValidIsoDate(datePart ?? '') && isValidTime(timePart ?? '')
-        ? { value: latin }
+      return match !== null && isValidIsoDate(match[1]) && isValidTime(match[2])
+        ? { value: `${match[1]}T${match[2]}` }
         : { error: 'INVALID_DATE' };
     }
     case 'single_choice':

@@ -19,6 +19,7 @@ describe('parsePublicSubmission', () => {
       inviteToken: null,
       campaignCode: null,
       startedAtMs: 1000,
+      elapsedMs: null,
       honeypotFilled: false,
     });
   });

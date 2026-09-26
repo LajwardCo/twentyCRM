@@ -35,6 +35,16 @@ export const SURVEY_UPLOAD_RATE_LIMIT_PER_IP = {
   windowMs: 10 * 60 * 1000,
 };
 
+export const SURVEY_UPLOAD_RATE_LIMIT_PER_FORM = {
+  maxTokens: 200,
+  windowMs: 10 * 60 * 1000,
+};
+
+export const SURVEY_UPLOAD_RATE_LIMIT_PER_WORKSPACE = {
+  maxTokens: 1000,
+  windowMs: 60 * 60 * 1000,
+};
+
 export const SURVEY_UPLOAD_REF_TTL_MS = 60 * 60 * 1000;
 
 export const SURVEY_MAX_INVITATIONS_PER_REQUEST = 200;

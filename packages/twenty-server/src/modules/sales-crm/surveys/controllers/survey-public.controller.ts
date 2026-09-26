@@ -19,7 +19,6 @@ import { type FileAnswer } from 'twenty-shared/surveys';
 
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
-import { clientIpFrom } from 'src/modules/sales-crm/audit-log/utils/sanitize-audit-event.util';
 import {
   type PublicFormPayload,
   type PublicSubmissionResult,
@@ -31,6 +30,9 @@ import {
 } from 'src/modules/sales-crm/surveys/survey.exception';
 import { toSurveyHttpException } from 'src/modules/sales-crm/surveys/utils/to-survey-http-exception.util';
 
+// request.ip honours Express "trust proxy" (TRUST_PROXY: only local and
+// private proxies by default), so it is the address the nearest trusted proxy
+// saw — unlike the left-most X-Forwarded-For entry, which the client writes.
 type RequestLike = {
   headers: Record<string, string | string[] | undefined>;
   ip?: string;
@@ -93,10 +95,7 @@ export class SurveyPublicController {
         origin: resolveOrigin(headerOrigin, queryOrigin),
         slug,
         inviteToken: typeof inviteToken === 'string' ? inviteToken : null,
-        ip: clientIpFrom(
-          request.headers ?? {},
-          request.ip ?? request.socket?.remoteAddress,
-        ),
+        ip: request.ip ?? request.socket?.remoteAddress ?? null,
       });
     } catch (error) {
       throw toSurveyHttpException(error, this.logger);
@@ -128,10 +127,7 @@ export class SurveyPublicController {
         slug,
         body: body ?? {},
         file,
-        ip: clientIpFrom(
-          request.headers ?? {},
-          request.ip ?? request.socket?.remoteAddress,
-        ),
+        ip: request.ip ?? request.socket?.remoteAddress ?? null,
       });
     } catch (error) {
       throw toSurveyHttpException(error, this.logger);
@@ -152,10 +148,7 @@ export class SurveyPublicController {
         origin: resolveOrigin(headerOrigin, queryOrigin),
         slug,
         body,
-        ip: clientIpFrom(
-          request.headers ?? {},
-          request.ip ?? request.socket?.remoteAddress,
-        ),
+        ip: request.ip ?? request.socket?.remoteAddress ?? null,
       });
     } catch (error) {
       throw toSurveyHttpException(error, this.logger);

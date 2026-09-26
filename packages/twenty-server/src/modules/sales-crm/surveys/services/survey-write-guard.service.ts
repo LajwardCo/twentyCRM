@@ -17,25 +17,106 @@ import { generateBase62Code } from 'src/modules/sales-crm/surveys/utils/survey-t
 
 type RecordData = Record<string, unknown>;
 
-// Fields only the server's own endpoints may set.
-const FORM_ENDPOINT_ONLY_FIELDS = [
-  'formStatus',
-  'publishedVersionId',
-  'currentVersionNumber',
-  'publicSlug',
-  'hasUnpublishedChanges',
+// Allow-lists, not deny-lists: the record API also accepts nested relation
+// writes ("publishedVersion: { connect }", "formVersion: { connect }"), so
+// anything not named here is refused (updates) or dropped (creates).
+// Actor fields the record API itself stamps onto every write before the
+// hooks run; they are never user-controlled content.
+const SYSTEM_STAMPED = ['createdBy', 'updatedBy'];
+
+const FORM_WRITABLE = [
+  ...SYSTEM_STAMPED,
+  'position',
+  'name',
+  'purpose',
+  'description',
+  'draftDefinition',
+  'draftRevision',
+  'publicEnabled',
+  'opensAt',
+  'closesAt',
+  'responseLimit',
+  'campaignIds',
+  'ownerId',
+];
+
+const FORM_BULK_WRITABLE = [
+  ...SYSTEM_STAMPED,
+  'position',
+  'purpose',
+  'ownerId',
+  'campaignIds',
+];
+
+const RESPONSE_WRITABLE = [
+  ...SYSTEM_STAMPED,
+  'position',
+  'name',
+  'formVersionId',
+  'answers',
+  'language',
+  'completionStatus',
+  'reviewStatus',
+  'collectedAt',
+  'collectorId',
+  'paperReference',
+  'paperReviewNotes',
+  'buyingInterest',
+  'city',
+  'area',
+  'location',
+  'companyId',
+  'personId',
+  'opportunityId',
+  'campaignId',
+  'visitId',
+  'crmActions',
+];
+
+// Create additionally allows the client-chosen id, idempotency key and
+// channel (checked below); everything derived is set by this guard.
+const RESPONSE_CREATABLE = [
+  ...RESPONSE_WRITABLE,
+  'id',
+  'submissionKey',
+  'source',
+];
+
+const RESPONSE_BULK_WRITABLE = [
+  ...SYSTEM_STAMPED,
+  'position',
+  'reviewStatus',
+  'collectorId',
+  'campaignId',
 ];
 
 const RESPONSE_CONTENT_FIELDS = [
   'answers',
   'completionStatus',
   'formVersionId',
-  'formId',
-  'versionNumber',
-  'skippedByLogic',
-  'source',
   'paperReference',
 ];
+
+const CAMPAIGN_WRITABLE = [
+  ...SYSTEM_STAMPED,
+  'position',
+  'name',
+  'description',
+  'campaignStatus',
+  'startsAt',
+  'endsAt',
+  'city',
+  'areas',
+  'assigneeIds',
+  'targetResponses',
+  'channels',
+  'formIds',
+];
+
+const pick = (data: RecordData, keys: string[]): RecordData =>
+  Object.fromEntries(
+    Object.entries(data).filter(([key]) => keys.includes(key)),
+  );
 
 const STAFF_SOURCES = ['STAFF_VISIT', 'PAPER'];
 
@@ -83,7 +164,7 @@ export class SurveyWriteGuardService {
     assertDefinitionSize(data.draftDefinition);
 
     return {
-      ...data,
+      ...pick(data, ['id', ...FORM_WRITABLE]),
       formStatus: 'DRAFT',
       publishedVersionId: null,
       currentVersionNumber: 0,
@@ -101,10 +182,15 @@ export class SurveyWriteGuardService {
     formId: string,
     data: RecordData,
   ): Promise<RecordData> {
-    for (const field of FORM_ENDPOINT_ONLY_FIELDS) {
-      if (field in data) {
-        reject('SURVEY_ENDPOINT_ONLY', `${field} is set by publishing`);
-      }
+    const forbidden = Object.keys(data).filter(
+      (key) => !FORM_WRITABLE.includes(key),
+    );
+
+    if (forbidden.length > 0) {
+      reject(
+        'SURVEY_ENDPOINT_ONLY',
+        `${forbidden.join(', ')} cannot be changed here`,
+      );
     }
 
     if (!('draftDefinition' in data)) {
@@ -115,14 +201,30 @@ export class SurveyWriteGuardService {
 
     assertDefinitionSize(data.draftDefinition);
 
-    const existing = await this.surveyRecordsService.findFormById(
+    const nextRevision = data.draftRevision;
+
+    // Autosave sends the revision it edited plus one. The revision is claimed
+    // with a conditional update so two tabs (or two server instances) can
+    // never both win: the loser sees a conflict instead of overwriting.
+    if (
+      typeof nextRevision !== 'number' ||
+      !Number.isInteger(nextRevision) ||
+      nextRevision < 1
+    ) {
+      reject('SURVEY_DRAFT_CONFLICT', 'a draft revision is required');
+    }
+
+    const claimed = await this.surveyRecordsService.withRepository(
       authContext.workspace.id,
-      formId,
+      'surveyForm',
+      (repository) =>
+        repository.update(
+          { id: formId, draftRevision: (nextRevision as number) - 1 },
+          { draftRevision: nextRevision },
+        ),
     );
 
-    // Autosave sends the revision it edited plus one; anything else means
-    // another tab or person saved in between, and overwriting would lose work.
-    if (data.draftRevision !== (existing.draftRevision ?? 0) + 1) {
+    if ((claimed.affected ?? 0) !== 1) {
       reject('SURVEY_DRAFT_CONFLICT', 'the draft was changed elsewhere');
     }
 
@@ -134,14 +236,15 @@ export class SurveyWriteGuardService {
   }
 
   assertFormUpdateMany(data: RecordData): void {
-    for (const field of [
-      ...FORM_ENDPOINT_ONLY_FIELDS,
-      'draftDefinition',
-      'draftRevision',
-    ]) {
-      if (field in data) {
-        reject('SURVEY_ENDPOINT_ONLY', `${field} cannot be bulk-updated`);
-      }
+    const forbidden = Object.keys(data).filter(
+      (key) => !FORM_BULK_WRITABLE.includes(key),
+    );
+
+    if (forbidden.length > 0) {
+      reject(
+        'SURVEY_ENDPOINT_ONLY',
+        `${forbidden.join(', ')} cannot be bulk-updated`,
+      );
     }
   }
 
@@ -161,17 +264,27 @@ export class SurveyWriteGuardService {
   }
 
   prepareCampaignCreate(data: RecordData): RecordData {
-    return { ...data, publicCode: generateBase62Code(8) };
+    return {
+      ...pick(data, ['id', ...CAMPAIGN_WRITABLE]),
+      publicCode: generateBase62Code(8),
+    };
   }
 
   assertCampaignUpdate(data: RecordData): void {
-    if ('publicCode' in data) {
-      reject('SURVEY_ENDPOINT_ONLY', 'publicCode is generated');
+    const forbidden = Object.keys(data).filter(
+      (key) => !CAMPAIGN_WRITABLE.includes(key),
+    );
+
+    if (forbidden.length > 0) {
+      reject(
+        'SURVEY_ENDPOINT_ONLY',
+        `${forbidden.join(', ')} cannot be changed here`,
+      );
     }
   }
 
   assertInvitationUpdate(data: RecordData): void {
-    const allowed = new Set(['invitationStatus', 'name']);
+    const allowed = new Set([...SYSTEM_STAMPED, 'invitationStatus', 'name']);
 
     if (Object.keys(data).some((key) => !allowed.has(key))) {
       reject(
@@ -189,6 +302,8 @@ export class SurveyWriteGuardService {
     authContext: WorkspaceAuthContext,
     data: RecordData,
   ): Promise<RecordData> {
+    data = pick(data, RESPONSE_CREATABLE);
+
     const source = (data.source as string | undefined) ?? 'STAFF_VISIT';
 
     // Public channels are only written by the public endpoint.
@@ -214,12 +329,13 @@ export class SurveyWriteGuardService {
           ? data.submissionKey.toLowerCase()
           : randomUUID(),
       collectedAt: data.collectedAt ?? now,
-      submittedAt:
-        data.submittedAt ?? (completionStatus === 'COMPLETED' ? now : null),
+      submittedAt: completionStatus === 'COMPLETED' ? now : null,
       collectorId:
         data.collectorId ?? (source === 'STAFF_VISIT' ? memberId : null),
-      enteredById: data.enteredById ?? (source === 'PAPER' ? memberId : null),
-      enteredAt: data.enteredAt ?? (source === 'PAPER' ? now : null),
+      // Whoever types in a paper sheet is recorded by the server, never taken
+      // from the payload.
+      enteredById: source === 'PAPER' ? memberId : null,
+      enteredAt: source === 'PAPER' ? now : null,
     });
 
     await this.assertPaperReferenceUnique(authContext, prepared, null);
@@ -232,12 +348,19 @@ export class SurveyWriteGuardService {
     responseId: string,
     data: RecordData,
   ): Promise<RecordData> {
-    if (!RESPONSE_CONTENT_FIELDS.some((field) => field in data)) {
-      return data;
+    const forbidden = Object.keys(data).filter(
+      (key) => !RESPONSE_WRITABLE.includes(key),
+    );
+
+    if (forbidden.length > 0) {
+      reject(
+        'SURVEY_ENDPOINT_ONLY',
+        `${forbidden.join(', ')} cannot be changed here`,
+      );
     }
 
-    if ('source' in data || 'formId' in data || 'versionNumber' in data) {
-      reject('SURVEY_ENDPOINT_ONLY', 'source and form cannot change');
+    if (!RESPONSE_CONTENT_FIELDS.some((field) => field in data)) {
+      return data;
     }
 
     const existing = await this.surveyRecordsService.withRepository<
@@ -299,10 +422,14 @@ export class SurveyWriteGuardService {
   }
 
   assertResponseUpdateMany(data: RecordData): void {
-    if (RESPONSE_CONTENT_FIELDS.some((field) => field in data)) {
+    const forbidden = Object.keys(data).filter(
+      (key) => !RESPONSE_BULK_WRITABLE.includes(key),
+    );
+
+    if (forbidden.length > 0) {
       reject(
         'SURVEY_ENDPOINT_ONLY',
-        'answers must be edited one response at a time',
+        `${forbidden.join(', ')} must be edited one response at a time`,
       );
     }
   }

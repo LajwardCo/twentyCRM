@@ -14,6 +14,8 @@ export type ParsedPublicSubmission = {
   inviteToken: string | null;
   campaignCode: string | null;
   startedAtMs: number | null;
+  // Measured on the respondent's device; immune to clock differences.
+  elapsedMs: number | null;
   honeypotFilled: boolean;
 };
 
@@ -83,6 +85,7 @@ export const parsePublicSubmission = (
     : 'fa';
 
   const startedAt = body.startedAt;
+  const elapsed = body.elapsedMs;
 
   return {
     submissionKey: submissionKey.toLowerCase(),
@@ -94,6 +97,10 @@ export const parsePublicSubmission = (
     startedAtMs:
       typeof startedAt === 'number' && Number.isFinite(startedAt)
         ? startedAt
+        : null,
+    elapsedMs:
+      typeof elapsed === 'number' && Number.isFinite(elapsed) && elapsed >= 0
+        ? elapsed
         : null,
     // The honeypot is a visually hidden text field people never fill.
     honeypotFilled: typeof body.website === 'string' && body.website !== '',

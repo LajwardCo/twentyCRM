@@ -196,6 +196,35 @@ export class SurveyInvitationService {
       : null;
   }
 
+  // Single use, atomically: only one of several concurrent submissions can
+  // move the invitation from ACTIVE to USED.
+  async claim(workspaceId: string, invitationId: string): Promise<boolean> {
+    const result = await this.surveyRecordsService.withRepository<
+      SurveyInvitationRecord,
+      { affected?: number | null }
+    >(workspaceId, 'surveyInvitation', (repository) =>
+      repository.update(
+        { id: invitationId, invitationStatus: 'ACTIVE' },
+        { invitationStatus: 'USED', usedAt: new Date().toISOString() },
+      ),
+    );
+
+    return (result.affected ?? 0) === 1;
+  }
+
+  // Undo a claim whose response could not be stored.
+  async release(workspaceId: string, invitationId: string): Promise<void> {
+    await this.surveyRecordsService.withRepository<
+      SurveyInvitationRecord,
+      unknown
+    >(workspaceId, 'surveyInvitation', (repository) =>
+      repository.update(
+        { id: invitationId, invitationStatus: 'USED' },
+        { invitationStatus: 'ACTIVE', usedAt: null },
+      ),
+    );
+  }
+
   async markUsed(workspaceId: string, invitationId: string): Promise<void> {
     await this.surveyRecordsService.withRepository<
       SurveyInvitationRecord,

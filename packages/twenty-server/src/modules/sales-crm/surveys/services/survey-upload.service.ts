@@ -13,6 +13,7 @@ import { InjectCacheStorage } from 'src/engine/core-modules/cache-storage/decora
 import { CacheStorageService } from 'src/engine/core-modules/cache-storage/services/cache-storage.service';
 import { CacheStorageNamespace } from 'src/engine/core-modules/cache-storage/types/cache-storage-namespace.enum';
 import { FilesFieldService } from 'src/engine/core-modules/file/files-field/services/files-field.service';
+import { extractFileInfoOrThrow } from 'src/engine/core-modules/file/utils/extract-file-info-or-throw.utils';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { SURVEY_UPLOAD_REF_TTL_MS } from 'src/modules/sales-crm/surveys/constants/survey.constants';
@@ -93,7 +94,17 @@ export class SurveyUploadService {
       );
     }
 
-    if (!isMimeTypeAccepted(mimeType, question.config.fileTypes)) {
+    // The type the browser declares is the uploader's claim; the type read
+    // from the file's own bytes is what gets checked and recorded.
+    const { mimeType: detectedMimeType } = await extractFileInfoOrThrow({
+      file: buffer,
+      filename,
+    }).catch(() => ({ mimeType: 'application/octet-stream' }));
+
+    if (
+      !isMimeTypeAccepted(detectedMimeType, question.config.fileTypes) ||
+      !isMimeTypeAccepted(mimeType, question.config.fileTypes)
+    ) {
       throw new SurveyException(
         'This file type is not accepted',
         SurveyExceptionCode.INVALID_FILE,
@@ -129,7 +140,7 @@ export class SurveyUploadService {
       submissionKey,
       fileId: uploaded.id,
       name: safeName,
-      mimeType,
+      mimeType: detectedMimeType,
       sizeBytes: buffer.length,
       extension,
     };
@@ -140,7 +151,12 @@ export class SurveyUploadService {
       SURVEY_UPLOAD_REF_TTL_MS,
     );
 
-    return { ref, name: safeName, mimeType, sizeBytes: buffer.length };
+    return {
+      ref,
+      name: safeName,
+      mimeType: detectedMimeType,
+      sizeBytes: buffer.length,
+    };
   }
 
   // Resolves every file answer of a submission to its stored upload, refusing

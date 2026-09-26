@@ -19,6 +19,9 @@ export type SurveyCapabilities = {
   canInvite: boolean;
   canEditResponses: boolean;
   canExport: boolean;
+  // Owner-scoped roles (Marketer, Partner) only act on responses they
+  // collected or entered themselves.
+  ownResponsesOnly: boolean;
 };
 
 export type SurveyCapability = Exclude<keyof SurveyCapabilities, 'supported'>;
@@ -33,6 +36,7 @@ const NONE: SurveyCapabilities = {
   canInvite: false,
   canEditResponses: false,
   canExport: false,
+  ownResponsesOnly: true,
 };
 
 // Survey permissions are ordinary Twenty object permissions, so they are
@@ -97,6 +101,9 @@ export class SurveyCapabilitiesService {
       canExport:
         can('surveyResponse', 'read') &&
         permissionFlags[PermissionFlagType.EXPORT_CSV] === true,
+      ownResponsesOnly:
+        objectsPermissions[objectIds.surveyResponse]
+          ?.canOnlyAccessOwnedRecords === true,
     };
   }
 

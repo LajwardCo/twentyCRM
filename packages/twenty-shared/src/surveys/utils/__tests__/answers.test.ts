@@ -57,6 +57,20 @@ describe('normalizeAnswer', () => {
     });
   });
 
+  it('should reject dates with trailing text instead of truncating them', () => {
+    expect(normalizeAnswer(question('q', 'date'), '2026-02-01junk')).toEqual({
+      error: 'INVALID_DATE',
+    });
+    expect(
+      normalizeAnswer(question('q', 'datetime'), '2026-02-01T10:00+04:30'),
+    ).toEqual({ error: 'INVALID_DATE' });
+    expect(
+      normalizeAnswer(question('q', 'datetime'), '2026-02-01T10:00:59'),
+    ).toEqual({
+      value: '2026-02-01T10:00',
+    });
+  });
+
   it('should reject a location with only one coordinate', () => {
     expect(normalizeAnswer(question('q', 'location'), { lat: 34.3 })).toEqual({
       error: 'INVALID_VALUE',

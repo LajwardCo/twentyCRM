@@ -71,6 +71,14 @@ const makeService = ({
   } as Record<string, unknown>,
 } = {}) => {
   const repository = {
+    // Conditional draft-revision claim: succeeds only from the stored revision.
+    update: jest
+      .fn()
+      .mockImplementation((criteria: { draftRevision?: number }) =>
+        Promise.resolve({
+          affected: criteria.draftRevision === draftRevision ? 1 : 0,
+        }),
+      ),
     findOne: jest.fn().mockResolvedValue(existingResponse),
     count: jest
       .fn()
@@ -145,6 +153,28 @@ describe('SurveyWriteGuardService', () => {
       });
 
       expect(accepted.hasUnpublishedChanges).toBe(true);
+    });
+
+    it('should refuse nested relation writes that bypass the publish endpoint', async () => {
+      const { service } = makeService();
+
+      await expect(
+        service.prepareFormUpdate(authContext, 'form-1', {
+          publishedVersion: {
+            connect: { where: { id: 'other-form-version' } },
+          },
+        }),
+      ).rejects.toThrow('SURVEY_ENDPOINT_ONLY');
+    });
+
+    it('should drop unknown fields on create', () => {
+      const { service } = makeService();
+      const data = service.prepareFormCreate(authContext, {
+        name: 'x',
+        publishedVersion: { connect: { where: { id: 'v' } } },
+      });
+
+      expect(data).not.toHaveProperty('publishedVersion');
     });
 
     it('should refuse to delete a form that has responses', async () => {
@@ -235,6 +265,29 @@ describe('SurveyWriteGuardService', () => {
           completionStatus: 'COMPLETED',
         }),
       ).rejects.toThrow('SURVEY_INVALID_ANSWERS');
+    });
+
+    it('should refuse relation writes that would move a response', async () => {
+      const { service } = makeService();
+
+      await expect(
+        service.prepareResponseUpdate(authContext, 'r1', {
+          formVersion: { connect: { where: { id: 'v-other' } } },
+        }),
+      ).rejects.toThrow('SURVEY_ENDPOINT_ONLY');
+    });
+
+    it('should never take the paper transcriber from the payload', async () => {
+      const { service } = makeService();
+      const data = await service.prepareResponseCreate(authContext, {
+        formVersionId: 'v1',
+        source: 'PAPER',
+        enteredById: 'someone-else',
+        invitationId: 'inv',
+      });
+
+      expect(data.enteredById).toBe('member-1');
+      expect(data).not.toHaveProperty('invitationId');
     });
 
     it('should not let a response move to another form', async () => {

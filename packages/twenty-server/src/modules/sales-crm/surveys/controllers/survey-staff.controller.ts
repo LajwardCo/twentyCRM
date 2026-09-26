@@ -213,10 +213,11 @@ export class SurveyStaffController {
     @AuthUser() user: UserEntity,
   ): Promise<{ crmActions: SurveyCrmAction[] }> {
     try {
-      await this.surveyCapabilitiesService.assertCapability(
-        { workspaceId: workspace.id, userWorkspaceId },
-        'canEditResponses',
-      );
+      const capabilities =
+        await this.surveyCapabilitiesService.assertCapability(
+          { workspaceId: workspace.id, userWorkspaceId },
+          'canEditResponses',
+        );
 
       const response = await this.surveyRecordsService.withRepository<
         SurveyResponseRecord,
@@ -225,7 +226,13 @@ export class SurveyStaffController {
         repository.findOne({ where: { id: responseId } }),
       );
 
-      if (response === null || response.formVersionId === null) {
+      const outOfScope =
+        response !== null &&
+        capabilities.ownResponsesOnly &&
+        response.collectorId !== workspaceMemberId &&
+        response.enteredById !== workspaceMemberId;
+
+      if (response === null || response.formVersionId === null || outOfScope) {
         throw new SurveyException(
           'Response not found',
           SurveyExceptionCode.RESPONSE_NOT_FOUND,

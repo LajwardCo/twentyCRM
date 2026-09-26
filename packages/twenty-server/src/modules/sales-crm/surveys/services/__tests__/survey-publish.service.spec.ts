@@ -38,6 +38,7 @@ const validDefinition = {
 const makeService = (
   form: Record<string, unknown>,
   existingVersion: unknown = null,
+  claimSucceeds = true,
 ) => {
   const saved: unknown[] = [];
   const updates: unknown[] = [];
@@ -48,11 +49,16 @@ const makeService = (
 
       return Promise.resolve({ id: 'version-new', ...values });
     }),
-    update: jest.fn().mockImplementation((_id: string, values: unknown) => {
-      updates.push(values);
+    update: jest
+      .fn()
+      .mockImplementation((criteria: unknown, values: unknown) => {
+        updates.push(values);
 
-      return Promise.resolve();
-    }),
+        // Object criteria = the conditional version-number claim.
+        return Promise.resolve({
+          affected: typeof criteria === 'object' && !claimSucceeds ? 0 : 1,
+        });
+      }),
   };
   const records = {
     findFormById: jest.fn().mockResolvedValue({
@@ -110,12 +116,25 @@ describe('SurveyPublishService', () => {
       definition: validDefinition,
       publishedById: 'member-1',
     });
-    expect(updates[0]).toMatchObject({
+    expect(updates[0]).toEqual({ currentVersionNumber: 3 });
+    expect(updates[1]).toMatchObject({
       formStatus: 'PUBLISHED',
       publishedVersionId: 'version-new',
-      currentVersionNumber: 3,
       hasUnpublishedChanges: false,
     });
+  });
+
+  it('should fail cleanly when another publisher claimed the version first', async () => {
+    const { service, saved } = makeService(
+      { currentVersionNumber: 2 },
+      null,
+      false,
+    );
+
+    await expect(publish(service)).rejects.toMatchObject({
+      code: SurveyExceptionCode.DRAFT_CONFLICT,
+    });
+    expect(saved).toEqual([]);
   });
 
   it('should refuse to publish a draft the publisher did not review', async () => {
@@ -149,10 +168,8 @@ describe('SurveyPublishService', () => {
 
     await publish(service);
 
-    expect(updates[0]).toMatchObject({
-      formStatus: 'CLOSED',
-      currentVersionNumber: 2,
-    });
+    expect(updates[0]).toEqual({ currentVersionNumber: 2 });
+    expect(updates[1]).toMatchObject({ formStatus: 'CLOSED' });
   });
 
   it('should not publish archived forms', async () => {

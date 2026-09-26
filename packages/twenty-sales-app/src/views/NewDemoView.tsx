@@ -25,6 +25,7 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: 'home_appliances', label: TDEMO.bizAppliances, desc: TDEMO.bizAppliancesDesc, emoji: '🧺' },
   { key: 'snooker_club', label: TDEMO.bizSnooker, desc: TDEMO.bizSnookerDesc, emoji: '🎱' },
   { key: 'car_rental', label: TDEMO.bizCarRental, desc: TDEMO.bizCarRentalDesc, emoji: '🚗' },
+  { key: 'opd', label: TDEMO.bizOpd, desc: TDEMO.bizOpdDesc, emoji: '🩺' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
 
@@ -32,7 +33,9 @@ const CURRENCIES = ['AFN', 'USD'];
 
 // Business types that ship a rich demo dataset (custom fields, images,
 // storefront, branding, documents) whose pieces the agent can toggle.
-const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'home_appliances', 'snooker_club', 'car_rental'];
+const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'opd'];
+// A clinic has no online store, and its sample "documents" are patient visits.
+const CLINIC_DEMO_TYPES: DemoBusinessType[] = ['opd'];
 const LANGUAGES: { code: string; label: string }[] = [
   { code: 'fa', label: TDEMO.langFa },
   { code: 'en', label: TDEMO.langEn },
@@ -77,6 +80,7 @@ export const NewDemoView = () => {
   const [step, setStep] = useState(1);
 
   const [businessType, setBusinessType] = useState<DemoBusinessType>('mobile_store');
+  const isClinic = CLINIC_DEMO_TYPES.includes(businessType);
   const [businessName, setBusinessName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [checkState, setCheckState] = useState<CheckState>('idle');
@@ -302,32 +306,39 @@ export const NewDemoView = () => {
                 </select>
               </div>
             </div>
-            <label className="demo-check-row" style={{ marginBottom: 0 }}>
-              <input
-                type="checkbox"
-                checked={inventoryEnabled}
-                onChange={(e) => setInventoryEnabled(e.target.checked)}
-              />
-              <span>
-                {TDEMO.inventory}
-                <span className="demo-check-hint">{TDEMO.inventoryHint}</span>
-              </span>
-            </label>
+            {/* A clinic keeps no stock (Core provisions OPD without inventory). */}
+            {!isClinic && (
+              <label className="demo-check-row" style={{ marginBottom: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={inventoryEnabled}
+                  onChange={(e) => setInventoryEnabled(e.target.checked)}
+                />
+                <span>
+                  {TDEMO.inventory}
+                  <span className="demo-check-hint">{TDEMO.inventoryHint}</span>
+                </span>
+              </label>
+            )}
 
             <div className="demo-content-toggles">
               <div className="demo-toggles-title">{TDEMO.settingsTitle}</div>
-              <label className="demo-check-row demo-toggle">
-                <input type="checkbox" checked={multiInventory} onChange={(e) => setMultiInventory(e.target.checked)} />
-                <span>{TDEMO.optMultiInventory}</span>
-              </label>
+              {!isClinic && (
+                <label className="demo-check-row demo-toggle">
+                  <input type="checkbox" checked={multiInventory} onChange={(e) => setMultiInventory(e.target.checked)} />
+                  <span>{TDEMO.optMultiInventory}</span>
+                </label>
+              )}
               <label className="demo-check-row demo-toggle">
                 <input type="checkbox" checked={multiCurrency} onChange={(e) => setMultiCurrency(e.target.checked)} />
                 <span>{TDEMO.optMultiCurrency}</span>
               </label>
-              <label className="demo-check-row demo-toggle">
-                <input type="checkbox" checked={multiLot} onChange={(e) => setMultiLot(e.target.checked)} />
-                <span>{TDEMO.optMultiLot}</span>
-              </label>
+              {!isClinic && (
+                <label className="demo-check-row demo-toggle">
+                  <input type="checkbox" checked={multiLot} onChange={(e) => setMultiLot(e.target.checked)} />
+                  <span>{TDEMO.optMultiLot}</span>
+                </label>
+              )}
               <div className="f2" style={{ marginTop: 8 }}>
                 <div className="fld" style={{ marginBottom: 0 }}>
                   <label>{TDEMO.optCustomLogo}</label>
@@ -345,10 +356,12 @@ export const NewDemoView = () => {
             {RICH_DEMO_TYPES.includes(businessType) && (
               <div className="demo-content-toggles">
                 <div className="demo-toggles-title">{TDEMO.demoContentTitle}</div>
-                <label className="demo-check-row demo-toggle">
-                  <input type="checkbox" checked={enableStorefront} onChange={(e) => setEnableStorefront(e.target.checked)} />
-                  <span>{TDEMO.optStorefront}</span>
-                </label>
+                {!isClinic && (
+                  <label className="demo-check-row demo-toggle">
+                    <input type="checkbox" checked={enableStorefront} onChange={(e) => setEnableStorefront(e.target.checked)} />
+                    <span>{TDEMO.optStorefront}</span>
+                  </label>
+                )}
                 <label className="demo-check-row demo-toggle">
                   <input type="checkbox" checked={enableLogo} onChange={(e) => setEnableLogo(e.target.checked)} />
                   <span>{TDEMO.optLogo}</span>
@@ -359,7 +372,9 @@ export const NewDemoView = () => {
                 </label>
                 <label className="demo-check-row demo-toggle" style={{ marginBottom: 0 }}>
                   <input type="checkbox" checked={seedDocuments} onChange={(e) => setSeedDocuments(e.target.checked)} />
-                  <span>{TDEMO.optDocuments}</span>
+                  <span>
+                    {isClinic ? TDEMO.optClinicVisits : TDEMO.optDocuments}
+                  </span>
                 </label>
               </div>
             )}

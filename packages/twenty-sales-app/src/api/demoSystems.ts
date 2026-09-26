@@ -9,6 +9,7 @@ export type DemoBusinessType =
   | 'home_appliances'
   | 'snooker_club'
   | 'car_rental'
+  | 'opd'
   | 'other';
 
 export type DemoStatus = {
@@ -151,7 +152,13 @@ export type DemoDetails = {
     week_start_day: string;
     currency: string | null;
   } | null;
-  catalog: { products: number | null; services: number | null } | null;
+  // doctors/patients are only reported for an OPD (clinic) demo.
+  catalog: {
+    products: number | null;
+    services: number | null;
+    doctors?: number | null;
+    patients?: number | null;
+  } | null;
 };
 
 export const getDemoDetails = (id: number | string): Promise<DemoDetails> =>

@@ -1258,11 +1258,13 @@ export const TDEMO = {
   bizAppliances: 'لوازم خانگی',
   bizSnooker: 'باشگاه اسنوکر',
   bizCarRental: 'کرایه موتر',
+  bizOpd: 'کلینیک / OPD',
   bizOther: 'سایر / تجارت عمومی',
   bizMobileDesc: 'گوشی، لوازم جانبی و خدمات تعمیر',
   bizAppliancesDesc: 'یخچال، ماشین لباسشویی و لوازم بزرگ',
   bizSnookerDesc: 'میزهای ساعتی، بوفه و ماژول رزرو',
   bizCarRentalDesc: 'کرایه موتر روزانه، افزودنی‌ها و ماژول رزرو',
+  bizOpdDesc: 'داکتران، بیماران، نوبت‌دهی و نسخه',
   bizOtherDesc: 'کاتالوگ عمومی حسابداری و انبار',
 
   // step 2
@@ -1292,6 +1294,7 @@ export const TDEMO = {
   optLogo: 'لوگوی صفحه ورود',
   optBackground: 'تصویر پس‌زمینه ورود',
   optDocuments: 'اسناد نمونه (فروش، انبار، هزینه)',
+  optClinicVisits: 'نوبت‌های امروز و مراجعات هفته گذشته',
 
   // step 3
   duration: 'مدت اعتبار',
@@ -1362,7 +1365,13 @@ export const TDEMO = {
   liveLocked: 'قفل‌شده',
   products: 'محصولات',
   services: 'خدمات',
+  doctors: 'داکتران',
+  patients: 'بیماران',
   workspaceName: 'نام فضای کاری',
+
+  // OPD (clinic) demo: the seeded doctor logs in with the demo password
+  doctorUsername: 'نام کاربری داکتر',
+  doctorLoginNote: 'داکتر با همین رمز عبور وارد می‌شود تا صفحه نوبت و معاینه داکتر را نشان دهید.',
 };
 
 // Real (production) customer systems — issued for a contracted lead. Sibling of

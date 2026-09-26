@@ -260,6 +260,12 @@ export class SurveyWriteGuardService {
     };
     const prepared = await this.applyAnswers(authContext, merged);
 
+    // A response may move to another version of its own form (re-entering a
+    // paper sheet against the right questionnaire), never to another form.
+    if (existing.formId !== null && prepared.formId !== existing.formId) {
+      reject('SURVEY_ENDPOINT_ONLY', 'a response cannot move to another form');
+    }
+
     if (
       prepared.completionStatus === 'COMPLETED' &&
       existing.completionStatus !== 'COMPLETED' &&

@@ -34,6 +34,11 @@ export default defineConfig(({ mode }) => {
             import.meta.url,
           ),
         ),
+        // The survey engine: one implementation of form logic and validation
+        // for the builder, every collection channel and the server.
+        '@shared/surveys': fileURLToPath(
+          new URL('../twenty-shared/src/surveys/index.ts', import.meta.url),
+        ),
       },
     },
     server: {

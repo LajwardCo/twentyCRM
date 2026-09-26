@@ -19,12 +19,15 @@
     "paths": {
       "@shared/phone": [
         "../twenty-shared/src/utils/phone/normalizePhoneNumber.ts"
-      ]
+      ],
+      "@shared/surveys": ["../twenty-shared/src/surveys/index.ts"]
     }
   },
   "include": [
     "src",
     "vite.config.ts",
-    "../twenty-shared/src/utils/phone/normalizePhoneNumber.ts"
-  ]
+    "../twenty-shared/src/utils/phone/normalizePhoneNumber.ts",
+    "../twenty-shared/src/surveys"
+  ],
+  "exclude": ["node_modules", "dist", "../twenty-shared/src/surveys/**/__tests__"]
 }

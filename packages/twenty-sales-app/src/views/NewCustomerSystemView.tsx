@@ -10,6 +10,11 @@ import {
   type SystemUserRole,
 } from '../api/customerSystems';
 import { fetchCompanyUsystemsContactId } from '../api/usystems';
+import {
+  CUSTOMER_SYSTEM_MODULES,
+  initialModuleFlags,
+  moduleFlagsPayload,
+} from '../lib/customerSystemModules';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { navigate, useRoute } from '../lib/router';
 import { TSYS } from '../lib/strings';
@@ -40,11 +45,6 @@ const ROLE_OPTIONS: { value: SystemUserRole; label: string }[] = [
   { value: 'admin', label: TSYS.roleAdmin },
 ];
 
-const MODULE_OPTIONS: { key: string; label: string }[] = [
-  { key: 'projects', label: TSYS.modProjects },
-  { key: 'booking', label: TSYS.modBooking },
-  { key: 'custom_pages', label: TSYS.modCustomPages },
-];
 
 const STEPS = [TSYS.step1, TSYS.step2, TSYS.step3, TSYS.step4, TSYS.step5];
 
@@ -99,11 +99,7 @@ export const NewCustomerSystemView = () => {
   const [customLogo, setCustomLogo] = useState('');
   const [customBackground, setCustomBackground] = useState('');
 
-  const [moduleFlags, setModuleFlags] = useState<Record<string, boolean>>({
-    projects: false,
-    booking: false,
-    custom_pages: false,
-  });
+  const [moduleFlags, setModuleFlags] = useState<Record<string, boolean>>(initialModuleFlags);
   const [maxUsers, setMaxUsers] = useState('');
   const [maxInventories, setMaxInventories] = useState('');
   const [maxEmployees, setMaxEmployees] = useState('');
@@ -228,7 +224,7 @@ export const NewCustomerSystemView = () => {
       ai_assistant_enabled: aiAssistant,
       dynamic_reporting_enabled: dynamicReporting,
       multi_language_enabled: multiLanguage,
-      module_flags: moduleFlags,
+      module_flags: moduleFlagsPayload(moduleFlags),
       max_users: toIntOrNull(maxUsers),
       max_main_inventories: toIntOrNull(maxInventories),
       max_employees: toIntOrNull(maxEmployees),
@@ -417,7 +413,7 @@ export const NewCustomerSystemView = () => {
             <legend>{TSYS.step3}</legend>
             <div className="demo-content-toggles" style={{ marginTop: 0 }}>
               <div className="demo-toggles-title">{TSYS.modulesTitle}</div>
-              {MODULE_OPTIONS.map((mod) => (
+              {CUSTOMER_SYSTEM_MODULES.map((mod) => (
                 <label key={mod.key} className="demo-check-row demo-toggle">
                   <input
                     type="checkbox"

@@ -95,7 +95,7 @@ export type CreateSystemInput = {
   ai_assistant_enabled?: boolean;
   dynamic_reporting_enabled?: boolean;
   multi_language_enabled?: boolean;
-  // Module on/off ({ projects, custom_pages, booking }).
+  // Module on/off, keys from Core's module registry (see lib/customerSystemModules.ts).
   module_flags?: Record<string, boolean>;
   // Metric caps (null / omitted => unlimited).
   max_users?: number | null;

@@ -19,6 +19,7 @@ const BIZ_LABEL: Record<string, string> = {
   home_appliances: TDEMO.bizAppliances,
   snooker_club: TDEMO.bizSnooker,
   car_rental: TDEMO.bizCarRental,
+  booking: TDEMO.bizBooking,
   opd: TDEMO.bizOpd,
   other: TDEMO.bizOther,
 };

@@ -9,6 +9,7 @@ export type DemoBusinessType =
   | 'home_appliances'
   | 'snooker_club'
   | 'car_rental'
+  | 'booking'
   | 'opd'
   | 'other';
 

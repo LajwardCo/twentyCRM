@@ -3,14 +3,18 @@ import { canSeeNavKey } from '../lib/access';
 import { TAUDIT } from '../lib/auditStrings';
 import { TFILES } from '../lib/fileStrings';
 import { T, T2, T3, T4, T7, T13, TDEMO, TSYS } from '../lib/strings';
+import { TSV } from '../lib/forms/surveyStrings';
 import {
   IconCalendar,
   IconChart,
   IconContacts,
   IconDailyReport,
   IconDashboard,
+  IconDoor,
   IconFlame,
+  IconForms,
   IconLeads,
+  IconMegaphone,
   IconPackage,
   IconPaperclip,
   IconPresentation,
@@ -35,6 +39,9 @@ export const NAV: readonly NavItem[] = [
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'contacts', label: T7.contacts, icon: IconContacts },
   { key: 'reports', label: T2.reports, icon: IconChart },
+  { key: 'visit', label: TSV.startVisit, icon: IconDoor },
+  { key: 'forms', label: TSV.nav, icon: IconForms },
+  { key: 'campaigns', label: TSV.navCampaigns, icon: IconMegaphone },
   { key: 'daily-report', label: T3.dailyReport, icon: IconDailyReport },
   { key: 'competitors', label: 'بازیگران بازار', icon: IconFlame },
   { key: 'catalog', label: T4.catalog, icon: IconPackage },
@@ -68,6 +75,11 @@ const ROUTE_TO_NAV_KEY: Record<string, string> = {
   search: 'leads',
   demo: 'demos',
   system: 'systems',
+  form: 'forms',
+  paper: 'forms',
+  responses: 'forms',
+  response: 'forms',
+  campaign: 'campaigns',
 };
 
 export const activeNavKey = (parts: string[]): string => {

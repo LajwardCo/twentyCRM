@@ -6,6 +6,7 @@ import 'vazirmatn/Vazirmatn-Variable-font-face.css';
 import { App } from './App';
 import { registerServiceWorker } from './lib/pwa';
 import './styles.css';
+import './surveys.css';
 
 registerServiceWorker();
 

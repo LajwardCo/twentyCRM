@@ -52,6 +52,8 @@ export const TSR = {
   exportXlsx: 'خروجی Excel',
   exporting: 'در حال آماده‌سازی خروجی…',
   exportDone: (count: string) => `${count} پاسخ صادر شد`,
+  exportTruncated: (count: string) =>
+    `فقط ${count} پاسخ اول صادر شد (سقف خروجی). برای بقیه، فیلتر را محدودتر کنید و دوباره خروجی بگیرید.`,
   exportFailed: 'خروجی گرفته نشد',
   exportHint: 'خروجی همهٔ پاسخ‌های فیلتر فعلی را شامل می‌شود',
   enterPaper: 'ورود پاسخ کاغذی',
@@ -117,7 +119,7 @@ export const TSR = {
   retrying: 'در حال اجرا…',
   retryDone: 'اقدام‌های خودکار دوباره اجرا شد',
   retryFailed: 'اجرا ناموفق بود',
-  actionStatus: { DONE: 'انجام شد', FAILED: 'ناموفق', SUGGESTED: 'پیشنهادی' } as Record<string, string>,
+  actionStatus: { DONE: 'انجام شد', FAILED: 'ناموفق', SUGGESTED: 'پیشنهادی', PENDING: 'ساخته شد، پیوند نشد' } as Record<string, string>,
   actionTypes: {
     CREATE_LEAD: 'ایجاد سرنخ',
     CREATE_TASK: 'ایجاد کار',
@@ -180,6 +182,10 @@ export const TSR = {
   applying: 'در حال اعمال…',
   applied: (count: string) => `${count} تغییر اعمال شد`,
   applyFailed: 'اعمال تغییرات ناموفق بود',
+  alreadyApplied: 'قبلاً اعمال شده است',
+  staleRows: (count: string) =>
+    `${count} ردیف پس از مقایسه در CRM یا در پاسخ تغییر کرده بود و اعمال نشد؛ جدول تازه شد، دوباره بررسی کنید.`,
+  linksChanged: 'پیوندهای این پاسخ پس از مقایسه تغییر کرده است؛ جدول تازه شد، دوباره بررسی کنید.',
   interestNoteTitle: 'علاقه (از نظرسنجی)',
   needLinkFor: 'برای اعمال، ابتدا این مورد را وصل کنید',
   cardTitle: 'نظرسنجی‌ها و فرم‌ها',

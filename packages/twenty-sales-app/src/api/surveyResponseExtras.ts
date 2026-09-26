@@ -13,6 +13,7 @@ import {
 import { type TaskAttachment, getAttachmentMetadata } from './attachments';
 import { coreQuery, loadTokens } from './client';
 import { createLead } from './surveyCrm';
+import { fetchAllPaged } from './surveyPaging';
 import {
   type ResponseFilter,
   type ResponsePage,
@@ -106,24 +107,26 @@ export const queryResponses = async (
 };
 
 // Follows cursors: the record API silently returns fewer rows than `first`
-// asks for, so an export must never trust one big page.
+// asks for, so an export must never trust one big page. Past the cap the list
+// is cut and `truncated` says so.
 export const queryAllResponses = async (
   filter: ResponseFilter,
   excludeSpam: boolean,
   { limit = 10_000 }: { limit?: number } = {},
-): Promise<SurveyResponse[]> => {
-  const all: SurveyResponse[] = [];
-  let after: string | null = null;
+): Promise<{ responses: SurveyResponse[]; truncated: boolean }> => {
+  const { items, truncated } = await fetchAllPaged(
+    async (after) => {
+      const page = await queryResponses(filter, { excludeSpam, first: 100, after });
 
-  for (;;) {
-    const page: ResponsePage = await queryResponses(filter, { excludeSpam, first: 100, after });
+      return {
+        nodes: page.responses,
+        pageInfo: { endCursor: page.endCursor, hasNextPage: page.hasNextPage },
+      };
+    },
+    { limit },
+  );
 
-    all.push(...page.responses);
-
-    if (!page.hasNextPage || page.endCursor === null || all.length >= limit) return all;
-
-    after = page.endCursor;
-  }
+  return { responses: items, truncated };
 };
 
 // The /rest/sales endpoints do not renew an expired access token the way
@@ -189,18 +192,25 @@ export const fetchResponseNotes = async (responseId: string): Promise<ResponseNo
 };
 
 // One note, attached to the response and (when given) to the linked lead so
-// it shows up in the lead's timeline too.
-export const createResponseNote = async (input: {
-  responseId: string | null;
-  opportunityId?: string | null;
-  title: string;
-  body: string;
-}): Promise<string> => {
+// it shows up in the lead's timeline too. `onCreated` runs as soon as the note
+// exists, before its links, so a caller can record it and a retry after a
+// failed link never creates a second note.
+export const createResponseNote = async (
+  input: {
+    responseId: string | null;
+    opportunityId?: string | null;
+    title: string;
+    body: string;
+  },
+  onCreated: (noteId: string) => Promise<void> = async () => undefined,
+): Promise<string> => {
   const created = await coreQuery<{ createNote: { id: string } }>(
     `mutation SurveyCreateNote($data: NoteCreateInput!) { createNote(data: $data) { id } }`,
     { data: { title: input.title, bodyV2: { markdown: input.body } } },
   );
   const noteId = created.createNote.id;
+
+  await onCreated(noteId);
 
   for (const target of [
     input.responseId === null ? null : { targetSurveyResponseId: input.responseId },
@@ -263,14 +273,18 @@ export const fetchResponseTasks = async (responseId: string): Promise<ResponseTa
     }));
 };
 
-export const createResponseTask = async (input: {
-  responseId: string | null;
-  opportunityId?: string | null;
-  title: string;
-  body?: string;
-  dueAt: string | null;
-  assigneeId: string;
-}): Promise<string> => {
+// `onCreated`: as for createResponseNote.
+export const createResponseTask = async (
+  input: {
+    responseId: string | null;
+    opportunityId?: string | null;
+    title: string;
+    body?: string;
+    dueAt: string | null;
+    assigneeId: string;
+  },
+  onCreated: (taskId: string) => Promise<void> = async () => undefined,
+): Promise<string> => {
   const created = await coreQuery<{ createTask: { id: string } }>(
     `mutation SurveyCreateTask($data: TaskCreateInput!) { createTask(data: $data) { id } }`,
     {
@@ -284,6 +298,8 @@ export const createResponseTask = async (input: {
     },
   );
   const taskId = created.createTask.id;
+
+  await onCreated(taskId);
 
   for (const target of [
     input.responseId === null ? null : { targetSurveyResponseId: input.responseId },

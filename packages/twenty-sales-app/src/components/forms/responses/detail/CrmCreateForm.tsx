@@ -7,7 +7,7 @@ import { createCompany, createPerson } from '../../../../api/surveyCrm';
 import { createLeadForResponse } from '../../../../api/surveyResponseExtras';
 import { TSR } from '../../../../lib/forms/responseStrings';
 import { type CrmLinkKind } from '../../../../lib/forms/responses/crmActionLog';
-import { splitPersonName } from '../../../../lib/forms/responses/crmDiff';
+import { parseCount, splitPersonName } from '../../../../lib/forms/responses/crmDiff';
 import { type CrmLinking } from './useCrmLinking';
 
 type CrmCreateFormProps = {
@@ -86,15 +86,13 @@ export const CrmCreateForm = ({ kind, response, proposals, user, linking, onDone
 
   const createRecord = async (): Promise<string> => {
     if (kind === 'company') {
-      const employees = Number((draft.employees ?? '').replace(/[^\d]/g, ''));
-
       return (
         await createCompany({
           name: draft.name,
           city: draft.city,
           street: draft.street,
           businessType: draft.businessType,
-          employees: draft.employees?.trim() && Number.isFinite(employees) ? employees : null,
+          employees: parseCount(draft.employees),
         })
       ).id;
     }

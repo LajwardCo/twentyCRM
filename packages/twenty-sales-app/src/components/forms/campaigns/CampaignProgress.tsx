@@ -30,6 +30,9 @@ import { CampaignTarget } from './CampaignStatusPill';
 
 type Loaded = {
   responses: SurveyResponse[];
+  // The device-side caps were hit: numbers cover only the first rows.
+  responsesTruncated: boolean;
+  visitsTruncated: boolean;
   // null = that part failed to load; the rest still renders.
   visits: VisitRecord[] | null;
   stages: Map<string, string | null> | null;
@@ -55,10 +58,11 @@ export const CampaignProgress = ({ campaign }: { campaign: SurveyCampaign }) => 
     setState({ status: 'loading' });
 
     try {
-      const [responses, visits] = await Promise.all([
+      const [{ responses, truncated: responsesTruncated }, visitResult] = await Promise.all([
         fetchAllResponses({ campaignId: campaign.id }),
         fetchCampaignVisits(campaign.id).catch(() => null),
       ]);
+      const visits = visitResult?.visits ?? null;
       const leadIds = uniqueLeadIds(responses);
       let stages: Loaded['stages'] = null;
       let followUps: Loaded['followUps'] = [];
@@ -73,7 +77,15 @@ export const CampaignProgress = ({ campaign }: { campaign: SurveyCampaign }) => 
         followUps = settledValue(taskResult);
       }
 
-      setState({ status: 'ready', responses, visits, stages, followUps });
+      setState({
+        status: 'ready',
+        responses,
+        responsesTruncated,
+        visits,
+        visitsTruncated: visitResult?.truncated ?? false,
+        stages,
+        followUps,
+      });
     } catch {
       setState({ status: 'error' });
     }
@@ -131,6 +143,13 @@ export const CampaignProgress = ({ campaign }: { campaign: SurveyCampaign }) => 
           {TINS.viewResponses}
         </button>
       </div>
+
+      {state.responsesTruncated && (
+        <div className="svk-warn" role="status">{TINS.truncatedResponses(state.responses.length)}</div>
+      )}
+      {state.visitsTruncated && state.visits !== null && (
+        <div className="svk-warn" role="status">{TINS.truncatedVisits(state.visits.length)}</div>
+      )}
 
       <section className="card card-pad">
         <h3>{TINS.targetProgress}</h3>

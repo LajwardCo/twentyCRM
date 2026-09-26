@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type CurrentUser } from '../../api/auth';
+import { toPersianDigits } from '../../lib/jalali';
 import { fetchLinkLabels } from '../../api/surveyCollect';
 import {
   type SurveyCampaign,
@@ -9,6 +10,7 @@ import {
   createVisitTask,
   fetchForm,
   fetchVersion,
+  linkVisitTaskTargets,
   listCampaigns,
   listForms,
 } from '../../api/surveys';
@@ -116,23 +118,39 @@ export const VisitFlowView = ({ query, user }: { query: string; user: CurrentUse
     })();
   }, [visit.step, formId, version]);
 
-  // Creates the visit task once; a retry reuses the remembered id.
+  // Task ids whose targets are known to be complete in this session.
+  const linkedVisitIds = useRef(new Set<string>());
+
+  // Creates the visit task once. The id is stored the moment the task exists
+  // (before its targets are linked), so a retry after any later failure
+  // finishes that task rather than creating a second one; linking is
+  // idempotent and re-checked once per session.
   const ensureVisitTask = async (): Promise<string> => {
     const current = visitRef.current;
+    const targets = { companyId: current.company?.id ?? null, opportunityId: null };
 
-    if (current.visitId !== null) return current.visitId;
+    if (current.visitId !== null) {
+      if (!linkedVisitIds.current.has(current.visitId)) {
+        await linkVisitTaskTargets(current.visitId, targets);
+        linkedVisitIds.current.add(current.visitId);
+      }
 
-    const task = await createVisitTask({
-      title: visitTaskTitle(current.company?.label ?? ''),
-      visitOutcome: current.outcome ?? 'REVISIT_NEEDED',
-      assigneeId: user.workspaceMemberId,
-      companyId: current.company?.id ?? null,
-      opportunityId: null,
-      surveyCampaignId: current.campaignId,
-      notes: current.notes.trim(),
-    });
+      return current.visitId;
+    }
 
-    patch({ visitId: task.id });
+    const task = await createVisitTask(
+      {
+        ...targets,
+        title: visitTaskTitle(current.company?.label ?? ''),
+        visitOutcome: current.outcome ?? 'REVISIT_NEEDED',
+        assigneeId: user.workspaceMemberId,
+        surveyCampaignId: current.campaignId,
+        notes: current.notes.trim(),
+      },
+      (taskId) => patch({ visitId: taskId }),
+    );
+
+    linkedVisitIds.current.add(task.id);
 
     return task.id;
   };
@@ -200,6 +218,7 @@ export const VisitFlowView = ({ query, user }: { query: string; user: CurrentUse
           <StaffCollectForm
             version={version.version}
             formName={version.formName}
+            memberId={user.workspaceMemberId}
             draftScope={`visit:${visit.company?.id ?? '-'}`}
             links={{
               ...NO_LINKS,
@@ -261,7 +280,7 @@ export const VisitFlowView = ({ query, user }: { query: string; user: CurrentUse
             className={visitStepIndex(entry.step) < stepIndex ? 'done' : entry.step === visit.step ? 'on' : ''}
             aria-current={entry.step === visit.step ? 'step' : undefined}
           >
-            <span className="svc-stepper-dot">{index + 1}</span>
+            <span className="svc-stepper-dot">{toPersianDigits(index + 1)}</span>
             {entry.label}
           </li>
         ))}

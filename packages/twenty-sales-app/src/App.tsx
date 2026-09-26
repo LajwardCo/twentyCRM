@@ -12,6 +12,7 @@ import { isWatermarkedSection } from './lib/auditEvent';
 import { recordSignOut, startAudit } from './lib/audit';
 import { onSearchDone } from './lib/backgroundSearch';
 import { invalidateCache } from './lib/cache';
+import { clearSurveyDrafts } from './lib/forms/collect/staffDraft';
 import { applyTheme, loadPrefs, resolveTheme, savePref } from './lib/prefs';
 import { toPersianDigits } from './lib/jalali';
 import { disablePushSubscription, ensurePushSubscription } from './lib/push';
@@ -126,6 +127,7 @@ export const App = () => {
   useEffect(() => {
     setSessionExpiredHandler(() => {
       recordSignOut('session-expired');
+      clearSurveyDrafts();
       invalidateCache();
       setSession({ status: 'anonymous' });
     });
@@ -214,6 +216,7 @@ export const App = () => {
     // Must run before the token goes: the server call needs it.
     void disablePushSubscription();
     logout();
+    clearSurveyDrafts();
     invalidateCache();
     setSession({ status: 'anonymous' });
   };

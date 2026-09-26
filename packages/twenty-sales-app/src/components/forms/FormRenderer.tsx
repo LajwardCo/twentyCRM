@@ -40,6 +40,9 @@ type FormRendererProps = {
   onAnswersChange: (answers: Record<string, unknown>) => void;
   // Absent in preview: finishing a preview never touches the network.
   onSubmit?: () => Promise<SubmitOutcome>;
+  // The host is already saving this response (e.g. "save incomplete"); the
+  // final submit waits until it is done.
+  submitDisabled?: boolean;
   services?: RendererServices;
   showWelcome?: boolean;
   submitLabel?: string;
@@ -100,6 +103,7 @@ export const FormRenderer = ({
   answers,
   onAnswersChange,
   onSubmit,
+  submitDisabled = false,
   services = {},
   showWelcome = true,
   submitLabel,
@@ -447,7 +451,11 @@ export const FormRenderer = ({
             {strings.pageOf(formatNumberFor(stepIndex + 1, language), formatNumberFor(steps.length, language))}
           </span>
         )}
-        <button type="submit" className="btn gold sv-primary" disabled={submitting}>
+        <button
+          type="submit"
+          className="btn gold sv-primary"
+          disabled={submitting || (submitDisabled && (isLast || layout === 'continuous'))}
+        >
           {submitting
             ? strings.submitting
             : isLast || layout === 'continuous'

@@ -103,6 +103,7 @@ export const PaperEntryView = ({
           formId={picked.formId}
           formName={picked.formName}
           version={picked.version}
+          memberId={user.workspaceMemberId}
           enteredByName={enteredByName}
           onCompleted={setCompleted}
         />

@@ -31,7 +31,7 @@ import { WeeklyBars } from '../insights/WeeklyBars';
 type LoadState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; versions: SurveyFormVersion[]; responses: SurveyResponse[] };
+  | { status: 'ready'; versions: SurveyFormVersion[]; responses: SurveyResponse[]; truncated: boolean };
 
 const Filters = ({
   filter,
@@ -113,12 +113,12 @@ export const FormInsightsPanel = ({ formId }: { formId: string }) => {
     setState({ status: 'loading' });
 
     try {
-      const [versions, responses] = await Promise.all([
+      const [versions, { responses, truncated }] = await Promise.all([
         fetchVersions(formId),
         fetchAllResponses({ formId }),
       ]);
 
-      setState({ status: 'ready', versions, responses });
+      setState({ status: 'ready', versions, responses, truncated });
     } catch {
       setState({ status: 'error' });
     }
@@ -197,6 +197,9 @@ export const FormInsightsPanel = ({ formId }: { formId: string }) => {
   return (
     <div className="svk-panel">
       <Filters filter={filter} onChange={setFilter} versions={versions} campaigns={campaigns} />
+      {state.truncated && (
+        <div className="svk-warn" role="status">{TINS.truncatedResponses(responses.length)}</div>
+      )}
 
       {insights.filtered.length === 0 ? (
         <div className="card empty-state">{TINS.noMatch}</div>

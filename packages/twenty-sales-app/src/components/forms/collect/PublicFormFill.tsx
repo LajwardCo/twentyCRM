@@ -1,5 +1,5 @@
 import { type FormDefinition, type FormLanguage } from '@shared/surveys';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type PublicFormState, submitPublicForm, uploadPublicFile } from '../../../api/surveys';
 import {
@@ -9,6 +9,7 @@ import {
   loadPublicSession,
   newSubmissionKey,
   publicSessionKey,
+  reconcilePublicSession,
   savePublicSession,
 } from '../../../lib/forms/collect/publicSession';
 import { summariseQuestions } from '../../../lib/forms/collect/errorSummary';
@@ -43,20 +44,36 @@ export const PublicFormFill = ({
   onStateChange,
 }: PublicFormFillProps) => {
   const { definition, versionNumber } = form;
-  const storageKey = publicSessionKey(slug, versionNumber);
+  const storageKey = publicSessionKey(slug);
   const [session, setSession] = useState<PublicSession>(() =>
-    loadPublicSession(safeSessionStorage(), storageKey, () => ({
-      submissionKey: newSubmissionKey(),
-      answers: {},
-      startedAt: Date.now(),
-      language: null,
-    })),
+    reconcilePublicSession(
+      loadPublicSession(safeSessionStorage(), storageKey, () => ({
+        submissionKey: newSubmissionKey(),
+        versionNumber,
+        answers: {},
+        startedAt: Date.now(),
+        elapsedMs: 0,
+        language: null,
+      })),
+      versionNumber,
+    ),
   );
   const [website, setWebsite] = useState('');
   const sessionRef = useRef(session);
   const inFlight = useRef<Promise<SubmitOutcome> | null>(null);
+  // Time on the form: what earlier page loads spent plus this load, on the
+  // monotonic clock so a wrong device clock cannot distort it.
+  const openedAt = useRef(performance.now());
+  const priorElapsedMs = useRef(session.elapsedMs);
+  const elapsedMs = () => Math.round(priorElapsedMs.current + performance.now() - openedAt.current);
 
   sessionRef.current = session;
+
+  // A session reconciled to a newer version gets a new submission key; store
+  // it now so an upload made before the first answer uses the same key.
+  useEffect(() => {
+    savePublicSession(safeSessionStorage(), storageKey, sessionRef.current);
+  }, [storageKey]);
 
   const language: FormLanguage =
     session.language !== null && definition.languages.includes(session.language)
@@ -67,9 +84,11 @@ export const PublicFormFill = ({
   const logo = safeLogo(definition.appearance.logoUrl);
 
   const persist = (next: PublicSession) => {
-    sessionRef.current = next;
-    setSession(next);
-    savePublicSession(safeSessionStorage(), storageKey, next);
+    const withTime = { ...next, elapsedMs: elapsedMs() };
+
+    sessionRef.current = withTime;
+    setSession(withTime);
+    savePublicSession(safeSessionStorage(), storageKey, withTime);
   };
 
   const services = useMemo(
@@ -98,6 +117,7 @@ export const PublicFormFill = ({
         inviteToken,
         campaignCode,
         startedAt: current.startedAt,
+        elapsedMs: elapsedMs(),
         website,
       });
 

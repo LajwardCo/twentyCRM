@@ -23,6 +23,10 @@ export const TC = {
   discardDraft: 'پاک‌کردن پیش‌نویس',
   discardConfirm: 'پیش‌نویس این دستگاه پاک شود؟ پاسخ‌های ذخیره‌نشده از بین می‌روند.',
   restoredDraft: 'پیش‌نویس قبلی همین دستگاه بازیابی شد.',
+  olderDraftVersion: (draftVersion: string, currentVersion: string) =>
+    `این پیش‌نویس بر اساس نسخهٔ ${draftVersion} است (نسخهٔ منتشرشدهٔ فعلی: ${currentVersion}). آن را روی همان نسخه تمام کنید.`,
+  discardOlderDraft: 'پاک‌کردن پیش‌نویس و شروع با نسخهٔ فعلی',
+  saveBusy: 'ذخیرهٔ قبلی هنوز در جریان است؛ چند لحظه صبر کنید.',
   linkedTo: 'مرتبط با',
   version: (code: string) => `نسخهٔ ${code}`,
   // after save
@@ -91,6 +95,7 @@ export const TC = {
   printedCodeHint: 'مثلاً F1G46-v2',
   findByCode: 'یافتن',
   codeNotFound: 'نسخه‌ای با این کد پیدا نشد.',
+  codeAmbiguous: 'این کد در بیش از یک فرم آمده است. لطفاً فرم و نسخه را از فهرست پایین انتخاب کنید.',
   orPickForm: 'یا فرم و نسخه را انتخاب کنید',
   pickForm: 'فرم',
   pickVersion: 'نسخه',

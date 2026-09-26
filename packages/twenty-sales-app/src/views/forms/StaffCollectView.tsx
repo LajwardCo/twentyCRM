@@ -20,7 +20,7 @@ type Loaded =
 // query may carry the records it is about (companyId, personId,
 // opportunityId, campaignId, visitId) — they prefill the CRM questions and
 // link the saved response.
-export const StaffCollectView = ({ formId, query }: { formId: string; query: string; user: CurrentUser }) => {
+export const StaffCollectView = ({ formId, query, user }: { formId: string; query: string; user: CurrentUser }) => {
   const links = useMemo(() => parseCollectLinks(query), [query]);
   const { capabilities, loading: capabilitiesLoading } = useSurveyCapabilities();
   const [loaded, setLoaded] = useState<Loaded>({ status: 'loading' });
@@ -94,6 +94,7 @@ export const StaffCollectView = ({ formId, query }: { formId: string; query: str
           key={round}
           version={loaded.version}
           formName={loaded.formName}
+          memberId={user.workspaceMemberId}
           draftScope={`collect:${formId}:${links.companyId ?? links.opportunityId ?? '-'}`}
           links={links}
           linkLabels={loaded.labels}

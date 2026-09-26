@@ -24,8 +24,8 @@ const download = (blob: Blob, fileName: string) => {
 export const buildResponseExport = async (
   filter: ResponseFilter,
   excludeSpam: boolean,
-): Promise<{ table: ExportTable; count: number; baseName: string }> => {
-  const responses = await queryAllResponses(filter, excludeSpam);
+): Promise<{ table: ExportTable; count: number; baseName: string; truncated: boolean }> => {
+  const { responses, truncated } = await queryAllResponses(filter, excludeSpam);
   const formIds = [...new Set(responses.map((response) => response.formId))];
   const versions: SurveyFormVersion[] = (
     await Promise.all(formIds.map((formId) => fetchVersions(formId)))
@@ -39,6 +39,7 @@ export const buildResponseExport = async (
     table: buildExportTable(responses, versions, formNames),
     count: responses.length,
     baseName,
+    truncated,
   };
 };
 

@@ -6,7 +6,9 @@ import {
   type PublishIssue,
 } from '@shared/surveys';
 
+import { exactIlikePattern } from '../lib/forms/collect/paperEntry';
 import { ApiError, coreQuery, loadTokens, renewSession } from './client';
+import { fetchAllPaged } from './surveyPaging';
 
 // Data access for Surveys & Forms. Record CRUD goes through the record API
 // (the server's query hooks validate every write); publishing, status
@@ -104,7 +106,9 @@ export type SurveyFormVersion = {
 export type SurveyCrmAction = {
   key: string;
   type: string;
-  status: 'DONE' | 'FAILED' | 'SUGGESTED';
+  // PENDING: a record was created but linking it to the response failed; the
+  // next attempt links that record instead of creating another.
+  status: 'DONE' | 'FAILED' | 'SUGGESTED' | 'PENDING';
   at: string;
   by: string | null;
   recordId?: string | null;
@@ -401,7 +405,13 @@ export const listForms = async (): Promise<FormsListResult> => {
 
 // One request: Twenty refuses the same root field twice in a query
 // ("Duplicate root resolver"), so aliased per-form counts cannot work; a
-// single groupBy on formId returns every count at once.
+// single groupBy on formId returns every count at once. groupBy returns at
+// most 50 groups unless told otherwise, so the limit is sized to the forms
+// asked about (the filter makes that the most groups there can be). Spam is
+// not a response anyone collected, so it is not counted (a null status is
+// not spam).
+export const COUNTED_REVIEW_STATUSES: ReviewStatus[] = ['NEW', 'NEEDS_REVIEW', 'REVIEWED', 'ACTIONED'];
+
 export const countResponsesByForm = async (
   formIds: string[],
   extraFilter = '',
@@ -411,13 +421,21 @@ export const countResponsesByForm = async (
   const data = await coreQuery<{
     surveyResponsesGroupBy: { groupByDimensionValues: (string | null)[]; totalCount: number }[];
   }>(
-    `query SurveyResponseCounts($formIds: [UUID!]) {
+    `query SurveyResponseCounts($formIds: [UUID!], $limit: Int) {
       surveyResponsesGroupBy(
         groupBy: [{ formId: true }]
-        filter: { formId: { in: $formIds } ${extraFilter} }
+        filter: {
+          formId: { in: $formIds }
+          or: [
+            { reviewStatus: { in: [${COUNTED_REVIEW_STATUSES.join(', ')}] } }
+            { reviewStatus: { is: NULL } }
+          ]
+          ${extraFilter}
+        }
+        limit: $limit
       ) { groupByDimensionValues totalCount }
     }`,
-    { formIds },
+    { formIds, limit: formIds.length },
   );
   const counts: Record<string, number> = Object.fromEntries(formIds.map((formId) => [formId, 0]));
 
@@ -640,7 +658,12 @@ export const fetchVersion = async (
   return data.surveyFormVersion === null ? null : toVersion(data.surveyFormVersion);
 };
 
-// Paper entry: staff type the code printed in the sheet's footer.
+export class AmbiguousPrintCodeError extends Error {}
+
+// Paper entry: staff type the code printed in the sheet's footer. The code is
+// matched exactly (ignoring case), so `%` or `_` typed by hand are literal.
+// Codes are short and could repeat across forms; rather than guess, a code
+// that matches more than one form is refused and staff pick the form.
 export const fetchVersionByPrintCode = async (
   printCode: string,
 ): Promise<SurveyFormVersion | null> => {
@@ -648,16 +671,24 @@ export const fetchVersionByPrintCode = async (
     surveyFormVersions: { edges: { node: RawVersion }[] };
   }>(
     `query SurveyVersionByCode($code: String!) {
-      surveyFormVersions(filter: { printCode: { ilike: $code } }, first: 1) {
+      surveyFormVersions(
+        filter: { printCode: { ilike: $code } }
+        orderBy: [{ publishedAt: DescNullsLast }]
+        first: 2
+      ) {
         edges { node { ${VERSION_FIELDS} } }
       }
     }`,
-    { code: printCode.trim() },
+    { code: exactIlikePattern(printCode.trim()) },
   );
 
-  const node = data.surveyFormVersions.edges[0]?.node;
+  const nodes = data.surveyFormVersions.edges.map((edge) => edge.node);
 
-  return node === undefined ? null : toVersion(node);
+  if (new Set(nodes.map((node) => node.formId)).size > 1) {
+    throw new AmbiguousPrintCodeError(printCode);
+  }
+
+  return nodes[0] === undefined ? null : toVersion(nodes[0]);
 };
 
 // ---- responses ----------------------------------------------------------
@@ -815,26 +846,25 @@ export const listResponses = async (
   };
 };
 
-// Every matching response, following cursors. The record API does not clamp
-// `first`, it silently returns fewer rows, so aggregates must page.
+// Every matching response, following cursors (see surveyPaging). Past the
+// cap the list is cut and `truncated` says so; screens must show that.
 export const fetchAllResponses = async (
   filter: ResponseFilter,
   { limit = 5000 }: { limit?: number } = {},
-): Promise<SurveyResponse[]> => {
-  const all: SurveyResponse[] = [];
-  let after: string | null = null;
+): Promise<{ responses: SurveyResponse[]; truncated: boolean }> => {
+  const { items, truncated } = await fetchAllPaged(
+    async (after) => {
+      const page = await listResponses(filter, { first: 100, after });
 
-  for (;;) {
-    const page = await listResponses(filter, { first: 100, after });
+      return {
+        nodes: page.responses,
+        pageInfo: { endCursor: page.endCursor, hasNextPage: page.hasNextPage },
+      };
+    },
+    { limit },
+  );
 
-    all.push(...page.responses);
-
-    if (!page.hasNextPage || page.endCursor === null || all.length >= limit) {
-      return all;
-    }
-
-    after = page.endCursor;
-  }
+  return { responses: items, truncated };
 };
 
 export const fetchResponse = async (
@@ -1056,15 +1086,21 @@ export const updateCampaign = async (
 
 // A visit is a DONE task of type VISIT. Recorded even when no survey was
 // collected, so an unsuccessful visit never needs a fabricated response.
-export const createVisitTask = async (input: {
-  title: string;
-  visitOutcome: VisitOutcome;
-  assigneeId: string;
-  companyId: string | null;
-  opportunityId: string | null;
-  surveyCampaignId: string | null;
-  notes?: string;
-}): Promise<{ id: string }> => {
+// `onCreated` hears the task id before the targets are linked, so a caller
+// can remember it: a retry after a failed link must finish this task, not
+// create a second one.
+export type VisitTaskTargets = { companyId: string | null; opportunityId: string | null };
+
+export const createVisitTask = async (
+  input: VisitTaskTargets & {
+    title: string;
+    visitOutcome: VisitOutcome;
+    assigneeId: string;
+    surveyCampaignId: string | null;
+    notes?: string;
+  },
+  onCreated: (taskId: string) => void = () => undefined,
+): Promise<{ id: string }> => {
   const now = new Date().toISOString();
   const data = await coreQuery<{ createTask: { id: string } }>(
     `mutation CreateVisitTask($data: TaskCreateInput!) { createTask(data: $data) { id } }`,
@@ -1086,19 +1122,53 @@ export const createVisitTask = async (input: {
   );
   const taskId = data.createTask.id;
 
-  for (const target of [
-    input.companyId === null ? null : { targetCompanyId: input.companyId },
-    input.opportunityId === null ? null : { targetOpportunityId: input.opportunityId },
-  ]) {
-    if (target === null) continue;
+  onCreated(taskId);
+  await linkVisitTaskTargets(taskId, input);
+
+  return { id: taskId };
+};
+
+// Idempotent: reads the task's existing targets first and only creates the
+// missing ones, so it is safe to run again after a partial failure.
+export const linkVisitTaskTargets = async (
+  taskId: string,
+  targets: VisitTaskTargets,
+): Promise<void> => {
+  const wanted = [
+    targets.companyId === null ? null : { targetCompanyId: targets.companyId },
+    targets.opportunityId === null ? null : { targetOpportunityId: targets.opportunityId },
+  ].filter((target) => target !== null);
+
+  if (wanted.length === 0) return;
+
+  const existing = await coreQuery<{
+    taskTargets: {
+      edges: { node: { targetCompanyId: string | null; targetOpportunityId: string | null } }[];
+    };
+  }>(
+    `query VisitTaskTargets($taskId: UUID!) {
+      taskTargets(filter: { taskId: { eq: $taskId } }, first: 50) {
+        edges { node { targetCompanyId targetOpportunityId } }
+      }
+    }`,
+    { taskId },
+  );
+  const nodes = existing.taskTargets.edges.map((edge) => edge.node);
+
+  for (const target of wanted) {
+    const present = nodes.some((node) =>
+      'targetCompanyId' in target
+        ? node.targetCompanyId === target.targetCompanyId
+        : node.targetOpportunityId === target.targetOpportunityId,
+    );
+
+    if (present) continue;
 
     await coreQuery(
       `mutation LinkVisit($data: TaskTargetCreateInput!) { createTaskTarget(data: $data) { id } }`,
       { data: { taskId, ...target } },
     );
   }
-
-  return { id: taskId };
 };
 
 // ---- public (no login) --------------------------------------------------
@@ -1152,7 +1222,11 @@ export const submitPublicForm = (
     language: string;
     inviteToken: string | null;
     campaignCode: string | null;
+    // Kept for servers that predate elapsedMs.
     startedAt: number;
+    // Time on the form measured with the page's monotonic clock; unlike
+    // startedAt it is immune to a wrong device clock.
+    elapsedMs: number;
     website: string;
   },
 ): Promise<PublicSubmissionResult> =>

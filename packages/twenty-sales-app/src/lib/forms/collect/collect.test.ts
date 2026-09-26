@@ -1,7 +1,8 @@
 import { createEmptyFormDefinition, createQuestion } from '@shared/surveys';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { summariseQuestions } from './errorSummary';
+import { createExclusiveSave } from './exclusiveSave';
 import { pendingUploads, rewriteUploadRefs, uploadRef } from './fileRefs';
 import {
   buildPaperReviewNotes,
@@ -16,11 +17,15 @@ import { staffResponseName } from './responseName';
 import { EMPTY_VISIT, parseVisitState } from './visitState';
 import {
   clearStaffDraft,
+  clearSurveyDrafts,
   draftHasContent,
   loadStaffDraft,
   newStaffDraft,
+  paperMetaKey,
+  restoreStaffDraft,
   saveStaffDraft,
   staffDraftKey,
+  storedDraftVersionId,
 } from './staffDraft';
 import {
   availableVisitOutcomes,
@@ -59,25 +64,73 @@ const crmDefinition = () => {
 describe('staff draft', () => {
   it('should reuse the stored submission key and response id', () => {
     const storage = memoryStorage();
-    const key = staffDraftKey('form-1', 'v-1');
+    const key = staffDraftKey('member-1', 'collect:form-1:-');
     const draft = { ...newStaffDraft('v-1'), responseId: 'r-1', answers: { q_name: 'x' } };
 
     saveStaffDraft(storage, key, draft);
 
-    const restored = loadStaffDraft(storage, key, 'v-1');
+    const restored = loadStaffDraft(storage, key);
 
     expect(restored?.submissionKey).toBe(draft.submissionKey);
     expect(restored?.responseId).toBe('r-1');
+    expect(restored?.versionId).toBe('v-1');
     expect(restored?.fieldData.buyingInterest).toBeNull();
   });
 
-  it('should not restore a draft made for another version', () => {
+  it('should keep drafts of different members apart on a shared device', () => {
+    expect(staffDraftKey('member-1', 'visit:c-1')).not.toBe(staffDraftKey('member-2', 'visit:c-1'));
+    expect(paperMetaKey('member-1', 'form-1')).not.toBe(paperMetaKey('member-2', 'form-1'));
+  });
+
+  it('should find a draft started before a republish and report its version', () => {
     const storage = memoryStorage();
-    const key = staffDraftKey('form-1', 'v-1');
+    const key = staffDraftKey('member-1', 'paper:form-1');
+
+    saveStaffDraft(storage, key, { ...newStaffDraft('v-1'), answers: { q: 1 } });
+
+    expect(storedDraftVersionId(storage, key)).toBe('v-1');
+    expect(restoreStaffDraft(loadStaffDraft(storage, key), 'v-1').draft.answers).toEqual({ q: 1 });
+  });
+
+  it('should ignore an empty draft when choosing the version', () => {
+    const storage = memoryStorage();
+    const key = staffDraftKey('member-1', 'paper:form-1');
 
     saveStaffDraft(storage, key, newStaffDraft('v-1'));
 
-    expect(loadStaffDraft(storage, key, 'v-2')).toBeNull();
+    expect(storedDraftVersionId(storage, key)).toBeNull();
+  });
+
+  it('should carry answers under a new submission key when the draft version is unavailable', () => {
+    const stored = { ...newStaffDraft('v-1'), answers: { q: 1 }, responseId: 'r-1' };
+    const { draft, restored } = restoreStaffDraft(stored, 'v-2');
+
+    expect(restored).toBe(true);
+    expect(draft.versionId).toBe('v-2');
+    expect(draft.answers).toEqual({ q: 1 });
+    expect(draft.responseId).toBeNull();
+    expect(draft.submissionKey).not.toBe(stored.submissionKey);
+  });
+
+  it('should clear every survey draft on sign-out and leave other data alone', () => {
+    const map = new Map<string, string>([
+      ['svc-draft:m1:visit:c', '{}'],
+      ['svc-paper-meta:m1:f', '{}'],
+      ['svc-visit:m1', '{}'],
+      ['sales-prefs', '{}'],
+    ]);
+    const storage = {
+      get length() {
+        return map.size;
+      },
+      key: (index: number) => [...map.keys()][index] ?? null,
+      removeItem: (key: string) => void map.delete(key),
+    };
+
+    clearSurveyDrafts(storage);
+
+    expect([...map.keys()]).toEqual(['sales-prefs']);
+    expect(() => clearSurveyDrafts(null)).not.toThrow();
   });
 
   it('should sanitise field data from storage', () => {
@@ -92,7 +145,7 @@ describe('staff draft', () => {
       }),
     );
 
-    const restored = loadStaffDraft(storage, 'k', 'v');
+    const restored = loadStaffDraft(storage, 'k');
 
     expect(restored?.fieldData).toEqual({
       buyingInterest: null,
@@ -340,5 +393,81 @@ describe('error summary', () => {
       '۱. نام، ۲. نرم‌افزار؟',
     );
     expect(summariseQuestions(definition, ['q_uses'], { audience: 'STAFF', language: 'en' })).toBe('4. نرم‌افزار؟');
+  });
+});
+
+describe('exclusive staff save', () => {
+  const deferred = () => {
+    let resolve: (value: string) => void = () => undefined;
+    const promise = new Promise<string>((done) => {
+      resolve = done;
+    });
+
+    return { promise, resolve };
+  };
+
+  it('should share the running save with a double click', async () => {
+    const first = deferred();
+    const run = vi.fn(() => first.promise);
+    const save = createExclusiveSave(run);
+
+    const one = save('PARTIAL');
+    const two = save('PARTIAL');
+
+    first.resolve('saved');
+
+    await expect(one).resolves.toBe('saved');
+    await expect(two).resolves.toBe('saved');
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('should run submit after a partial save that is still running', async () => {
+    const partial = deferred();
+    const order: string[] = [];
+    const run = vi.fn((status: 'PARTIAL' | 'COMPLETED') => {
+      order.push(`start:${status}`);
+
+      return status === 'PARTIAL' ? partial.promise : Promise.resolve('completed');
+    });
+    const running: (string | null)[] = [];
+    const save = createExclusiveSave(run, (status) => running.push(status));
+
+    void save('PARTIAL');
+    const submit = save('COMPLETED');
+
+    expect(order).toEqual(['start:PARTIAL']);
+
+    partial.resolve('partial');
+
+    await expect(submit).resolves.toBe('completed');
+    expect(order).toEqual(['start:PARTIAL', 'start:COMPLETED']);
+    expect(running).toEqual(['PARTIAL', null, 'COMPLETED', null]);
+  });
+
+  it('should never start a partial save after or during a completing one', async () => {
+    const completing = deferred();
+    const run = vi.fn(() => completing.promise);
+    const save = createExclusiveSave(run);
+
+    const submit = save('COMPLETED');
+    const partial = save('PARTIAL');
+
+    completing.resolve('completed');
+
+    await expect(partial).resolves.toBe('completed');
+    await submit;
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledWith('COMPLETED');
+  });
+
+  it('should allow a new save after a failed one', async () => {
+    const run = vi
+      .fn<(status: 'PARTIAL' | 'COMPLETED') => Promise<string>>()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce('saved');
+    const save = createExclusiveSave(run);
+
+    await expect(save('PARTIAL')).rejects.toThrow('offline');
+    await expect(save('PARTIAL')).resolves.toBe('saved');
   });
 });

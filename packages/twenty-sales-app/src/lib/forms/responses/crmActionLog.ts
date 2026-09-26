@@ -25,6 +25,28 @@ export const crmActionKey = (verb: 'create' | 'link' | 'apply', kind: CrmLinkKin
 export const hasDoneAction = (actions: SurveyCrmAction[], key: string): boolean =>
   actions.some((action) => action.key === key && action.status === 'DONE');
 
+// A record an earlier "create" made but could not link to the response
+// (logged PENDING). Linking that one is the retry; creating another would
+// leave a duplicate company/contact/lead behind.
+export const pendingRecordId = (actions: SurveyCrmAction[], key: string): string | null => {
+  for (let index = actions.length - 1; index >= 0; index -= 1) {
+    const action = actions[index];
+
+    if (action.key === key && action.status === 'PENDING' && typeof action.recordId === 'string') {
+      return action.recordId;
+    }
+  }
+
+  return null;
+};
+
+// One log entry per applied mapping rule. For interest/follow-up rules it is
+// what stops a second apply from adding the same note or task again.
+export const applyRuleKey = (ruleId: string): string => `apply:${ruleId}`;
+
+export const hasAppliedRule = (actions: SurveyCrmAction[], ruleId: string): boolean =>
+  hasDoneAction(actions, applyRuleKey(ruleId));
+
 export const appendCrmAction = (
   actions: SurveyCrmAction[],
   entry: Omit<SurveyCrmAction, 'at'> & { at?: string },

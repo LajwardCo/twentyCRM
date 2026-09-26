@@ -9,6 +9,7 @@ import {
   appendCrmAction,
   crmActionKey,
   hasDoneAction,
+  pendingRecordId,
 } from '../../../../lib/forms/responses/crmActionLog';
 
 const linkedId = (
@@ -19,7 +20,10 @@ const linkedId = (
 // Link/create for the review panel, safe against double clicks, two open
 // tabs and two reviewers: the response is re-read right before acting, a
 // create never runs when the kind is already linked (or was created before),
-// and the link plus its log entry are written together.
+// and the link plus its log entry are written together. A record created but
+// not linked (the link write failed) is remembered — in memory and, when the
+// server can still be reached, as a PENDING log entry — and the next attempt
+// links it instead of creating a second one.
 export const useCrmLinking = ({
   responseId,
   user,
@@ -30,6 +34,7 @@ export const useCrmLinking = ({
   onChanged: () => Promise<void> | void;
 }) => {
   const inFlight = useRef(false);
+  const createdUnlinked = useRef<Partial<Record<CrmLinkKind, string>>>({});
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [askActioned, setAskActioned] = useState(false);
@@ -59,19 +64,42 @@ export const useCrmLinking = ({
         return false;
       }
 
-      const recordId = await obtainRecordId();
+      const earlier =
+        verb === 'create' ? (createdUnlinked.current[kind] ?? pendingRecordId(fresh.crmActions, key)) : null;
+      const recordId = earlier ?? (await obtainRecordId());
 
-      await updateResponse(responseId, {
-        [CRM_LINK_FIELD[kind]]: recordId,
-        crmActions: appendCrmAction(fresh.crmActions, {
-          key,
-          type: verb === 'create' ? 'CREATE' : 'LINK',
-          status: 'DONE',
-          by: user.workspaceMemberId,
-          recordId,
-          target: kind,
-        }),
-      });
+      if (verb === 'create') createdUnlinked.current[kind] = recordId;
+
+      try {
+        await updateResponse(responseId, {
+          [CRM_LINK_FIELD[kind]]: recordId,
+          crmActions: appendCrmAction(fresh.crmActions, {
+            key,
+            type: verb === 'create' ? 'CREATE' : 'LINK',
+            status: 'DONE',
+            by: user.workspaceMemberId,
+            recordId,
+            target: kind,
+          }),
+        });
+      } catch (error) {
+        if (verb === 'create' && earlier === null) {
+          await updateResponse(responseId, {
+            crmActions: appendCrmAction(fresh.crmActions, {
+              key,
+              type: 'CREATE',
+              status: 'PENDING',
+              by: user.workspaceMemberId,
+              recordId,
+              target: kind,
+            }),
+          }).catch(() => undefined);
+        }
+
+        throw error;
+      }
+
+      delete createdUnlinked.current[kind];
 
       if (kind === 'opportunity' && fresh.reviewStatus !== 'ACTIONED') setAskActioned(true);
 

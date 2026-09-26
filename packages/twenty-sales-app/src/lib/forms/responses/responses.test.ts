@@ -2,10 +2,20 @@ import { type CrmProposal } from '@shared/surveys';
 import { describe, expect, it } from 'vitest';
 
 import { buildAnswerLayout, classifyAnswer, countAnswerStatuses } from './answerStatus';
-import { appendCrmAction, crmActionKey, pendingSuggestions } from './crmActionLog';
+import {
+  appendCrmAction,
+  applyRuleKey,
+  crmActionKey,
+  hasAppliedRule,
+  pendingRecordId,
+  pendingSuggestions,
+} from './crmActionLog';
 import {
   buildCrmPatches,
   initialDiffSelection,
+  isAppendOnly,
+  parseCount,
+  revalidateChanges,
   selectedChanges,
   splitPersonName,
   visibleDiffRows,
@@ -238,6 +248,58 @@ describe('CRM diff selection', () => {
   it('should split a one-word name into a first name', () => {
     expect(splitPersonName('  Ahmad ')).toEqual({ firstName: 'Ahmad', lastName: '' });
   });
+
+  it('should read a head count typed with Dari digits and treat no number as not provided', () => {
+    expect(parseCount('۱۵')).toBe(15);
+    expect(parseCount('۱۵ نفر')).toBe(15);
+    expect(parseCount('10-20')).toBe(10);
+    expect(parseCount(12.6)).toBe(13);
+    expect(parseCount('')).toBeNull();
+    expect(parseCount('زیاد')).toBeNull();
+    expect(parseCount(null)).toBeNull();
+    expect(buildCrmPatches([proposal('a', 'company.employees', 'FILL', '۲۵')], () => null).company).toEqual({ employees: 25 });
+    expect(buildCrmPatches([proposal('a', 'company.employees', 'FILL', 'چند نفر')], () => null).company).toEqual({});
+  });
+
+  it('should mark interest and follow-up as append-only', () => {
+    expect(isAppendOnly(proposal('e', 'opportunity.interest', 'FILL', 'POS'))).toBe(true);
+    expect(isAppendOnly(proposal('f', 'opportunity.followUp', 'FILL', 'call'))).toBe(true);
+    expect(isAppendOnly(proposal('a', 'company.name', 'FILL', 'Noor'))).toBe(false);
+  });
+
+  it('should drop a reviewed FILL whose CRM field got a value meanwhile', () => {
+    const reviewed = [proposal('fill', 'company.address', 'FILL', 'Kabul')];
+    const fresh = [proposal('fill', 'company.address', 'CONFLICT', 'Kabul', 'Herat')];
+
+    expect(revalidateChanges(reviewed, fresh)).toEqual({ valid: [], stale: reviewed });
+  });
+
+  it('should drop a chosen CONFLICT when the CRM value changed again', () => {
+    const reviewed = [proposal('c', 'person.jobTitle', 'CONFLICT', 'Manager', 'Owner')];
+    const fresh = [proposal('c', 'person.jobTitle', 'CONFLICT', 'Manager', 'CEO')];
+
+    expect(revalidateChanges(reviewed, fresh).stale).toHaveLength(1);
+  });
+
+  it('should keep unchanged rows and quietly skip rows that became SAME', () => {
+    const reviewed = [
+      proposal('fill', 'company.address', 'FILL', 'Kabul'),
+      proposal('done', 'company.name', 'FILL', 'Noor'),
+    ];
+    const fresh = [
+      proposal('fill', 'company.address', 'FILL', 'Kabul'),
+      proposal('done', 'company.name', 'SAME', 'Noor', 'noor'),
+    ];
+
+    expect(revalidateChanges(reviewed, fresh)).toEqual({ valid: [fresh[0]], stale: [] });
+  });
+
+  it('should treat a row whose answer was corrected as stale', () => {
+    const reviewed = [proposal('fill', 'company.address', 'FILL', 'Kabul')];
+
+    expect(revalidateChanges(reviewed, [proposal('fill', 'company.address', 'FILL', 'Mazar')]).stale).toHaveLength(1);
+    expect(revalidateChanges(reviewed, []).stale).toHaveLength(1);
+  });
 });
 
 describe('CRM action log', () => {
@@ -254,6 +316,25 @@ describe('CRM action log', () => {
 
     expect(appendCrmAction(linked, { key: 'link:company', type: 'LINK', status: 'DONE', by: 'm1', recordId: 'c1' })).toBe(linked);
     expect(appendCrmAction(linked, { key: 'link:company', type: 'LINK', status: 'DONE', by: 'm1', recordId: 'c2' })).toHaveLength(2);
+  });
+
+  it('should remember a created-but-unlinked record for the retry', () => {
+    const actions = appendCrmAction([], { key: 'create:lead', type: 'CREATE', status: 'PENDING', by: 'm1', recordId: 'l1' });
+
+    expect(pendingRecordId(actions, 'create:lead')).toBe('l1');
+    expect(pendingRecordId(actions, 'create:company')).toBeNull();
+
+    // The pending entry does not count as done, so the DONE link is logged.
+    const linked = appendCrmAction(actions, { key: 'create:lead', type: 'CREATE', status: 'DONE', by: 'm1', recordId: 'l1' });
+
+    expect(linked).toHaveLength(2);
+  });
+
+  it('should record applied rules so an append-only rule is not applied twice', () => {
+    const actions = appendCrmAction([], { key: applyRuleKey('rule-1'), type: 'APPLY', status: 'DONE', by: 'm1', recordId: 'n1' });
+
+    expect(hasAppliedRule(actions, 'rule-1')).toBe(true);
+    expect(hasAppliedRule(actions, 'rule-2')).toBe(false);
   });
 
   it('should list only suggestions not yet linked', () => {

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   type SurveyFormSummary,
   type SurveyFormVersion,
+  AmbiguousPrintCodeError,
   fetchVersionByPrintCode,
   fetchVersions,
   listForms,
@@ -21,7 +22,7 @@ type PaperVersionPickerProps = {
 // the sheet's footer (e.g. F1G46-v2) finds it; otherwise pick form + version.
 export const PaperVersionPicker = ({ initialFormId, onPick }: PaperVersionPickerProps) => {
   const [code, setCode] = useState('');
-  const [codeState, setCodeState] = useState<'idle' | 'searching' | 'missing' | 'error'>('idle');
+  const [codeState, setCodeState] = useState<'idle' | 'searching' | 'missing' | 'ambiguous' | 'error'>('idle');
   const [forms, setForms] = useState<SurveyFormSummary[] | null>(null);
   const [formId, setFormId] = useState(initialFormId ?? '');
   const [versions, setVersions] = useState<SurveyFormVersion[] | null>(null);
@@ -67,8 +68,8 @@ export const PaperVersionPicker = ({ initialFormId, onPick }: PaperVersionPicker
 
       setCodeState('idle');
       onPick({ formId: version.formId, formName: formName(version.formId), version });
-    } catch {
-      setCodeState('error');
+    } catch (error) {
+      setCodeState(error instanceof AmbiguousPrintCodeError ? 'ambiguous' : 'error');
     }
   };
 
@@ -102,6 +103,7 @@ export const PaperVersionPicker = ({ initialFormId, onPick }: PaperVersionPicker
           </button>
         </div>
         {codeState === 'missing' && <div className="svc-hint svc-warn">{TC.codeNotFound}</div>}
+        {codeState === 'ambiguous' && <div className="svc-hint svc-warn">{TC.codeAmbiguous}</div>}
         {codeState === 'error' && <div className="svc-hint svc-warn">{TC.loadFailed}</div>}
       </form>
 

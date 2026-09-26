@@ -1,5 +1,5 @@
 import { type FormLanguage, analysePrintability, validateResponse } from '@shared/surveys';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { type CompletionStatus, type SurveyFormVersion } from '../../../api/surveys';
 import {
@@ -11,33 +11,78 @@ import {
   todayLocalDate,
 } from '../../../lib/forms/collect/paperEntry';
 import { staffResponseName } from '../../../lib/forms/collect/responseName';
-import { safeLocalStorage } from '../../../lib/forms/collect/staffDraft';
+import { createExclusiveSave } from '../../../lib/forms/collect/exclusiveSave';
+import {
+  clearStaffDraft,
+  paperMetaKey,
+  safeLocalStorage,
+  staffDraftKey,
+} from '../../../lib/forms/collect/staffDraft';
 import { TC } from '../../../lib/forms/collectStrings';
 import { toPersianDigits } from '../../../lib/jalali';
 import { FormRenderer, type SubmitOutcome } from '../FormRenderer';
-import { DraftStatusBadge } from './CollectChrome';
+import { DraftStatusBadge, LoadingCard, OlderDraftNote } from './CollectChrome';
 import { PaperMetaFields } from './PaperMetaFields';
 import { PaperScans } from './PaperScans';
-import { type StaffSaveInput, saveStaffResponse } from './staffSave';
+import { type StaffSaveInput, type StaffSaveResult, saveStaffResponse } from './staffSave';
 import { staffRendererServices } from './staffServices';
-import { useStaffDraft } from './useStaffDraft';
+import { useDraftVersion, useStaffDraft } from './useStaffDraft';
 
 type PaperEntryFormProps = {
   formId: string;
   formName: string;
   version: SurveyFormVersion;
+  // The signed-in member: drafts on a shared device are per person.
+  memberId: string;
   enteredByName: string;
   onCompleted: (responseId: string) => void;
 };
 
 // Transcribing one paper sheet against the version that was printed. Answers
 // the transcriber cannot read are marked unclear (left empty, listed for the
-// reviewer, response flagged NEEDS_REVIEW) — never guessed.
-export const PaperEntryForm = ({ formId, formName, version, enteredByName, onCompleted }: PaperEntryFormProps) => {
+// reviewer, response flagged NEEDS_REVIEW) — never guessed. An unfinished
+// sheet started on another version is finished on that version first.
+export const PaperEntryForm = (props: PaperEntryFormProps) => {
+  const draftKey = staffDraftKey(props.memberId, `paper:${props.formId}`);
+  const { state, switchToCurrent } = useDraftVersion(draftKey, props.version);
+
+  if (state.status === 'loading') return <LoadingCard />;
+
+  return (
+    <PaperEntryFormBody
+      key={state.version.id}
+      {...props}
+      version={state.version}
+      draftKey={draftKey}
+      metaKey={paperMetaKey(props.memberId, props.formId)}
+      olderThan={state.olderThan}
+      onDiscardOlder={() => {
+        clearStaffDraft(safeLocalStorage(), draftKey);
+        switchToCurrent();
+      }}
+    />
+  );
+};
+
+const PaperEntryFormBody = ({
+  formName,
+  formId,
+  version,
+  enteredByName,
+  onCompleted,
+  draftKey,
+  metaKey,
+  olderThan,
+  onDiscardOlder,
+}: Omit<PaperEntryFormProps, 'memberId'> & {
+  draftKey: string;
+  metaKey: string;
+  olderThan: SurveyFormVersion | null;
+  onDiscardOlder: () => void;
+}) => {
   const definition = version.definition;
-  const handle = useStaffDraft(`paper:${formId}`, version.id);
+  const handle = useStaffDraft(draftKey, version.id);
   const { draft, update } = handle;
-  const metaKey = `svc-paper-meta:${formId}:${version.id}`;
   const [meta, setMeta] = useState<PaperMeta>(() => {
     try {
       return parsePaperMeta(safeLocalStorage()?.getItem(metaKey) ?? null, todayLocalDate());
@@ -104,7 +149,16 @@ export const PaperEntryForm = ({ formId, formName, version, enteredByName, onCom
     };
   };
 
-  const save = (status: CompletionStatus) => saveStaffResponse(handle, status, input());
+  const [running, setRunning] = useState<CompletionStatus | null>(null);
+  const runSave = (status: CompletionStatus): Promise<StaffSaveResult> => saveStaffResponse(handle, status, input());
+  const latestRunSave = useRef(runSave);
+
+  latestRunSave.current = runSave;
+
+  // One save at a time, shared by "save incomplete" and submit.
+  const [save] = useState(() =>
+    createExclusiveSave((status) => latestRunSave.current(status), setRunning),
+  );
 
   const saveIncomplete = async () => {
     if (validateResponse(definition, draft.answers, { audience: 'STAFF', mode: 'PARTIAL' }).errors.length > 0) {
@@ -147,6 +201,21 @@ export const PaperEntryForm = ({ formId, formName, version, enteredByName, onCom
         {version.printCode !== '' && <span className="svc-code">{TC.version(version.printCode)}</span>}
       </div>
       {handle.restored && <div className="svc-note">{TC.restoredDraft}</div>}
+      {olderThan !== null && (
+        <OlderDraftNote
+          draftVersion={version.versionNumber}
+          currentVersion={olderThan.versionNumber}
+          canDiscard={draft.responseId === null}
+          onDiscard={() => {
+            try {
+              safeLocalStorage()?.removeItem(metaKey);
+            } catch {
+              // nothing to clear
+            }
+            onDiscardOlder();
+          }}
+        />
+      )}
 
       <PaperMetaFields
         formId={formId}
@@ -168,6 +237,7 @@ export const PaperEntryForm = ({ formId, formName, version, enteredByName, onCom
         answers={draft.answers}
         onAnswersChange={(answers) => update({ answers, dirty: true })}
         onSubmit={submit}
+        submitDisabled={running !== null}
         services={services}
         layout="continuous"
         showWelcome={false}
@@ -177,10 +247,10 @@ export const PaperEntryForm = ({ formId, formName, version, enteredByName, onCom
           <button
             type="button"
             className="btn line"
-            disabled={partial?.kind === 'saving'}
+            disabled={running !== null}
             onClick={() => void saveIncomplete()}
           >
-            {partial?.kind === 'saving' ? TC.savingIncomplete : TC.saveIncomplete}
+            {running === 'PARTIAL' ? TC.savingIncomplete : TC.saveIncomplete}
           </button>
         }
       />

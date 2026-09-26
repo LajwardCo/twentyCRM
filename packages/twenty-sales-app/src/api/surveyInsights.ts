@@ -1,13 +1,12 @@
 import { type FollowUpTask, type VisitRecord } from '../lib/forms/insights';
 import { coreQuery } from './client';
+import { type PageInfo, fetchAllPaged, withRateLimitRetry } from './surveyPaging';
 import { type SurveyFormStatus, type VisitOutcome } from './surveys';
 
 // Reads that only the insights screens need: a campaign's visits, fresh
 // stages of a set of leads, tasks on those leads, and per-campaign counts.
 // Every list follows cursors — the record API silently returns fewer rows
 // than `first` asks for, so a single oversized page would undercount.
-
-type PageInfo = { endCursor: string | null; hasNextPage: boolean };
 
 const PAGE = 100;
 // Keeps each `in: [...]` filter, and so each request body, small.
@@ -25,23 +24,7 @@ const chunk = <TItem>(items: TItem[], size: number): TItem[][] => {
 
 const fetchAllPages = async <TNode>(
   fetchPage: (after: string | null) => Promise<{ nodes: TNode[]; pageInfo: PageInfo }>,
-  limit = 5000,
-): Promise<TNode[]> => {
-  const all: TNode[] = [];
-  let after: string | null = null;
-
-  for (;;) {
-    const page = await fetchPage(after);
-
-    all.push(...page.nodes);
-
-    if (!page.pageInfo.hasNextPage || page.pageInfo.endCursor === null || all.length >= limit) {
-      return all;
-    }
-
-    after = page.pageInfo.endCursor;
-  }
-};
+): Promise<TNode[]> => (await fetchAllPaged(fetchPage)).items;
 
 // ---- visits ---------------------------------------------------------------
 
@@ -53,8 +36,10 @@ type RawVisit = {
   taskTargets: { edges: { node: { targetOpportunityId: string | null } }[] } | null;
 };
 
-export const fetchCampaignVisits = async (campaignId: string): Promise<VisitRecord[]> => {
-  const nodes = await fetchAllPages<RawVisit>(async (after) => {
+export const fetchCampaignVisits = async (
+  campaignId: string,
+): Promise<{ visits: VisitRecord[]; truncated: boolean }> => {
+  const { items: nodes, truncated } = await fetchAllPaged<RawVisit>(async (after) => {
     const data = await coreQuery<{
       tasks: { pageInfo: PageInfo; edges: { node: RawVisit }[] };
     }>(
@@ -82,7 +67,7 @@ export const fetchCampaignVisits = async (campaignId: string): Promise<VisitReco
     };
   });
 
-  return nodes.map((node) => ({
+  const visits = nodes.map((node) => ({
     id: node.id,
     status: node.status,
     visitOutcome: node.visitOutcome,
@@ -91,6 +76,8 @@ export const fetchCampaignVisits = async (campaignId: string): Promise<VisitReco
       edge.node.targetOpportunityId === null ? [] : [edge.node.targetOpportunityId],
     ),
   }));
+
+  return { visits, truncated };
 };
 
 // ---- leads ----------------------------------------------------------------
@@ -169,39 +156,41 @@ export const fetchLeadTasks = async (opportunityIds: string[]): Promise<FollowUp
 
 // ---- campaign list --------------------------------------------------------
 
-// Twenty rejects a query that aliases the same root resolver twice
-// ("Duplicate root resolver"), so counts are one small request per campaign,
-// a few at a time.
-const COUNT_CONCURRENCY = 6;
-
-const countCompleted = async (campaignId: string): Promise<number> => {
-  // A null review status is not spam, hence the explicit OR.
-  const data = await coreQuery<{ surveyResponses: { totalCount: number } }>(
-    `query SurveyCampaignCompleted($campaignId: UUID!) {
-      surveyResponses(filter: {
-        campaignId: { eq: $campaignId }
-        completionStatus: { eq: COMPLETED }
-        or: [{ reviewStatus: { neq: SPAM } }, { reviewStatus: { is: NULL } }]
-      }) { totalCount }
-    }`,
-    { campaignId },
-  );
-
-  return data.surveyResponses.totalCount;
-};
-
-// Completed, non-spam responses per campaign.
+// Completed, non-spam responses per campaign: one groupBy on campaignId (a
+// request per campaign would trip the API rate limit on a long list).
+// groupBy caps groups at 50 by default, so the limit is sized to the list;
+// long lists are split to keep each `in: [...]` small.
 export const countCompletedByCampaign = async (
   campaignIds: string[],
 ): Promise<Record<string, number>> => {
-  const counts: Record<string, number> = {};
+  const counts: Record<string, number> = Object.fromEntries(campaignIds.map((campaignId) => [campaignId, 0]));
 
-  for (const ids of chunk(campaignIds, COUNT_CONCURRENCY)) {
-    const values = await Promise.all(ids.map(countCompleted));
+  for (const ids of chunk([...new Set(campaignIds)], ID_CHUNK)) {
+    const data = await withRateLimitRetry(() =>
+      coreQuery<{
+        surveyResponsesGroupBy: { groupByDimensionValues: (string | null)[]; totalCount: number }[];
+      }>(
+        // A null review status is not spam, hence the explicit OR.
+        `query SurveyCampaignCompleted($ids: [UUID!], $limit: Int) {
+          surveyResponsesGroupBy(
+            groupBy: [{ campaignId: true }]
+            filter: {
+              campaignId: { in: $ids }
+              completionStatus: { eq: COMPLETED }
+              or: [{ reviewStatus: { neq: SPAM } }, { reviewStatus: { is: NULL } }]
+            }
+            limit: $limit
+          ) { groupByDimensionValues totalCount }
+        }`,
+        { ids, limit: ids.length },
+      ),
+    );
 
-    ids.forEach((campaignId, index) => {
-      counts[campaignId] = values[index];
-    });
+    for (const group of data.surveyResponsesGroupBy) {
+      const campaignId = group.groupByDimensionValues[0];
+
+      if (typeof campaignId === 'string' && campaignId in counts) counts[campaignId] = group.totalCount;
+    }
   }
 
   return counts;

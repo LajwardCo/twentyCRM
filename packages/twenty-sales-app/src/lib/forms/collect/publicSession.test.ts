@@ -9,6 +9,7 @@ import {
   newSubmissionKey,
   parsePublicSession,
   publicSessionKey,
+  reconcilePublicSession,
   savePublicSession,
 } from './publicSession';
 
@@ -25,21 +26,46 @@ const memoryStorage = () => {
 
 const session = (overrides: Partial<PublicSession> = {}): PublicSession => ({
   submissionKey: '3f1c2a8e-5b7d-4c1e-9a2b-7d6e5f4c3b2a',
+  versionNumber: 1,
   answers: { q_name: 'Noor' },
   startedAt: 1_700_000_000_000,
+  elapsedMs: 0,
   language: 'fa',
   ...overrides,
 });
 
 describe('public session persistence', () => {
-  it('should key sessions per slug and version', () => {
-    expect(publicSessionKey('abc', 2)).toBe('svc-public:abc:v2');
-    expect(publicSessionKey('abc', 3)).not.toBe(publicSessionKey('abc', 2));
+  it('should key sessions per form link, whatever the version', () => {
+    expect(publicSessionKey('abc')).toBe('svc-public:abc');
+    expect(publicSessionKey('xyz')).not.toBe(publicSessionKey('abc'));
+  });
+
+  it('should keep the submission key when the served version is unchanged', () => {
+    const stored = session({ versionNumber: 2 });
+
+    expect(reconcilePublicSession(stored, 2)).toBe(stored);
+  });
+
+  it('should keep answers but start a new key after the form was republished', () => {
+    const stored = session({ versionNumber: 2, elapsedMs: 40_000 });
+    const next = reconcilePublicSession(stored, 3);
+
+    expect(next.versionNumber).toBe(3);
+    expect(next.answers).toEqual({ q_name: 'Noor' });
+    expect(next.elapsedMs).toBe(40_000);
+    expect(next.startedAt).toBe(stored.startedAt);
+    expect(next.submissionKey).not.toBe(stored.submissionKey);
+  });
+
+  it('should treat a stored session without a version as unusable', () => {
+    const { versionNumber: _versionNumber, ...legacy } = session();
+
+    expect(parsePublicSession(JSON.stringify(legacy))).toBeNull();
   });
 
   it('should restore the same submission key and answers after a reload', () => {
     const storage = memoryStorage();
-    const key = publicSessionKey('slug', 1);
+    const key = publicSessionKey('slug');
 
     savePublicSession(storage, key, session());
 
@@ -51,7 +77,7 @@ describe('public session persistence', () => {
 
   it('should start a fresh session when nothing or garbage is stored', () => {
     const storage = memoryStorage();
-    const key = publicSessionKey('slug', 1);
+    const key = publicSessionKey('slug');
     const fresh = session({ submissionKey: '00000000-0000-4000-8000-000000000000' });
 
     expect(loadPublicSession(storage, key, () => fresh)).toBe(fresh);

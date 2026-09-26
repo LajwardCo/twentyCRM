@@ -1,4 +1,6 @@
-import { type CrmProposal } from '@shared/surveys';
+import { type CrmProposal, toLatinDigits } from '@shared/surveys';
+
+import { normalizeNumericText, parseDecimalInput } from '../../numberInput';
 
 // Selection rules for the "apply proposed changes" table. Review-first: only
 // FILL rows start selected; a CONFLICT needs an explicit per-row decision; a
@@ -29,6 +31,47 @@ export const selectedChanges = (
     (proposal) =>
       isSelectable(proposal) && selection[proposal.ruleId] === true && !isBlank(proposal.proposed),
   );
+
+// Interest and follow-up rows add a note / a task rather than set a field, so
+// they never become SAME: applying one twice would add it twice.
+export const isAppendOnly = (proposal: Pick<CrmProposal, 'field'>): boolean =>
+  proposal.field === 'opportunity.interest' || proposal.field === 'opportunity.followUp';
+
+const comparable = (value: string | number | null): string =>
+  toLatinDigits(String(value ?? '')).trim().toLowerCase().replace(/\s+/g, ' ');
+
+// The reviewed rows checked against a comparison made right before applying.
+// A row is applied only if nothing moved under it: the CRM value and the
+// answer are what the reviewer saw, and the action is unchanged. A FILL whose
+// field got a value meanwhile is `stale` (it shows up again as a CONFLICT);
+// a row that has become SAME has nothing left to do.
+export const revalidateChanges = (
+  reviewed: CrmProposal[],
+  fresh: CrmProposal[],
+): { valid: CrmProposal[]; stale: CrmProposal[] } => {
+  const freshByRule = new Map(fresh.map((proposal) => [proposal.ruleId, proposal]));
+  const valid: CrmProposal[] = [];
+  const stale: CrmProposal[] = [];
+
+  for (const row of reviewed) {
+    const now = freshByRule.get(row.ruleId);
+
+    if (now !== undefined && now.action === 'SAME') continue;
+
+    if (
+      now !== undefined &&
+      now.action === row.action &&
+      comparable(now.current) === comparable(row.current) &&
+      comparable(now.proposed) === comparable(row.proposed)
+    ) {
+      valid.push(now);
+    } else {
+      stale.push(row);
+    }
+  }
+
+  return { valid, stale };
+};
 
 export type CompanyPatch = Partial<{
   name: string;
@@ -67,6 +110,17 @@ export const splitPersonName = (full: string): { firstName: string; lastName: st
   return { firstName: words[0] ?? '', lastName: words.slice(1).join(' ') };
 };
 
+// A head count as staff type it: Dari digits, "۱۵ نفر", "10-20". The first
+// number is taken; text with no number is "not provided" (null), never 0.
+export const parseCount = (raw: string | number | null | undefined): number | null => {
+  if (typeof raw === 'number') return Number.isFinite(raw) && raw >= 0 ? Math.round(raw) : null;
+
+  const match = /\d+(?:\.\d+)?/.exec(normalizeNumericText(raw ?? ''));
+  const value = match === null ? null : parseDecimalInput(match[0]);
+
+  return value === null ? null : Math.round(value);
+};
+
 const withHttps = (url: string): string =>
   /^https?:\/\//i.test(url) ? url : `https://${url}`;
 
@@ -90,9 +144,9 @@ export const buildCrmPatches = (
         patches.company.name = text;
         break;
       case 'company.employees': {
-        const employees = Number(text.replace(/[^\d.]/g, ''));
+        const employees = parseCount(change.proposed);
 
-        if (Number.isFinite(employees) && text !== '') patches.company.employees = Math.round(employees);
+        if (employees !== null) patches.company.employees = employees;
         break;
       }
       case 'company.domainName':

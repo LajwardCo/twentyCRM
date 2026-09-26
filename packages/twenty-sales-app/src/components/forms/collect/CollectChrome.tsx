@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 
+import { toPersianDigits } from '../../../lib/jalali';
 import { navigate } from '../../../lib/router';
 import { type StaffDraft } from '../../../lib/forms/collect/staffDraft';
 import { TC } from '../../../lib/forms/collectStrings';
@@ -23,6 +24,36 @@ export const DraftStatusBadge = ({ draft }: { draft: StaffDraft }) => {
 
   return <span className="sv-server-saved">✓ {TSV.serverSaved}</span>;
 };
+
+// A draft being finished on the version it was started on, after the form was
+// republished. It can be dropped for the current version only while nothing
+// of it is on the server yet.
+export const OlderDraftNote = ({
+  draftVersion,
+  currentVersion,
+  canDiscard,
+  onDiscard,
+}: {
+  draftVersion: number;
+  currentVersion: number;
+  canDiscard: boolean;
+  onDiscard: () => void;
+}) => (
+  <div className="svc-note svc-warn-note" role="status">
+    {TC.olderDraftVersion(toPersianDigits(draftVersion), toPersianDigits(currentVersion))}
+    {canDiscard && (
+      <button
+        type="button"
+        className="btn line sm"
+        onClick={() => {
+          if (window.confirm(TC.discardConfirm)) onDiscard();
+        }}
+      >
+        {TC.discardOlderDraft}
+      </button>
+    )}
+  </div>
+);
 
 type SavedPanelProps = {
   title: string;

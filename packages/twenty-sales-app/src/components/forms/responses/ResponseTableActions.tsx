@@ -65,12 +65,12 @@ export const ResponseTableActions = ({
     setMessage(TSR.exporting);
 
     try {
-      const { table, count, baseName } = await buildResponseExport(query.filter, query.excludeSpam);
+      const { table, count, baseName, truncated } = await buildResponseExport(query.filter, query.excludeSpam);
 
       if (format === 'csv') downloadCsv(table, baseName);
       else await downloadXlsx(table, baseName);
 
-      setMessage(TSR.exportDone(toPersianDigits(count)));
+      setMessage(truncated ? TSR.exportTruncated(toPersianDigits(count)) : TSR.exportDone(toPersianDigits(count)));
     } catch (error) {
       setMessage(`${TSR.exportFailed}: ${error instanceof Error ? error.message : ''}`);
     } finally {

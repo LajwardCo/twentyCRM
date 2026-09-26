@@ -185,4 +185,8 @@ export const TINS = {
   noFollowUps: 'روی لیدهای این کمپاین کاری ثبت نشده است.',
   byOutcome: 'بر اساس نتیجهٔ بازدید',
   partialLoad: 'بخشی از اطلاعات بارگذاری نشد:',
+  truncatedResponses: (count: number) =>
+    `فقط ${n(count)} پاسخ اول بارگذاری شد؛ اعداد این صفحه همهٔ پاسخ‌ها را در بر نمی‌گیرند.`,
+  truncatedVisits: (count: number) =>
+    `فقط ${n(count)} بازدید اول بارگذاری شد؛ آمار بازدیدها ناقص است.`,
 };

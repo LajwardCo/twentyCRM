@@ -7,7 +7,7 @@ import {
   pickLocalizedText,
   validateResponse,
 } from '@shared/surveys';
-import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react';
 
 import { type CompletionStatus, type SurveyFormVersion } from '../../../api/surveys';
 import {
@@ -17,19 +17,27 @@ import {
   resolveResponseLinks,
 } from '../../../lib/forms/collect/prefill';
 import { staffResponseName } from '../../../lib/forms/collect/responseName';
-import { type StaffDraft } from '../../../lib/forms/collect/staffDraft';
+import { createExclusiveSave } from '../../../lib/forms/collect/exclusiveSave';
+import {
+  type StaffDraft,
+  clearStaffDraft,
+  safeLocalStorage,
+  staffDraftKey,
+} from '../../../lib/forms/collect/staffDraft';
 import { TC } from '../../../lib/forms/collectStrings';
 import { TSV } from '../../../lib/forms/surveyStrings';
 import { FormRenderer, type SubmitOutcome } from '../FormRenderer';
-import { DraftStatusBadge } from './CollectChrome';
+import { DraftStatusBadge, LoadingCard, OlderDraftNote } from './CollectChrome';
 import { FieldDataFields } from './FieldDataFields';
-import { type StaffSaveInput, saveStaffResponse } from './staffSave';
+import { type StaffSaveInput, type StaffSaveResult, saveStaffResponse } from './staffSave';
 import { staffRendererServices } from './staffServices';
-import { useStaffDraft } from './useStaffDraft';
+import { useDraftVersion, useStaffDraft } from './useStaffDraft';
 
 type StaffCollectFormProps = {
   version: SurveyFormVersion;
   formName: string;
+  // The signed-in member: drafts on a shared phone are per person.
+  memberId: string;
   draftScope: string;
   links: CollectLinks;
   linkLabels: LinkLabels;
@@ -48,18 +56,46 @@ const staffBadge = (question: Question): string | undefined =>
 
 // The staff side of collection: the published version in STAFF audience,
 // device-local draft, field data, save-incomplete and submit. Shared by the
-// "collect" screen and the visit flow.
-export const StaffCollectForm = ({
+// "collect" screen and the visit flow. A draft started on an older version is
+// finished on that version (see useDraftVersion).
+export const StaffCollectForm = (props: StaffCollectFormProps) => {
+  const draftKey = staffDraftKey(props.memberId, props.draftScope);
+  const { state, switchToCurrent } = useDraftVersion(draftKey, props.version);
+
+  if (state.status === 'loading') return <LoadingCard />;
+
+  return (
+    <StaffCollectFormBody
+      key={state.version.id}
+      {...props}
+      version={state.version}
+      draftKey={draftKey}
+      olderThan={state.olderThan}
+      onDiscardOlder={() => {
+        clearStaffDraft(safeLocalStorage(), draftKey);
+        switchToCurrent();
+      }}
+    />
+  );
+};
+
+const StaffCollectFormBody = ({
   version,
   formName,
-  draftScope,
+  draftKey,
+  olderThan,
+  onDiscardOlder,
   links,
   linkLabels,
   prepareSave,
   onSaved,
   submitLabel,
   header,
-}: StaffCollectFormProps) => {
+}: Omit<StaffCollectFormProps, 'memberId' | 'draftScope'> & {
+  draftKey: string;
+  olderThan: SurveyFormVersion | null;
+  onDiscardOlder: () => void;
+}) => {
   const definition = version.definition;
   const seed = useCallback(
     (draft: StaffDraft): StaffDraft => ({
@@ -68,7 +104,7 @@ export const StaffCollectForm = ({
     }),
     [definition, linkLabels],
   );
-  const handle = useStaffDraft(draftScope, version.id, seed);
+  const handle = useStaffDraft(draftKey, version.id, seed);
   const { draft, update } = handle;
   const [language, setLanguage] = useState<FormLanguage>(definition.languages[0] ?? 'fa');
   const [partialState, setPartialState] = useState<
@@ -85,7 +121,8 @@ export const StaffCollectForm = ({
     [responseLinks.companyId],
   );
 
-  const save = async (completionStatus: CompletionStatus) => {
+  const [running, setRunning] = useState<CompletionStatus | null>(null);
+  const runSave = async (completionStatus: CompletionStatus): Promise<StaffSaveResult> => {
     const current = handle.current.current;
     const resolved = resolveResponseLinks(definition, current.answers, links);
     const extra = prepareSave === undefined ? {} : await prepareSave(completionStatus);
@@ -108,6 +145,14 @@ export const StaffCollectForm = ({
       ...extra,
     });
   };
+  const latestRunSave = useRef(runSave);
+
+  latestRunSave.current = runSave;
+
+  // One save at a time, shared by "save incomplete" and submit.
+  const [save] = useState(() =>
+    createExclusiveSave((status) => latestRunSave.current(status), setRunning),
+  );
 
   const describeQuestion = (questionId: string): string => {
     for (const page of definition.pages) {
@@ -180,7 +225,7 @@ export const StaffCollectForm = ({
       <div className="svc-status-bar">
         <DraftStatusBadge draft={draft} />
         {version.printCode !== '' && <span className="svc-code">{TC.version(version.printCode)}</span>}
-        {draft.responseId === null && Object.keys(draft.answers).length > 0 && (
+        {draft.responseId === null && Object.keys(draft.answers).length > 0 && olderThan === null && (
           <button
             type="button"
             className="btn line sm"
@@ -193,6 +238,14 @@ export const StaffCollectForm = ({
         )}
       </div>
       {handle.restored && <div className="svc-note">{TC.restoredDraft}</div>}
+      {olderThan !== null && (
+        <OlderDraftNote
+          draftVersion={version.versionNumber}
+          currentVersion={olderThan.versionNumber}
+          canDiscard={draft.responseId === null}
+          onDiscard={onDiscardOlder}
+        />
+      )}
       {header}
       {hasFileQuestion && <div className="svc-note">{TC.staffFilesNote}</div>}
 
@@ -208,6 +261,7 @@ export const StaffCollectForm = ({
           if (partialState?.kind === 'saved') setPartialState(null);
         }}
         onSubmit={submit}
+        submitDisabled={running !== null}
         services={services}
         showWelcome={false}
         submitLabel={submitLabel ?? TC.submitResponse}
@@ -225,10 +279,10 @@ export const StaffCollectForm = ({
           <button
             type="button"
             className="btn line"
-            disabled={partialState?.kind === 'saving'}
+            disabled={running !== null}
             onClick={() => void saveIncomplete()}
           >
-            {partialState?.kind === 'saving' ? TC.savingIncomplete : TC.saveIncomplete}
+            {running === 'PARTIAL' ? TC.savingIncomplete : TC.saveIncomplete}
           </button>
         }
       />

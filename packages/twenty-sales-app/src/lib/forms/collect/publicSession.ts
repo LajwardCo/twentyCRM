@@ -9,15 +9,20 @@ import { type PublicFormState, SurveyRequestError } from '../../../api/surveys';
 
 export type PublicSession = {
   submissionKey: string;
+  // The version the submission key was made for.
+  versionNumber: number;
   answers: Record<string, unknown>;
   startedAt: number;
+  // Time spent on the form in earlier page loads (performance.now based).
+  elapsedMs: number;
   language: FormLanguage | null;
 };
 
 type KeyValueStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-export const publicSessionKey = (slug: string, versionNumber: number): string =>
-  `svc-public:${slug}:v${versionNumber}`;
+// One session per form link, whatever the version: a respondent who reloads
+// after the form was republished must not lose what they typed.
+export const publicSessionKey = (slug: string): string => `svc-public:${slug}`;
 
 const isLanguage = (value: unknown): value is FormLanguage =>
   value === 'fa' || value === 'ps' || value === 'en';
@@ -35,6 +40,7 @@ export const parsePublicSession = (raw: string | null): PublicSession | null => 
       !isPlainObject(parsed) ||
       typeof parsed.submissionKey !== 'string' ||
       !/^[0-9a-f-]{36}$/i.test(parsed.submissionKey) ||
+      typeof parsed.versionNumber !== 'number' ||
       !isPlainObject(parsed.answers) ||
       typeof parsed.startedAt !== 'number'
     ) {
@@ -43,8 +49,13 @@ export const parsePublicSession = (raw: string | null): PublicSession | null => 
 
     return {
       submissionKey: parsed.submissionKey,
+      versionNumber: parsed.versionNumber,
       answers: parsed.answers,
       startedAt: parsed.startedAt,
+      elapsedMs:
+        typeof parsed.elapsedMs === 'number' && Number.isFinite(parsed.elapsedMs) && parsed.elapsedMs >= 0
+          ? parsed.elapsedMs
+          : 0,
       language: isLanguage(parsed.language) ? parsed.language : null,
     };
   } catch {
@@ -69,6 +80,23 @@ export const loadPublicSession = (
 
   return create();
 };
+
+// A session stored before the form was republished. The server still accepts
+// the older version while the form is open, but the public endpoint only
+// serves the newest definition, so the respondent continues on the served
+// version: answers carry over by question id (the renderer and the server's
+// validation drop ids the new version no longer has), language and timing are
+// kept. The submission key is kept only when the version matches — the server
+// ties a key (and any files uploaded under it) to its version, so a republish
+// starts a new key; an upload made under the old one is re-requested if the
+// server rejects it.
+export const reconcilePublicSession = (
+  stored: PublicSession,
+  versionNumber: number,
+): PublicSession =>
+  stored.versionNumber === versionNumber
+    ? stored
+    : { ...stored, versionNumber, submissionKey: newSubmissionKey() };
 
 export const savePublicSession = (
   storage: KeyValueStorage | null,

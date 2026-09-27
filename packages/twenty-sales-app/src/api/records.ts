@@ -1837,6 +1837,7 @@ export type SearchHit = {
 export const globalSearch = async (
   searchInput: string,
   limit = 16,
+  included: string[] = ['opportunity', 'person', 'company', 'task', 'note'],
 ): Promise<SearchHit[]> => {
   const data = await coreQuery<{
     search: { edges: { node: SearchHit }[] };
@@ -1853,7 +1854,7 @@ export const globalSearch = async (
     {
       s: searchInput,
       limit,
-      included: ['opportunity', 'person', 'company', 'task', 'note'],
+      included,
     },
   );
   return data.search.edges.map((e) => e.node);

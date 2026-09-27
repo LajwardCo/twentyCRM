@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 
-import { IconChart, IconDashboard, IconSearch } from '../components/icons';
+import type { CurrentUser } from '../api/auth';
+import { IconAI, IconChart, IconDashboard, IconSearch } from '../components/icons';
+import { TAI } from '../lib/assistantStrings';
 import { toPersianDigits } from '../lib/jalali';
 import {
   CATEGORY_LABELS,
@@ -16,7 +18,9 @@ import { type ReportCategory } from '../lib/reports/types';
 // what it answers. The dashboard keeps its own card at the top -- it is a
 // summary screen, not a report, and pretending otherwise is what sent people
 // looking for numbers it never had.
-export const ReportsCatalogView = () => {
+type ReportsCatalogViewProps = { user: CurrentUser };
+
+export const ReportsCatalogView = ({ user }: ReportsCatalogViewProps) => {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ReportCategory | 'all'>('all');
 
@@ -60,6 +64,23 @@ export const ReportsCatalogView = () => {
           <small>{RT.dashboardSub}</small>
         </span>
       </button>
+
+      {/* Reads the server's AI token ledger rather than CRM records, so it
+          is a screen of its own like the dashboard. Admins only. */}
+      {user.isAdmin && (
+        <button
+          className="card card-pad rpt-dash-card anim d1"
+          onClick={() => navigate('/reports/ai-usage')}
+        >
+          <span className="rpt-dash-ico">
+            <IconAI size={20} />
+          </span>
+          <span className="rpt-dash-text">
+            <b>{TAI.usageCard}</b>
+            <small>{TAI.usageCardSub}</small>
+          </span>
+        </button>
+      )}
 
       <div className="toolbar anim d1">
         <div className="cmd-search rpt-search">

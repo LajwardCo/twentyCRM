@@ -58,10 +58,12 @@ export const createChatThread = async (): Promise<string> => {
   return data.createChatThread.id;
 };
 
+// recordId pins the chat to one lead (the lead chat screen); the standalone
+// assistant sends its records inside the text instead (lib/assistantContext).
 export const sendChatMessage = async (input: {
   threadId: string;
   text: string;
-  recordId: string;
+  recordId?: string;
 }): Promise<void> => {
   await metadataQuery(
     `mutation SendChatMessage(
@@ -84,12 +86,59 @@ export const sendChatMessage = async (input: {
       threadId: input.threadId,
       text: input.text,
       messageId: crypto.randomUUID(),
-      browsingContext: {
-        type: 'recordPage',
-        objectNameSingular: 'opportunity',
-        recordId: input.recordId,
-      },
+      browsingContext:
+        input.recordId === undefined
+          ? null
+          : {
+              type: 'recordPage',
+              objectNameSingular: 'opportunity',
+              recordId: input.recordId,
+            },
     },
+  );
+};
+
+// ---------- thread history (standalone assistant) ----------
+
+export type ChatThread = {
+  id: string;
+  title: string | null;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string | null;
+  deletedAt: string | null;
+};
+
+// Every thread of the signed-in user, most recently active first (the
+// server's order). Archived threads come back too; callers hide them.
+export const fetchChatThreads = async (): Promise<ChatThread[]> => {
+  const data = await metadataQuery<{ chatThreads: ChatThread[] }>(
+    `query ChatThreads {
+      chatThreads {
+        id
+        title
+        totalInputTokens
+        totalOutputTokens
+        createdAt
+        updatedAt
+        lastMessageAt
+        deletedAt
+      }
+    }`,
+  );
+  return data.chatThreads;
+};
+
+// Archive, not delete: the thread leaves the history list but its messages
+// and token totals stay on the server.
+export const archiveChatThread = async (id: string): Promise<void> => {
+  await metadataQuery(
+    `mutation ArchiveChatThread($id: UUID!) {
+      archiveChatThread(id: $id) { id }
+    }`,
+    { id },
   );
 };
 

@@ -6,7 +6,13 @@ import {
 import { toPersianDigits } from '../../lib/jalali';
 
 // Vertical bar chart, used for the registrations trend over time buckets.
-export const Bars = ({ series }: { series: { label: string; count: number }[] }) => {
+export const Bars = ({
+  series,
+  formatValue = toPersianDigits,
+}: {
+  series: { label: string; count: number }[];
+  formatValue?: (count: number) => string;
+}) => {
   const max = Math.max(1, ...series.map((s) => s.count));
   return (
     <div
@@ -31,7 +37,7 @@ export const Bars = ({ series }: { series: { label: string; count: number }[] })
           }}
         >
           <span className="num" style={{ fontSize: 11, fontWeight: 750 }}>
-            {s.count > 0 ? toPersianDigits(s.count) : ''}
+            {s.count > 0 ? formatValue(s.count) : ''}
           </span>
           <div
             style={{

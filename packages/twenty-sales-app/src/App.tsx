@@ -25,6 +25,8 @@ import { ContactsView } from './views/ContactsView';
 import { TagsView } from './views/TagsView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
+import { AiUsageReportView } from './views/AiUsageReportView';
+import { AssistantView } from './views/AssistantView';
 import { AuditLogView } from './views/AuditLogView';
 import { PartnersView } from './views/PartnersView';
 import { CalendarView } from './views/CalendarView';
@@ -67,6 +69,7 @@ import { ResponsesView } from './views/forms/ResponsesView';
 import { StaffCollectView } from './views/forms/StaffCollectView';
 import { VisitFlowView } from './views/forms/VisitFlowView';
 import { TSV } from './lib/forms/surveyStrings';
+import { RT } from './lib/reports';
 
 type Session =
   | { status: 'loading' }
@@ -300,6 +303,14 @@ export const App = () => {
     view = <SearchResultsView searchId={param} />;
   } else if (section === 'reports' && param === 'dashboard') {
     view = <ReportsView user={user} />;
+  } else if (section === 'reports' && param === 'ai-usage') {
+    view = <AiUsageReportView user={user} />;
+    bar = (
+      <button className="btn line sm" onClick={() => navigate('/reports')}>
+        <IconBack size={15} />
+        {RT.library}
+      </button>
+    );
   } else if (section === 'reports' && param) {
     // Keyed on the report id: filters, grouping and sort are per-report state,
     // and without a remount they would follow you from one report to the next.
@@ -307,7 +318,7 @@ export const App = () => {
   } else if (section === 'reports') {
     // The section index is the report library, not the dashboard: the
     // dashboard is one entry in it (/reports/dashboard).
-    view = <ReportsCatalogView />;
+    view = <ReportsCatalogView user={user} />;
   } else if (section === 'daily-report') {
     view = <DailyReportView user={user} />;
   } else if (section === 'competitor' && param) {
@@ -412,6 +423,8 @@ export const App = () => {
     view = <AuditLogView user={user} />;
   } else if (section === 'admin') {
     view = <AdminView user={user} />;
+  } else if (section === 'assistant') {
+    view = <AssistantView threadId={param ?? null} />;
   } else {
     view = <TodayView user={user} />;
   }

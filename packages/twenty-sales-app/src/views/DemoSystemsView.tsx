@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { listDemos, type DemoStatus } from '../api/demoSystems';
 import { IconPlus, IconPresentation } from '../components/icons';
 import { toPersianDigits } from '../lib/jalali';
+import { demoBusinessLabel } from '../lib/businessTypes';
 import { navigate } from '../lib/router';
 import { TDEMO } from '../lib/strings';
 
@@ -14,16 +15,6 @@ const STATUS_LABEL: Record<DemoStatus['status'], string> = {
   expired: TDEMO.statusExpired,
   stopped: TDEMO.statusStopped,
   deleted: TDEMO.statusDeleted,
-};
-
-const BIZ_LABEL: Record<string, string> = {
-  mobile_store: TDEMO.bizMobile,
-  home_appliances: TDEMO.bizAppliances,
-  snooker_club: TDEMO.bizSnooker,
-  car_rental: TDEMO.bizCarRental,
-  booking: TDEMO.bizBooking,
-  opd: TDEMO.bizOpd,
-  other: TDEMO.bizOther,
 };
 
 const daysLeft = (expiresAt: string | null): number | null => {
@@ -115,7 +106,7 @@ export const DemoSystemsView = () => {
                       </span>
                     </div>
                     <div className="sub" style={{ marginTop: 3 }}>
-                      {BIZ_LABEL[demo.business_type] ?? demo.business_type}
+                      {demoBusinessLabel(demo.business_type, demo.product_variant)}
                       {' · '}
                       <code dir="ltr">{demo.subdomain}</code>
                     </div>

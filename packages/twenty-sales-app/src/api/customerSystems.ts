@@ -1,3 +1,4 @@
+import type { AssemblyVariant } from '../lib/businessTypes';
 import { loadTokens } from './client';
 
 // Talks to the twenty-server proxy (/rest/sales/customer-systems/*), which
@@ -5,7 +6,7 @@ import { loadTokens } from './client';
 // real (production) sibling of api/demoSystems.ts: a system is issued for a
 // contracted lead and provisioned as a permanent standard tenant.
 
-export type SystemBusinessType = 'retail' | 'services' | 'booking' | 'general';
+export type SystemBusinessType = 'retail' | 'services' | 'booking' | 'assembly' | 'general';
 
 export type SystemUserRole =
   | 'admin'
@@ -14,7 +15,10 @@ export type SystemUserRole =
   | 'seller'
   | 'cashier'
   | 'inventory'
-  | 'inventory_manager';
+  | 'inventory_manager'
+  // Assembly systems only.
+  | 'assembly'
+  | 'purchaser_person';
 
 export type RequestedUser = {
   name: string;
@@ -35,6 +39,7 @@ export type SystemStatus = {
   status: 'queued' | 'provisioning' | 'ready' | 'failed';
   business_name: string;
   business_type: SystemBusinessType;
+  product_variant?: string;
   subdomain: string;
   workspace_url: string;
   login_url: string;
@@ -76,6 +81,8 @@ export type SubdomainCheck = {
 export type CreateSystemInput = {
   business_name: string;
   business_type: SystemBusinessType;
+  // Assembly systems only: the production style the workspace runs on.
+  product_variant?: AssemblyVariant;
   subdomain: string;
   // The contracted lead this system is issued for (required).
   crm_lead_id: string;

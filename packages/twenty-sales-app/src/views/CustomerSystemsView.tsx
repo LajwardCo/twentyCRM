@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { listSystems, type SystemStatus } from '../api/customerSystems';
 import { IconPresentation } from '../components/icons';
+import { systemBusinessLabel } from '../lib/businessTypes';
 import { navigate } from '../lib/router';
 import { TSYS } from '../lib/strings';
 
@@ -10,13 +11,6 @@ const STATUS_LABEL: Record<SystemStatus['status'], string> = {
   provisioning: TSYS.statusProvisioning,
   ready: TSYS.statusReady,
   failed: TSYS.statusFailed,
-};
-
-const BIZ_LABEL: Record<string, string> = {
-  retail: TSYS.typeRetail,
-  services: TSYS.typeServices,
-  booking: TSYS.typeBooking,
-  general: TSYS.typeGeneral,
 };
 
 export const CustomerSystemsView = () => {
@@ -94,7 +88,7 @@ export const CustomerSystemsView = () => {
                     </span>
                   </div>
                   <div className="sub" style={{ marginTop: 3 }}>
-                    {BIZ_LABEL[system.business_type] ?? system.business_type}
+                    {systemBusinessLabel(system.business_type, system.product_variant)}
                     {' · '}
                     <code dir="ltr">{system.subdomain}</code>
                     {system.crm_lead_name && (

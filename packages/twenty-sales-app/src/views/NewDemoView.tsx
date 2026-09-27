@@ -8,13 +8,27 @@ import {
   type DemoBusinessType,
 } from '../api/demoSystems';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
+import {
+  ASSEMBLY_INDUSTRIES,
+  ASSEMBLY_VARIANTS,
+  assemblyDemoType,
+  assemblyIndustryOf,
+  DEFAULT_ASSEMBLY_VARIANT,
+  demoBusinessLabel,
+  isAssemblyDemoType,
+  type AssemblyIndustry,
+  type AssemblyVariant,
+} from '../lib/businessTypes';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { TDEMO } from '../lib/strings';
+import { TASM, TDEMO } from '../lib/strings';
+
+// The assembly card stands for the three assembly industries, picked below it.
+const ASSEMBLY_CARD = 'assembly';
 
 type BusinessOption = {
-  key: DemoBusinessType;
+  key: DemoBusinessType | typeof ASSEMBLY_CARD;
   label: string;
   desc: string;
   emoji: string;
@@ -27,6 +41,7 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: 'car_rental', label: TDEMO.bizCarRental, desc: TDEMO.bizCarRentalDesc, emoji: '🚗' },
   { key: 'booking', label: TDEMO.bizBooking, desc: TDEMO.bizBookingDesc, emoji: '📅' },
   { key: 'opd', label: TDEMO.bizOpd, desc: TDEMO.bizOpdDesc, emoji: '🩺' },
+  { key: ASSEMBLY_CARD, label: TASM.assembly, desc: TASM.assemblyDesc, emoji: '🏭' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
 
@@ -34,7 +49,10 @@ const CURRENCIES = ['AFN', 'USD'];
 
 // Business types that ship a rich demo dataset (custom fields, images,
 // storefront, branding, documents) whose pieces the agent can toggle.
-const RICH_DEMO_TYPES: DemoBusinessType[] = ['mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'booking', 'opd'];
+const RICH_DEMO_TYPES: DemoBusinessType[] = [
+  'mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'booking', 'opd',
+  'assembly_furniture', 'assembly_carton', 'assembly_doors',
+];
 // A clinic has no online store, and its sample "documents" are patient visits.
 const CLINIC_DEMO_TYPES: DemoBusinessType[] = ['opd'];
 const LANGUAGES: { code: string; label: string }[] = [
@@ -82,6 +100,9 @@ export const NewDemoView = () => {
 
   const [businessType, setBusinessType] = useState<DemoBusinessType>('mobile_store');
   const isClinic = CLINIC_DEMO_TYPES.includes(businessType);
+  const isAssembly = isAssemblyDemoType(businessType);
+  const [assemblyIndustry, setAssemblyIndustry] = useState<AssemblyIndustry>('furniture');
+  const [assemblyVariant, setAssemblyVariant] = useState<AssemblyVariant>(DEFAULT_ASSEMBLY_VARIANT);
   const [businessName, setBusinessName] = useState('');
   const [subdomain, setSubdomain] = useState('');
   const [checkState, setCheckState] = useState<CheckState>('idle');
@@ -112,6 +133,14 @@ export const NewDemoView = () => {
   }, []);
 
   const preview = useMemo(() => previewSubdomain(subdomain), [subdomain]);
+
+  const pickBusiness = (key: BusinessOption['key']) =>
+    setBusinessType(key === ASSEMBLY_CARD ? assemblyDemoType(assemblyIndustry) : key);
+
+  const pickIndustry = (industry: AssemblyIndustry) => {
+    setAssemblyIndustry(industry);
+    setBusinessType(assemblyDemoType(industry));
+  };
   const durationDays = useMemo(() => daysFromKey(expiryDate), [expiryDate]);
 
   // Read a chosen image as a data URL for the custom login logo/background.
@@ -184,7 +213,9 @@ export const NewDemoView = () => {
       subdomain: subdomain.trim(),
       language,
       currency,
-      inventory_enabled: inventoryEnabled,
+      // Production consumes stock, so an assembly demo always has inventory.
+      inventory_enabled: isAssembly || inventoryEnabled,
+      ...(isAssembly ? { product_variant: assemblyVariant } : {}),
       notes: notes.trim(),
       duration_days: durationDays,
       agreement_accepted: agreementAccepted,
@@ -243,8 +274,10 @@ export const NewDemoView = () => {
                 <button
                   type="button"
                   key={opt.key}
-                  className={`demo-biz-card ${businessType === opt.key ? 'selected' : ''}`}
-                  onClick={() => setBusinessType(opt.key)}
+                  className={`demo-biz-card ${
+                    (opt.key === ASSEMBLY_CARD ? isAssembly : businessType === opt.key) ? 'selected' : ''
+                  }`}
+                  onClick={() => pickBusiness(opt.key)}
                 >
                   <span className="demo-biz-emoji">{opt.emoji}</span>
                   <span className="demo-biz-label">{opt.label}</span>
@@ -252,6 +285,46 @@ export const NewDemoView = () => {
                 </button>
               ))}
             </div>
+            {isAssembly && (
+              <>
+                <div className="fld" style={{ marginTop: 14 }}>
+                  <label>{TASM.industryTitle}</label>
+                  <div className="demo-chip-row">
+                    {ASSEMBLY_INDUSTRIES.map((industry) => (
+                      <button
+                        type="button"
+                        key={industry.key}
+                        className={`demo-chip ${assemblyIndustryOf(businessType) === industry.key ? 'selected' : ''}`}
+                        onClick={() => pickIndustry(industry.key)}
+                      >
+                        {industry.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="demo-sub-hint">
+                    {ASSEMBLY_INDUSTRIES.find((industry) => industry.key === assemblyIndustry)?.desc}
+                  </div>
+                </div>
+                <div className="fld" style={{ marginBottom: 0 }}>
+                  <label>{TASM.variantTitle}</label>
+                  <div className="demo-chip-row">
+                    {ASSEMBLY_VARIANTS.map((variant) => (
+                      <button
+                        type="button"
+                        key={variant.key}
+                        className={`demo-chip ${assemblyVariant === variant.key ? 'selected' : ''}`}
+                        onClick={() => setAssemblyVariant(variant.key)}
+                      >
+                        {variant.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="demo-sub-hint">
+                    {ASSEMBLY_VARIANTS.find((variant) => variant.key === assemblyVariant)?.desc}
+                  </div>
+                </div>
+              </>
+            )}
             <div className="fld" style={{ marginTop: 14, marginBottom: 0 }}>
               <label htmlFor="demo-name">{TDEMO.businessName} *</label>
               <input
@@ -307,8 +380,10 @@ export const NewDemoView = () => {
                 </select>
               </div>
             </div>
-            {/* A clinic keeps no stock (Core provisions OPD without inventory). */}
-            {!isClinic && (
+            {/* A clinic keeps no stock (Core provisions OPD without inventory); a
+                manufacturer always does. */}
+            {isAssembly && <div className="demo-sub-hint">{TASM.inventoryIncluded}</div>}
+            {!isClinic && !isAssembly && (
               <label className="demo-check-row" style={{ marginBottom: 0 }}>
                 <input
                   type="checkbox"
@@ -374,7 +449,7 @@ export const NewDemoView = () => {
                 <label className="demo-check-row demo-toggle" style={{ marginBottom: 0 }}>
                   <input type="checkbox" checked={seedDocuments} onChange={(e) => setSeedDocuments(e.target.checked)} />
                   <span>
-                    {isClinic ? TDEMO.optClinicVisits : TDEMO.optDocuments}
+                    {isClinic ? TDEMO.optClinicVisits : isAssembly ? TASM.optDocuments : TDEMO.optDocuments}
                   </span>
                 </label>
               </div>
@@ -443,7 +518,7 @@ export const NewDemoView = () => {
             </label>
 
             <div className="demo-review">
-              <div><span>{TDEMO.businessType}</span><b>{BUSINESS_OPTIONS.find((o) => o.key === businessType)?.label}</b></div>
+              <div><span>{TDEMO.businessType}</span><b>{demoBusinessLabel(businessType, isAssembly ? assemblyVariant : null)}</b></div>
               <div><span>{TDEMO.businessName}</span><b>{businessName}</b></div>
               <div><span>{TDEMO.subdomain}</span><b dir="ltr">{preview}</b></div>
               <div><span>{TDEMO.duration}</span><b>{toPersianDigits(String(durationDays))} {TDEMO.daysLeft}</b></div>

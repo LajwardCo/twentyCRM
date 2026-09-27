@@ -1,3 +1,4 @@
+import type { AssemblyVariant } from '../lib/businessTypes';
 import { loadTokens } from './client';
 
 // Talks to the twenty-server proxy (/rest/sales/demo-systems/*), which forwards
@@ -11,6 +12,9 @@ export type DemoBusinessType =
   | 'car_rental'
   | 'booking'
   | 'opd'
+  | 'assembly_furniture'
+  | 'assembly_carton'
+  | 'assembly_doors'
   | 'other';
 
 export type DemoStatus = {
@@ -18,6 +22,8 @@ export type DemoStatus = {
   status: 'queued' | 'provisioning' | 'ready' | 'failed' | 'expired' | 'stopped' | 'deleted';
   business_name: string;
   business_type: DemoBusinessType;
+  // Assembly demos only: assembly | assembly_mts | assembly_mto.
+  product_variant?: string;
   subdomain: string;
   workspace_url: string;
   login_url: string;
@@ -46,6 +52,8 @@ export type SubdomainCheck = {
 export type CreateDemoInput = {
   business_name: string;
   business_type: DemoBusinessType;
+  // Assembly demos only: the production style the workspace runs on.
+  product_variant?: AssemblyVariant;
   subdomain: string;
   language: string;
   currency: string;
@@ -159,6 +167,9 @@ export type DemoDetails = {
     services: number | null;
     doctors?: number | null;
     patients?: number | null;
+    // Assembly demos: seeded bills of materials and production orders.
+    boms?: number | null;
+    builds?: number | null;
   } | null;
 };
 

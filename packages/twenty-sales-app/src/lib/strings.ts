@@ -1232,6 +1232,32 @@ export const T19 = {
 };
 
 // --- demo systems (نسخه نمایشی) ---
+// Assembly (manufacturing) demos and customer systems share these labels.
+export const TASM = {
+  assembly: 'مونتاژ / تولید',
+  assemblyDesc: 'فهرست مواد (BOM)، سفارش تولید و کارگاه',
+  industryTitle: 'صنعت نمونه',
+  industryFurniture: 'مبل و فرنیچر',
+  industryFurnitureDesc: 'مبل، الماری، میز و تخت',
+  industryCarton: 'کارتن و بسته‌بندی',
+  industryCartonDesc: 'کارتن‌های حمل و جعبه‌های چاپی',
+  industryDoors: 'درب و پنجره',
+  industryDoorsDesc: 'یو‌پی‌وی‌سی و المونیم',
+  variantTitle: 'نوع تولید',
+  variantGeneral: 'عمومی',
+  variantGeneralDesc: 'تولید برای انبار و تولید سفارشی',
+  variantMts: 'تولید برای انبار (MTS)',
+  variantMtsDesc: 'تولید پیش از سفارش و نگهداری در انبار',
+  variantMto: 'تولید سفارشی (MTO)',
+  variantMtoDesc: 'تولید پس از دریافت سفارش مشتری',
+  inventoryIncluded: 'انبار برای سیستم تولیدی همیشه فعال است',
+  optDocuments: 'سفارش‌های تولید، سفارش مشتری و فروش نمونه',
+  boms: 'فهرست مواد (BOM)',
+  builds: 'سفارش‌های تولید',
+  roleAssembly: 'مسئول تولید',
+  rolePurchaser: 'مسئول خرید',
+};
+
 export const TDEMO = {
   navDemos: 'سیستم‌های نمایشی',
   pageTitle: 'سیستم‌های نمایشی',

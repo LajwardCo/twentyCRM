@@ -15,9 +15,16 @@ import {
   initialModuleFlags,
   moduleFlagsPayload,
 } from '../lib/customerSystemModules';
+import {
+  ASSEMBLY_VARIANTS,
+  DEFAULT_ASSEMBLY_VARIANT,
+  isRoleAvailableFor,
+  systemBusinessLabel,
+  type AssemblyVariant,
+} from '../lib/businessTypes';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { navigate, useRoute } from '../lib/router';
-import { TSYS } from '../lib/strings';
+import { TASM, TSYS } from '../lib/strings';
 
 type TypeOption = { key: SystemBusinessType; label: string; desc: string; emoji: string };
 
@@ -25,6 +32,7 @@ const TYPE_OPTIONS: TypeOption[] = [
   { key: 'retail', label: TSYS.typeRetail, desc: TSYS.typeRetailDesc, emoji: '🏬' },
   { key: 'services', label: TSYS.typeServices, desc: TSYS.typeServicesDesc, emoji: '🧾' },
   { key: 'booking', label: TSYS.typeBooking, desc: TSYS.typeBookingDesc, emoji: '📅' },
+  { key: 'assembly', label: TASM.assembly, desc: TASM.assemblyDesc, emoji: '🏭' },
   { key: 'general', label: TSYS.typeGeneral, desc: TSYS.typeGeneralDesc, emoji: '🏢' },
 ];
 
@@ -42,6 +50,8 @@ const ROLE_OPTIONS: { value: SystemUserRole; label: string }[] = [
   { value: 'manager', label: TSYS.roleManager },
   { value: 'inventory', label: TSYS.roleInventory },
   { value: 'inventory_manager', label: TSYS.roleInventoryManager },
+  { value: 'assembly', label: TASM.roleAssembly },
+  { value: 'purchaser_person', label: TASM.rolePurchaser },
   { value: 'admin', label: TSYS.roleAdmin },
 ];
 
@@ -90,6 +100,8 @@ export const NewCustomerSystemView = () => {
   const [language, setLanguage] = useState('fa');
   const [currency, setCurrency] = useState('AFN');
   const [inventoryEnabled, setInventoryEnabled] = useState(true);
+  const [assemblyVariant, setAssemblyVariant] = useState<AssemblyVariant>(DEFAULT_ASSEMBLY_VARIANT);
+  const isAssembly = businessType === 'assembly';
   const [multiInventory, setMultiInventory] = useState(true);
   const [multiCurrency, setMultiCurrency] = useState(true);
   const [multiLot, setMultiLot] = useState(true);
@@ -177,6 +189,15 @@ export const NewCustomerSystemView = () => {
     return () => window.clearTimeout(checkTimer.current);
   }, [subdomain, preview]);
 
+  // Users already added keep working: a role the new type has no group for
+  // falls back to seller.
+  const pickType = (type: SystemBusinessType) => {
+    setBusinessType(type);
+    setUsers((prev) =>
+      prev.map((user) => (isRoleAvailableFor(type, user.role) ? user : { ...user, role: 'seller' })),
+    );
+  };
+
   const addUser = () =>
     setUsers((prev) => [...prev, { name: '', phone: '', login_username: '', role: 'seller' }]);
   const updateUser = (index: number, patch: Partial<RequestedUser>) =>
@@ -215,7 +236,9 @@ export const NewCustomerSystemView = () => {
       ...(usystemsContactId ? { usystems_contact_id: usystemsContactId } : {}),
       language,
       currency,
-      inventory_enabled: inventoryEnabled,
+      // Production consumes stock, so an assembly system always has inventory.
+      inventory_enabled: isAssembly || inventoryEnabled,
+      ...(isAssembly ? { product_variant: assemblyVariant } : {}),
       notes: notes.trim(),
       admin_username: adminUsername.trim() || 'admin',
       multi_inventory: multiInventory,
@@ -290,7 +313,7 @@ export const NewCustomerSystemView = () => {
                   type="button"
                   key={opt.key}
                   className={`demo-biz-card ${businessType === opt.key ? 'selected' : ''}`}
-                  onClick={() => setBusinessType(opt.key)}
+                  onClick={() => pickType(opt.key)}
                 >
                   <span className="demo-biz-emoji">{opt.emoji}</span>
                   <span className="demo-biz-label">{opt.label}</span>
@@ -298,6 +321,26 @@ export const NewCustomerSystemView = () => {
                 </button>
               ))}
             </div>
+            {isAssembly && (
+              <div className="fld" style={{ marginTop: 14, marginBottom: 0 }}>
+                <label>{TASM.variantTitle}</label>
+                <div className="demo-chip-row">
+                  {ASSEMBLY_VARIANTS.map((variant) => (
+                    <button
+                      type="button"
+                      key={variant.key}
+                      className={`demo-chip ${assemblyVariant === variant.key ? 'selected' : ''}`}
+                      onClick={() => setAssemblyVariant(variant.key)}
+                    >
+                      {variant.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="demo-sub-hint">
+                  {ASSEMBLY_VARIANTS.find((variant) => variant.key === assemblyVariant)?.desc}
+                </div>
+              </div>
+            )}
             <div className="fld" style={{ marginTop: 14 }}>
               <label htmlFor="sys-name">{TSYS.businessName} *</label>
               <input
@@ -350,13 +393,17 @@ export const NewCustomerSystemView = () => {
                 </select>
               </div>
             </div>
-            <label className="demo-check-row">
-              <input type="checkbox" checked={inventoryEnabled} onChange={(e) => setInventoryEnabled(e.target.checked)} />
-              <span>
-                {TSYS.inventory}
-                <span className="demo-check-hint">{TSYS.inventoryHint}</span>
-              </span>
-            </label>
+            {isAssembly ? (
+              <div className="demo-sub-hint">{TASM.inventoryIncluded}</div>
+            ) : (
+              <label className="demo-check-row">
+                <input type="checkbox" checked={inventoryEnabled} onChange={(e) => setInventoryEnabled(e.target.checked)} />
+                <span>
+                  {TSYS.inventory}
+                  <span className="demo-check-hint">{TSYS.inventoryHint}</span>
+                </span>
+              </label>
+            )}
 
             <div className="demo-content-toggles">
               <div className="demo-toggles-title">{TSYS.capabilitiesTitle}</div>
@@ -477,7 +524,7 @@ export const NewCustomerSystemView = () => {
                   <div className="fld">
                     <label>{TSYS.userRole}</label>
                     <select value={user.role} onChange={(e) => updateUser(index, { role: e.target.value as SystemUserRole })}>
-                      {ROLE_OPTIONS.map((r) => (
+                      {ROLE_OPTIONS.filter((r) => isRoleAvailableFor(businessType, r.value)).map((r) => (
                         <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>
@@ -507,7 +554,7 @@ export const NewCustomerSystemView = () => {
             <legend>{TSYS.step5}</legend>
             <div className="demo-review">
               <div><span>{TSYS.forLeadLabel}</span><b>{leadName || companyName || '—'}</b></div>
-              <div><span>{TSYS.customerType}</span><b>{TYPE_OPTIONS.find((o) => o.key === businessType)?.label}</b></div>
+              <div><span>{TSYS.customerType}</span><b>{systemBusinessLabel(businessType, isAssembly ? assemblyVariant : null)}</b></div>
               <div><span>{TSYS.businessName}</span><b>{businessName}</b></div>
               <div><span>{TSYS.subdomain}</span><b dir="ltr">{preview}</b></div>
               <div><span>{TSYS.currency}</span><b>{currency}</b></div>

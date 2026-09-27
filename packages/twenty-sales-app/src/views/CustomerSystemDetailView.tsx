@@ -8,16 +8,10 @@ import {
   type SystemStatus,
 } from '../api/customerSystems';
 import { IconPresentation } from '../components/icons';
+import { systemBusinessLabel } from '../lib/businessTypes';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { TSYS } from '../lib/strings';
-
-const BIZ_LABEL: Record<string, string> = {
-  retail: TSYS.typeRetail,
-  services: TSYS.typeServices,
-  booking: TSYS.typeBooking,
-  general: TSYS.typeGeneral,
-};
+import { TASM, TSYS } from '../lib/strings';
 
 const STATUS_LABEL: Record<SystemStatus['status'], string> = {
   queued: TSYS.statusQueued,
@@ -34,6 +28,8 @@ const ROLE_LABEL: Record<string, string> = {
   cashier: TSYS.roleCashier,
   inventory: TSYS.roleInventory,
   inventory_manager: TSYS.roleInventoryManager,
+  assembly: TASM.roleAssembly,
+  purchaser_person: TASM.rolePurchaser,
 };
 
 const CopyRow = ({ label, value }: { label: string; value: string }) => {
@@ -142,7 +138,7 @@ export const CustomerSystemDetailView = ({ systemId }: { systemId: string }) => 
         <div>
           <h1>{system.business_name}</h1>
           <div className="sub">
-            {BIZ_LABEL[system.business_type] ?? system.business_type}
+            {systemBusinessLabel(system.business_type, system.product_variant)}
             {' · '}
             <span className={`demo-status-badge s-${system.status}`}>{STATUS_LABEL[system.status]}</span>
             {system.crm_lead_name && (

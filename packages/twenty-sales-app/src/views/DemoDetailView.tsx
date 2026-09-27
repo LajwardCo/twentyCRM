@@ -11,18 +11,9 @@ import {
 } from '../api/demoSystems';
 import { IconPresentation } from '../components/icons';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
+import { demoBusinessLabel } from '../lib/businessTypes';
 import { navigate } from '../lib/router';
-import { TDEMO } from '../lib/strings';
-
-const BIZ_LABEL: Record<string, string> = {
-  mobile_store: TDEMO.bizMobile,
-  home_appliances: TDEMO.bizAppliances,
-  snooker_club: TDEMO.bizSnooker,
-  car_rental: TDEMO.bizCarRental,
-  booking: TDEMO.bizBooking,
-  opd: TDEMO.bizOpd,
-  other: TDEMO.bizOther,
-};
+import { TASM, TDEMO } from '../lib/strings';
 
 // Core seeds an OPD demo's doctor under this login, sharing the admin password.
 const OPD_DOCTOR_USERNAME = 'doctor';
@@ -185,7 +176,7 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
             <span className="demo-status-badge s-demo">{TDEMO.demoBadge}</span>
           </h1>
           <div className="sub">
-            {BIZ_LABEL[demo.business_type] ?? demo.business_type}
+            {demoBusinessLabel(demo.business_type, demo.product_variant)}
             {' · '}
             <span className={`demo-status-badge s-${demo.status}`}>
               {STATUS_LABEL[demo.status]}
@@ -316,6 +307,18 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
                       <div>
                         <span>{TDEMO.patients}</span>
                         <b>{toPersianDigits(String(details.catalog.patients))}</b>
+                      </div>
+                    )}
+                    {details.catalog.boms != null && (
+                      <div>
+                        <span>{TASM.boms}</span>
+                        <b>{toPersianDigits(String(details.catalog.boms))}</b>
+                      </div>
+                    )}
+                    {details.catalog.builds != null && (
+                      <div>
+                        <span>{TASM.builds}</span>
+                        <b>{toPersianDigits(String(details.catalog.builds))}</b>
                       </div>
                     )}
                   </>

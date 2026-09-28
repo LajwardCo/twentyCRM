@@ -11,7 +11,7 @@ import { IconPresentation } from '../components/icons';
 import { systemBusinessLabel } from '../lib/businessTypes';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { TASM, TSYS } from '../lib/strings';
+import { TASM, TDATA, TSYS } from '../lib/strings';
 
 const STATUS_LABEL: Record<SystemStatus['status'], string> = {
   queued: TSYS.statusQueued,
@@ -139,6 +139,7 @@ export const CustomerSystemDetailView = ({ systemId }: { systemId: string }) => 
           <h1>{system.business_name}</h1>
           <div className="sub">
             {systemBusinessLabel(system.business_type, system.product_variant)}
+            {system.sample_data === false && ` · ${TDATA.clean}`}
             {' · '}
             <span className={`demo-status-badge s-${system.status}`}>{STATUS_LABEL[system.status]}</span>
             {system.crm_lead_name && (

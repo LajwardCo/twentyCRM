@@ -13,7 +13,7 @@ import { IconPresentation } from '../components/icons';
 import { formatJalaliDate, toPersianDigits } from '../lib/jalali';
 import { demoBusinessLabel } from '../lib/businessTypes';
 import { navigate } from '../lib/router';
-import { TASM, TDEMO } from '../lib/strings';
+import { TASM, TDATA, TDEMO } from '../lib/strings';
 
 // Core seeds an OPD demo's doctor under this login, sharing the admin password.
 const OPD_DOCTOR_USERNAME = 'doctor';
@@ -177,6 +177,7 @@ export const DemoDetailView = ({ demoId }: { demoId: string }) => {
           </h1>
           <div className="sub">
             {demoBusinessLabel(demo.business_type, demo.product_variant)}
+            {demo.sample_data === false && ` · ${TDATA.clean}`}
             {' · '}
             <span className={`demo-status-badge s-${demo.status}`}>
               {STATUS_LABEL[demo.status]}

@@ -24,7 +24,8 @@ import {
 } from '../lib/businessTypes';
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { navigate, useRoute } from '../lib/router';
-import { TASM, TSYS } from '../lib/strings';
+import { SampleDataChoice, sampleDataLabel } from '../components/SampleDataChoice';
+import { TASM, TDATA, TFUEL, TSYS } from '../lib/strings';
 
 type TypeOption = { key: SystemBusinessType; label: string; desc: string; emoji: string };
 
@@ -33,6 +34,8 @@ const TYPE_OPTIONS: TypeOption[] = [
   { key: 'services', label: TSYS.typeServices, desc: TSYS.typeServicesDesc, emoji: '🧾' },
   { key: 'booking', label: TSYS.typeBooking, desc: TSYS.typeBookingDesc, emoji: '📅' },
   { key: 'assembly', label: TASM.assembly, desc: TASM.assemblyDesc, emoji: '🏭' },
+  { key: 'oil_and_gas', label: TFUEL.oilGas, desc: TFUEL.oilGasDesc, emoji: '🛢️' },
+  { key: 'gas_station', label: TFUEL.station, desc: TFUEL.stationDesc, emoji: '⛽' },
   { key: 'general', label: TSYS.typeGeneral, desc: TSYS.typeGeneralDesc, emoji: '🏢' },
 ];
 
@@ -100,6 +103,8 @@ export const NewCustomerSystemView = () => {
   const [language, setLanguage] = useState('fa');
   const [currency, setCurrency] = useState('AFN');
   const [inventoryEnabled, setInventoryEnabled] = useState(true);
+  // No default: the agent must say whether the system gets sample data.
+  const [sampleData, setSampleData] = useState<boolean | null>(null);
   const [assemblyVariant, setAssemblyVariant] = useState<AssemblyVariant>(DEFAULT_ASSEMBLY_VARIANT);
   const isAssembly = businessType === 'assembly';
   const [multiInventory, setMultiInventory] = useState(true);
@@ -206,7 +211,9 @@ export const NewCustomerSystemView = () => {
     setUsers((prev) => prev.filter((_, i) => i !== index));
 
   const canNext = (): boolean => {
-    if (step === 1) return businessName.trim().length > 0 && preview.length > 0 && checkState !== 'taken';
+    if (step === 1) {
+      return businessName.trim().length > 0 && preview.length > 0 && checkState !== 'taken' && sampleData !== null;
+    }
     if (step === 4) return users.every((u) => u.name.trim().length > 0);
     return true;
   };
@@ -238,6 +245,7 @@ export const NewCustomerSystemView = () => {
       currency,
       // Production consumes stock, so an assembly system always has inventory.
       inventory_enabled: isAssembly || inventoryEnabled,
+      sample_data: sampleData !== false,
       ...(isAssembly ? { product_variant: assemblyVariant } : {}),
       notes: notes.trim(),
       admin_username: adminUsername.trim() || 'admin',
@@ -369,6 +377,7 @@ export const NewCustomerSystemView = () => {
                 </div>
               )}
             </div>
+            <SampleDataChoice value={sampleData} onChange={setSampleData} withDataDesc={TDATA.withDataSystemDesc} />
           </div>
         )}
 
@@ -556,6 +565,7 @@ export const NewCustomerSystemView = () => {
               <div><span>{TSYS.forLeadLabel}</span><b>{leadName || companyName || '—'}</b></div>
               <div><span>{TSYS.customerType}</span><b>{systemBusinessLabel(businessType, isAssembly ? assemblyVariant : null)}</b></div>
               <div><span>{TSYS.businessName}</span><b>{businessName}</b></div>
+              <div><span>{TDATA.question}</span><b>{sampleDataLabel(sampleData)}</b></div>
               <div><span>{TSYS.subdomain}</span><b dir="ltr">{preview}</b></div>
               <div><span>{TSYS.currency}</span><b>{currency}</b></div>
               <div><span>{TSYS.adminUsername}</span><b dir="ltr">{adminUsername || 'admin'}</b></div>

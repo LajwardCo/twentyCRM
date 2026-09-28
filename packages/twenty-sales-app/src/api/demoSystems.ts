@@ -15,6 +15,8 @@ export type DemoBusinessType =
   | 'assembly_furniture'
   | 'assembly_carton'
   | 'assembly_doors'
+  | 'oil_and_gas'
+  | 'gas_station'
   | 'other';
 
 export type DemoStatus = {
@@ -34,6 +36,8 @@ export type DemoStatus = {
   language: string;
   currency: string;
   inventory_enabled: boolean;
+  // false => a clean system (setup only). Older demos predate the flag.
+  sample_data?: boolean;
   duration_days: number;
   expires_at: string | null;
   auto_delete_at: string | null;
@@ -61,6 +65,9 @@ export type CreateDemoInput = {
   notes: string;
   duration_days: number;
   agreement_accepted: boolean;
+  // The agent's answer to "create with sample data?". false => setup only: no
+  // catalog, documents or demo extras.
+  sample_data: boolean;
   // Demo-content toggles (rich business types only, e.g. mobile store).
   enable_storefront?: boolean;
   enable_logo?: boolean;

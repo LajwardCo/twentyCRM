@@ -8,6 +8,7 @@ import {
   type DemoBusinessType,
 } from '../api/demoSystems';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
+import { SampleDataChoice, sampleDataLabel } from '../components/SampleDataChoice';
 import {
   ASSEMBLY_INDUSTRIES,
   ASSEMBLY_VARIANTS,
@@ -22,7 +23,7 @@ import {
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { TASM, TDEMO } from '../lib/strings';
+import { TASM, TDATA, TDEMO, TFUEL } from '../lib/strings';
 
 // The assembly card stands for the three assembly industries, picked below it.
 const ASSEMBLY_CARD = 'assembly';
@@ -42,6 +43,8 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: 'booking', label: TDEMO.bizBooking, desc: TDEMO.bizBookingDesc, emoji: '📅' },
   { key: 'opd', label: TDEMO.bizOpd, desc: TDEMO.bizOpdDesc, emoji: '🩺' },
   { key: ASSEMBLY_CARD, label: TASM.assembly, desc: TASM.assemblyDesc, emoji: '🏭' },
+  { key: 'oil_and_gas', label: TFUEL.oilGas, desc: TFUEL.oilGasDesc, emoji: '🛢️' },
+  { key: 'gas_station', label: TFUEL.station, desc: TFUEL.stationDesc, emoji: '⛽' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
 
@@ -51,7 +54,7 @@ const CURRENCIES = ['AFN', 'USD'];
 // storefront, branding, documents) whose pieces the agent can toggle.
 const RICH_DEMO_TYPES: DemoBusinessType[] = [
   'mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'booking', 'opd',
-  'assembly_furniture', 'assembly_carton', 'assembly_doors',
+  'assembly_furniture', 'assembly_carton', 'assembly_doors', 'oil_and_gas', 'gas_station',
 ];
 // A clinic has no online store, and its sample "documents" are patient visits.
 const CLINIC_DEMO_TYPES: DemoBusinessType[] = ['opd'];
@@ -109,6 +112,8 @@ export const NewDemoView = () => {
   const [language, setLanguage] = useState('fa');
   const [currency, setCurrency] = useState('AFN');
   const [inventoryEnabled, setInventoryEnabled] = useState(true);
+  // No default: the agent must say whether the demo gets sample data.
+  const [sampleData, setSampleData] = useState<boolean | null>(null);
   const [enableStorefront, setEnableStorefront] = useState(true);
   const [enableLogo, setEnableLogo] = useState(true);
   const [enableBackground, setEnableBackground] = useState(true);
@@ -180,7 +185,7 @@ export const NewDemoView = () => {
   }, [subdomain, preview]);
 
   const canNext = (): boolean => {
-    if (step === 1) return businessName.trim().length > 0;
+    if (step === 1) return businessName.trim().length > 0 && sampleData !== null;
     if (step === 2) return preview.length > 0 && checkState !== 'taken';
     if (step === 3) return durationDays >= 1;
     if (step === 4) return agreementAccepted;
@@ -190,6 +195,7 @@ export const NewDemoView = () => {
   const goNext = () => {
     setError(null);
     if (!canNext()) {
+      if (step === 1 && sampleData === null) setError(TDATA.required);
       if (step === 4 && !agreementAccepted) setError(TDEMO.agreementRequired);
       return;
     }
@@ -219,6 +225,7 @@ export const NewDemoView = () => {
       notes: notes.trim(),
       duration_days: durationDays,
       agreement_accepted: agreementAccepted,
+      sample_data: sampleData !== false,
       enable_storefront: enableStorefront,
       enable_logo: enableLogo,
       enable_background: enableBackground,
@@ -335,6 +342,7 @@ export const NewDemoView = () => {
                 onChange={(e) => setBusinessName(e.target.value)}
               />
             </div>
+            <SampleDataChoice value={sampleData} onChange={setSampleData} withDataDesc={TDATA.withDataDemoDesc} />
           </div>
         )}
 
@@ -429,7 +437,8 @@ export const NewDemoView = () => {
               </div>
             </div>
 
-            {RICH_DEMO_TYPES.includes(businessType) && (
+            {/* The content toggles decorate the sample catalog; a clean demo has none. */}
+            {sampleData !== false && RICH_DEMO_TYPES.includes(businessType) && (
               <div className="demo-content-toggles">
                 <div className="demo-toggles-title">{TDEMO.demoContentTitle}</div>
                 {!isClinic && (
@@ -520,6 +529,7 @@ export const NewDemoView = () => {
             <div className="demo-review">
               <div><span>{TDEMO.businessType}</span><b>{demoBusinessLabel(businessType, isAssembly ? assemblyVariant : null)}</b></div>
               <div><span>{TDEMO.businessName}</span><b>{businessName}</b></div>
+              <div><span>{TDATA.question}</span><b>{sampleDataLabel(sampleData)}</b></div>
               <div><span>{TDEMO.subdomain}</span><b dir="ltr">{preview}</b></div>
               <div><span>{TDEMO.duration}</span><b>{toPersianDigits(String(durationDays))} {TDEMO.daysLeft}</b></div>
               <div><span>{TDEMO.currency}</span><b>{currency}</b></div>

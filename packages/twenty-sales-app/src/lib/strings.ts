@@ -1258,6 +1258,29 @@ export const TASM = {
   rolePurchaser: 'مسئول خرید',
 };
 
+// Fuel businesses (demos and customer systems): each runs on its own product.
+export const TFUEL = {
+  oilGas: 'تیل و گاز',
+  oilGasDesc: 'خرید به تن، فروش به لیتر با ضریب تبدیل هر محموله',
+  station: 'تانک تیل (پمپ استیشن)',
+  stationDesc: 'صندوق فروش سریع پترول، دیزل، گاز و روغنیات',
+};
+
+// "Should the system be created with sample data?" — asked in both wizards,
+// with no default: the agent must answer.
+export const TDATA = {
+  question: 'اطلاعات نمونه',
+  questionHint: 'آیا سیستم با اطلاعات نمونه ساخته شود؟',
+  withData: 'با اطلاعات نمونه',
+  withDataDemoDesc: 'محصولات، مشتریان، فروش‌ها و اسناد نمونه — آماده برای ارائه',
+  withDataSystemDesc: 'محصولات اولیه و اسناد نمونه برای آموزش کاربران',
+  clean: 'سیستم خالی',
+  cleanDesc: 'فقط تنظیمات پایه (سرفصل حساب‌ها، واحدها، انبار) — بدون اسناد نمونه',
+  required: 'لطفاً مشخص کنید سیستم با اطلاعات نمونه ساخته شود یا خالی',
+  yes: 'بله',
+  no: 'خیر، سیستم خالی',
+};
+
 export const TDEMO = {
   navDemos: 'سیستم‌های نمایشی',
   pageTitle: 'سیستم‌های نمایشی',

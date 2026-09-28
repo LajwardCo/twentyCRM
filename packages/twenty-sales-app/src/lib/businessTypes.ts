@@ -1,6 +1,6 @@
 import type { DemoBusinessType } from '../api/demoSystems';
 import type { SystemBusinessType, SystemUserRole } from '../api/customerSystems';
-import { TASM, TDEMO, TSYS } from './strings';
+import { TASM, TDEMO, TFUEL, TSYS } from './strings';
 
 // Assembly (manufacturing) tenants run on one of three product variants; the
 // platform treats them alike, the variant only fixes the production style the
@@ -40,6 +40,8 @@ const DEMO_LABELS: Record<string, string> = {
   car_rental: TDEMO.bizCarRental,
   booking: TDEMO.bizBooking,
   opd: TDEMO.bizOpd,
+  oil_and_gas: TFUEL.oilGas,
+  gas_station: TFUEL.station,
   other: TDEMO.bizOther,
 };
 
@@ -48,6 +50,8 @@ const SYSTEM_LABELS: Record<SystemBusinessType, string> = {
   services: TSYS.typeServices,
   booking: TSYS.typeBooking,
   assembly: TASM.assembly,
+  oil_and_gas: TFUEL.oilGas,
+  gas_station: TFUEL.station,
   general: TSYS.typeGeneral,
 };
 

@@ -8,7 +8,7 @@ import {
   isRoleAvailableFor,
   systemBusinessLabel,
 } from './businessTypes';
-import { TASM, TDEMO, TSYS } from './strings';
+import { TASM, TDEMO, TFUEL, TSYS } from './strings';
 
 describe('assembly business types', () => {
   it('should map each industry to its demo business type and back', () => {
@@ -50,5 +50,22 @@ describe('customer-system roles', () => {
     expect(isRoleAvailableFor('assembly', 'cashier')).toBe(false);
     expect(isRoleAvailableFor('retail', 'cashier')).toBe(true);
     expect(isRoleAvailableFor('assembly', 'seller')).toBe(true);
+  });
+});
+
+describe('fuel business types', () => {
+  it('should label the oil & gas and station demos', () => {
+    expect(demoBusinessLabel('oil_and_gas')).toBe(TFUEL.oilGas);
+    expect(demoBusinessLabel('gas_station')).toBe(TFUEL.station);
+  });
+
+  it('should label the oil & gas and station customer systems', () => {
+    expect(systemBusinessLabel('oil_and_gas')).toBe(TFUEL.oilGas);
+    expect(systemBusinessLabel('gas_station')).toBe(TFUEL.station);
+  });
+
+  it('should offer the retail roles (not the production ones) on a fuel system', () => {
+    expect(isRoleAvailableFor('gas_station', 'cashier')).toBe(true);
+    expect(isRoleAvailableFor('oil_and_gas', 'assembly')).toBe(false);
   });
 });

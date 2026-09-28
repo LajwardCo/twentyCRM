@@ -6,7 +6,14 @@ import { loadTokens } from './client';
 // real (production) sibling of api/demoSystems.ts: a system is issued for a
 // contracted lead and provisioned as a permanent standard tenant.
 
-export type SystemBusinessType = 'retail' | 'services' | 'booking' | 'assembly' | 'general';
+export type SystemBusinessType =
+  | 'retail'
+  | 'services'
+  | 'booking'
+  | 'assembly'
+  | 'oil_and_gas'
+  | 'gas_station'
+  | 'general';
 
 export type SystemUserRole =
   | 'admin'
@@ -54,6 +61,8 @@ export type SystemStatus = {
   language: string;
   currency: string;
   inventory_enabled: boolean;
+  // false => a clean system (setup only). Older systems predate the flag.
+  sample_data?: boolean;
   multi_inventory: boolean;
   multi_currency: boolean;
   multi_lot: boolean;
@@ -92,6 +101,9 @@ export type CreateSystemInput = {
   language: string;
   currency: string;
   inventory_enabled: boolean;
+  // The agent's answer to "create with sample data?". false => setup only: no
+  // starter catalog or posted sample documents.
+  sample_data: boolean;
   notes: string;
   admin_username: string;
   // Capability settings.

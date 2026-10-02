@@ -8,7 +8,15 @@ import {
   fetchReferrers,
   OPEN_STAGES,
 } from '../api/records';
+import {
+  fetchAllTags,
+  fetchLeadIdsForTags,
+  fetchLinksForLeads,
+  isTagsProvisioned,
+} from '../api/leadTags';
+import { isExternalUser } from '../lib/access';
 import { FilterBar } from '../components/FilterBar';
+import { TagChip } from '../components/TagChip';
 import { IconKanban, IconPlus, IconTable } from '../components/icons';
 import { useCached } from '../lib/cache';
 import { buildGraphQLFilter, isFilterActive } from '../lib/filters';
@@ -25,6 +33,7 @@ import {
   sumByCurrency,
   totalsAreEmpty,
 } from '../lib/format';
+import { sortTags, tagsByLead, visibleTags, type LeadTag } from '../lib/leadTags';
 import { loadPrefs, savePref } from '../lib/prefs';
 import { relativeDueLabel, toPersianDigits } from '../lib/jalali';
 import { navigate, useRoute } from '../lib/router';
@@ -54,6 +63,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
   const [view, setViewState] = useState<'table' | 'kanban'>(prefs.leadsView);
   const [sortBy, setSortByState] = useState<SortKey>(prefs.leadsSort);
   const [debouncedSearch, setDebouncedSearch] = useState(search.trim());
+  const tagsEnabled = !isExternalUser(user);
   const debounceRef = useRef<number>(0);
 
   useEffect(() => {
@@ -85,13 +95,65 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
   // Option lists for the filter sheet. Both are small, cached, and shared with
   // other screens; a failure here must not take the leads list down with it.
   const { data: filterOptions } = useCached('lead-filter-options', async () => {
-    const [members, referrers, businessTypes] = await Promise.all([
+    const [members, referrers, businessTypes, tags] = await Promise.all([
       fetchMembers().catch(() => []),
       fetchReferrers().catch(() => []),
       fetchBusinessTypes().catch(() => []),
+      tagsEnabled
+        ? isTagsProvisioned().then((provisioned) =>
+            provisioned ? fetchAllTags().catch(() => []) : null,
+          )
+        : Promise.resolve(null),
     ]);
-    return { members, referrers, businessTypes };
+    return { members, referrers, businessTypes, tags };
   });
+
+  // Tags are for employees only, and only once the objects exist. `null` tags
+  // means "not available"; an empty list means "available, none created yet".
+  const allTags: LeadTag[] | null = tagsEnabled ? (filterOptions?.tags ?? null) : null;
+  const tagFilterAvailable = tagsEnabled && filterOptions?.tags !== null;
+
+  const tagOptions = useMemo(
+    () =>
+      sortTags(visibleTags(allTags ?? [], user.workspaceMemberId), user.workspaceMemberId).map(
+        (tag) => ({ value: tag.id, label: tag.name }),
+      ),
+    [allTags, user.workspaceMemberId],
+  );
+
+  // Two field sets: the first only describes the filters (labels, URL
+  // encoding) and is what useFilters needs BEFORE the chosen tags are known;
+  // the second adds the resolved lead ids for the server clause.
+  const baseFields = useMemo(
+    () =>
+      leadFilterFields(
+        filterOptions?.members ?? [],
+        filterOptions?.referrers ?? [],
+        filterOptions?.businessTypes ?? [],
+        tagFilterAvailable ? { options: tagOptions, leadIdsForTags: [] } : null,
+      ),
+    [filterOptions, tagFilterAvailable, tagOptions],
+  );
+
+  const route = useRoute();
+  const filters = useFilters('leads', baseFields, route.query);
+
+  // A tag id from a shared link that this member cannot see (someone else's
+  // personal tag) is ignored once the options are known, so a link cannot be
+  // used to ask which leads carry a tag the member has no access to.
+  const selectedTagIds = useMemo(() => {
+    const value = filters.state.tags;
+    if (value?.kind !== 'multiEnum' || value.values.length === 0) return [];
+    if (allTags === null) return value.values;
+    const allowed = new Set(tagOptions.map((option) => option.value));
+    return value.values.filter((id) => allowed.has(id));
+  }, [filters.state.tags, allTags, tagOptions]);
+
+  const { data: tagLeadIds } = useCached(
+    `tag-leads:${[...selectedTagIds].sort().join(',')}`,
+    () => fetchLeadIdsForTags(selectedTagIds),
+  );
+  const tagFilterPending = selectedTagIds.length > 0 && tagLeadIds === null;
 
   const fields = useMemo(
     () =>
@@ -99,12 +161,12 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
         filterOptions?.members ?? [],
         filterOptions?.referrers ?? [],
         filterOptions?.businessTypes ?? [],
+        tagFilterAvailable
+          ? { options: tagOptions, leadIdsForTags: tagLeadIds ?? [] }
+          : null,
       ),
-    [filterOptions],
+    [filterOptions, tagFilterAvailable, tagOptions, tagLeadIds],
   );
-
-  const route = useRoute();
-  const filters = useFilters('leads', fields, route.query);
 
   // Leads are server-paged, so the filter has to run in the query: filtering
   // one page in the browser would quietly filter a truncated pipeline.
@@ -137,7 +199,9 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
   );
 
   const leads = useMemo(() => {
-    if (!data) return null;
+    // Hold the list until the tag filter has resolved to lead ids, rather than
+    // flash "no matches" for the interval where the id list is still empty.
+    if (!data || tagFilterPending) return null;
     const sorted = [...data];
     if (sortBy === 'value') {
       sorted.sort(
@@ -148,7 +212,30 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
     }
     // 'created' keeps the server order (newest first)
     return sorted;
-  }, [data, sortBy]);
+  }, [data, sortBy, tagFilterPending]);
+
+  // Chips for the rows on screen: one links query for the whole page, joined
+  // to the tag list this member may see.
+  const leadIdsOnPage = useMemo(() => (leads ?? []).map((lead) => lead.id), [leads]);
+  const { data: pageLinks } = useCached(
+    `lead-tag-links:${tagFilterAvailable}:${leadIdsOnPage.join(',')}`,
+    () => (tagFilterAvailable ? fetchLinksForLeads(leadIdsOnPage) : Promise.resolve([])),
+  );
+  const tagsForLead = useMemo(
+    () => tagsByLead(pageLinks ?? [], allTags ?? [], user.workspaceMemberId),
+    [pageLinks, allTags, user.workspaceMemberId],
+  );
+  const renderTagChips = (leadId: string, className = 'tag-cell-chips') => {
+    const tags = tagsForLead.get(leadId);
+    if (!tags || tags.length === 0) return null;
+    return (
+      <span className={className}>
+        {tags.map((tag) => (
+          <TagChip key={tag.id} tag={tag} />
+        ))}
+      </span>
+    );
+  };
 
   const openValue = useMemo(
     () =>
@@ -303,6 +390,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
                                 }`
                               : T.noContact}
                           </small>
+                          {renderTagChips(lead.id)}
                         </span>
                       </div>
                     </td>
@@ -371,6 +459,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
                       </>
                     )}
                   </div>
+                  {renderTagChips(lead.id)}
                   <div className="kf">
                     <span className="owner">
                       <span className="avatar av-26">
@@ -416,6 +505,7 @@ export const LeadsView = ({ user, search }: LeadsViewProps) => {
                       {TEMP_LABELS[lead.temperature]}
                     </span>
                   )}
+                  {renderTagChips(lead.id, 'tag-inline-chips')}
                 </span>
               </span>
               {(lead.amount?.amountMicros ?? 0) > 0 && (

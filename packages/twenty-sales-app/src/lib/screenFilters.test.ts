@@ -245,3 +245,29 @@ describe('fileFilterFields', () => {
     expect(filter.and[1]).toMatchObject({ createdAt: { gte: expect.any(String) } });
   });
 });
+
+describe('leadFilterFields tags', () => {
+  const tagFields = (leadIdsForTags: string[]) =>
+    leadFilterFields(members, [], [], {
+      options: [{ value: 't1', label: 'VIP' }],
+      leadIdsForTags,
+    });
+  const state: FilterState = { tags: { kind: 'multiEnum', values: ['t1'] } };
+
+  it('has no tags field until tags are enabled', () => {
+    expect(leadFields().some((field) => field.key === 'tags')).toBe(false);
+    expect(tagFields([]).some((field) => field.key === 'tags')).toBe(true);
+  });
+
+  it('filters leads by the ids carrying the chosen tags', () => {
+    expect(buildGraphQLFilter(tagFields(['l1', 'l2']), state)).toEqual({
+      and: [{ id: { in: ['l1', 'l2'] } }],
+    });
+  });
+
+  it('matches nothing, not everything, when no lead carries the tag', () => {
+    expect(buildGraphQLFilter(tagFields([]), state)).toEqual({
+      and: [{ id: { in: ['00000000-0000-0000-0000-000000000000'] } }],
+    });
+  });
+});

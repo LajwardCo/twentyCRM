@@ -11,6 +11,7 @@ import './styles/surveys-builder.css';
 import './styles/surveys-collect.css';
 import './styles/surveys-responses.css';
 import './styles/surveys-campaigns.css';
+import './styles/tags.css';
 
 registerServiceWorker();
 

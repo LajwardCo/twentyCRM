@@ -22,6 +22,7 @@ import { T, T5, TDEMO, TSYS } from './lib/strings';
 import { LeadChatView } from './views/LeadChatView';
 import { LeadDetailView } from './views/LeadDetailView';
 import { ContactsView } from './views/ContactsView';
+import { TagsView } from './views/TagsView';
 import { LeadsView } from './views/LeadsView';
 import { AdminView } from './views/AdminView';
 import { AuditLogView } from './views/AuditLogView';
@@ -268,6 +269,8 @@ export const App = () => {
   } else if (section === 'contacts') {
     view = <ContactsView search={search} />;
     bar = <CmdSearch value={search} onChange={setSearch} />;
+  } else if (section === 'tags') {
+    view = <TagsView user={user} />;
   } else if (section === 'new') {
     view = <NewLeadView user={user} />;
   } else if (section === 'tasks') {

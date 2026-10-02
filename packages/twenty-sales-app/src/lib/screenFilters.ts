@@ -15,6 +15,7 @@ import {
   type FilterValue,
 } from './filters';
 import { TFILES } from './fileStrings';
+import { TTAG } from './tagStrings';
 import { EXTENSIONS_BY_KIND, FILE_TYPE_OPTIONS, previewKindOf } from './fileType';
 import {
   COMPETITOR_STATUS_LABELS,
@@ -109,10 +110,30 @@ const businessTypeServerFilter = (
     ? { company: { businessType: { in: value.values } } }
     : undefined;
 
+// Tags are one-to-many from the lead, which the record API cannot filter
+// through, so the screen resolves the chosen tags to the ids of the leads
+// carrying them (fetchLeadIdsForTags) and this clause is a plain id match. A
+// selection that matches no lead must match nothing, hence the nil-UUID guard:
+// an empty `in` list is not a safe thing to send.
+const NO_MATCH_ID = '00000000-0000-0000-0000-000000000000';
+
+const tagServerFilter =
+  (leadIdsForTags: string[]) =>
+  (value: FilterValue): Record<string, unknown> | undefined =>
+    value.kind === 'multiEnum' && value.values.length > 0
+      ? { id: { in: leadIdsForTags.length > 0 ? leadIdsForTags : [NO_MATCH_ID] } }
+      : undefined;
+
+export type LeadTagFilterInput = {
+  options: FilterOption[];
+  leadIdsForTags: string[];
+};
+
 export const leadFilterFields = (
   members: Member[],
   referrers: Referrer[],
   businessTypes: string[] = [],
+  tagFilter: LeadTagFilterInput | null = null,
 ): FilterField<LeadSummary>[] => [
   {
     key: 'stage',
@@ -184,6 +205,20 @@ export const leadFilterFields = (
           kind: 'multiEnum' as const,
           options: businessTypes.map((value) => ({ value, label: value })),
           buildServerFilter: businessTypeServerFilter,
+        },
+      ]
+    : []),
+  // Present whenever tags are enabled, even while the option list is still
+  // loading: useFilters decodes the URL once on mount, and a tags=... link from
+  // the manage screen would otherwise be dropped for want of this field.
+  ...(tagFilter !== null
+    ? [
+        {
+          key: 'tags',
+          label: TTAG.fTags,
+          kind: 'multiEnum' as const,
+          options: tagFilter.options,
+          buildServerFilter: tagServerFilter(tagFilter.leadIdsForTags),
         },
       ]
     : []),

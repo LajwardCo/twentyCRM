@@ -46,6 +46,7 @@ import { LeadSubscriptionsCard } from '../components/LeadSubscriptionsCard';
 import { LeadCustomerSystemCard } from '../components/LeadCustomerSystemCard';
 import { LeadDealCard } from '../components/LeadDealCard';
 import { LeadReferrersCard } from '../components/LeadReferrersCard';
+import { LeadTagsRow } from '../components/LeadTagsRow';
 import { LeadCompetitorsCard } from '../components/LeadCompetitorsCard';
 import { AddContactModal } from '../components/AddContactModal';
 import { ContactEditModal } from '../components/ContactEditModal';
@@ -531,6 +532,7 @@ export const LeadDetailView = ({ leadId, user }: LeadDetailViewProps) => {
             </span>
             <span>ثبت: {formatJalaliDate(lead.createdAt)}</span>
           </div>
+          <LeadTagsRow leadId={lead.id} user={user} />
         </div>
         <div className="hero-actions">
           <button

@@ -4,6 +4,7 @@ import { TAUDIT } from '../lib/auditStrings';
 import { TFILES } from '../lib/fileStrings';
 import { T, T2, T3, T4, T7, T13, TDEMO, TSYS } from '../lib/strings';
 import { TSV } from '../lib/forms/surveyStrings';
+import { TTAG } from '../lib/tagStrings';
 import {
   IconCalendar,
   IconChart,
@@ -19,6 +20,7 @@ import {
   IconPaperclip,
   IconPresentation,
   IconShield,
+  IconTag,
   IconTasks,
 } from './icons';
 
@@ -38,6 +40,7 @@ export const NAV: readonly NavItem[] = [
   { key: 'files', label: TFILES.nav, icon: IconPaperclip },
   { key: 'leads', label: T.tabLeads, icon: IconLeads },
   { key: 'contacts', label: T7.contacts, icon: IconContacts },
+  { key: 'tags', label: TTAG.nav, icon: IconTag },
   { key: 'reports', label: T2.reports, icon: IconChart },
   { key: 'visit', label: TSV.startVisit, icon: IconDoor },
   { key: 'forms', label: TSV.nav, icon: IconForms },

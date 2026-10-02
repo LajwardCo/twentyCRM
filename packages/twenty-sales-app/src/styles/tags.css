@@ -1,0 +1,204 @@
+/* Lead tags. The hue drives both the tint and the text, mixed against --ink so
+   one rule reads in light and dark themes. */
+.tag-chip {
+  --tag-h: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--tag-h) 17%, transparent);
+  color: color-mix(in srgb, var(--tag-h) 68%, var(--ink));
+  border: 1px solid color-mix(in srgb, var(--tag-h) 28%, transparent);
+}
+
+.tag-chip[data-color='GRAY'] { --tag-h: #6b7280; }
+.tag-chip[data-color='RED'] { --tag-h: #dc3b2a; }
+.tag-chip[data-color='ORANGE'] { --tag-h: #e07b12; }
+.tag-chip[data-color='YELLOW'] { --tag-h: #d4a50a; }
+.tag-chip[data-color='GREEN'] { --tag-h: #1f9d55; }
+.tag-chip[data-color='TEAL'] { --tag-h: #0e9aa7; }
+.tag-chip[data-color='BLUE'] { --tag-h: #2f62dd; }
+.tag-chip[data-color='PURPLE'] { --tag-h: #7c4ddb; }
+.tag-chip[data-color='PINK'] { --tag-h: #d6409f; }
+
+.tag-chip .tag-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tag-chip button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-inline-end: -4px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.tag-chip button:hover {
+  background: color-mix(in srgb, var(--tag-h) 28%, transparent);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag-row .tag-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tag-row .tag-add:hover {
+  border-color: var(--lapis-500);
+  color: var(--lapis-600);
+}
+
+.tag-cell-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+/* picker + editor */
+.tag-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-swatch {
+  --tag-h: #6b7280;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--tag-h);
+  cursor: pointer;
+  padding: 0;
+}
+
+.tag-swatch[data-color='GRAY'] { --tag-h: #6b7280; }
+.tag-swatch[data-color='RED'] { --tag-h: #dc3b2a; }
+.tag-swatch[data-color='ORANGE'] { --tag-h: #e07b12; }
+.tag-swatch[data-color='YELLOW'] { --tag-h: #d4a50a; }
+.tag-swatch[data-color='GREEN'] { --tag-h: #1f9d55; }
+.tag-swatch[data-color='TEAL'] { --tag-h: #0e9aa7; }
+.tag-swatch[data-color='BLUE'] { --tag-h: #2f62dd; }
+.tag-swatch[data-color='PURPLE'] { --tag-h: #7c4ddb; }
+.tag-swatch[data-color='PINK'] { --tag-h: #d6409f; }
+
+.tag-swatch.on {
+  border-color: var(--card);
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.tag-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 10px 0;
+  max-height: 38dvh;
+  overflow-y: auto;
+}
+
+.tag-pick-group {
+  margin: 8px 2px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.tag-pick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+
+.tag-pick-item:hover {
+  background: var(--lapis-50);
+}
+
+.tag-pick-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #fff;
+}
+
+.tag-pick-item.on .tag-pick-check {
+  background: var(--lapis-600);
+  border-color: var(--lapis-600);
+}
+
+.tag-create-box {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 12px;
+  margin-top: 6px;
+}
+
+.tag-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.tag-manage-row:last-child {
+  border-bottom: 0;
+}
+
+.tag-manage-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-error {
+  color: var(--hot);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* Mobile list card: chips sit in the same wrapping row as the stage pill. */
+.tag-inline-chips {
+  display: contents;
+}

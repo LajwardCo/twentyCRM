@@ -410,3 +410,17 @@ export const IconDoor = ({ size }: IconProps) => (
     <circle cx="10.5" cy="12.5" r=".5" />
   </svg>
 );
+
+export const IconTag = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9Z" />
+    <circle cx="8" cy="8" r="1.4" />
+  </svg>
+);
+
+export const IconLock = ({ size }: IconProps) => (
+  <svg {...base(size)}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);

@@ -25,7 +25,9 @@ import {
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { navigate, useRoute } from '../lib/router';
 import { SampleDataChoice, sampleDataLabel } from '../components/SampleDataChoice';
-import { TASM, TDATA, TFUEL, TSYS } from '../lib/strings';
+import { SeedDataPicker } from '../components/SeedDataPicker';
+import { seedOptionsFor, seedOptionsPayload, untickedLabels, type SeedOptionKey } from '../lib/seedOptions';
+import { TASM, TDATA, TFUEL, TREST, TSEED, TSYS } from '../lib/strings';
 
 type TypeOption = { key: SystemBusinessType; label: string; desc: string; emoji: string };
 
@@ -36,6 +38,7 @@ const TYPE_OPTIONS: TypeOption[] = [
   { key: 'assembly', label: TASM.assembly, desc: TASM.assemblyDesc, emoji: '🏭' },
   { key: 'oil_and_gas', label: TFUEL.oilGas, desc: TFUEL.oilGasDesc, emoji: '🛢️' },
   { key: 'gas_station', label: TFUEL.station, desc: TFUEL.stationDesc, emoji: '⛽' },
+  { key: 'restaurant', label: TREST.restaurant, desc: TREST.restaurantSystemDesc, emoji: '🍽️' },
   { key: 'general', label: TSYS.typeGeneral, desc: TSYS.typeGeneralDesc, emoji: '🏢' },
 ];
 
@@ -107,6 +110,25 @@ export const NewCustomerSystemView = () => {
   const [sampleData, setSampleData] = useState<boolean | null>(null);
   const [assemblyVariant, setAssemblyVariant] = useState<AssemblyVariant>(DEFAULT_ASSEMBLY_VARIANT);
   const isAssembly = businessType === 'assembly';
+  // With sample data: the kinds of it the agent unticked. Services/booking
+  // systems keep no stock, so they have no products to leave out.
+  const [untickedSeed, setUntickedSeed] = useState<Set<SeedOptionKey>>(new Set());
+  const seedOptions = useMemo(
+    () =>
+      seedOptionsFor({
+        restaurant: businessType === 'restaurant',
+        inventory: (isAssembly || inventoryEnabled) && businessType !== 'services' && businessType !== 'booking',
+        projects: true,
+      }),
+    [businessType, isAssembly, inventoryEnabled],
+  );
+  const toggleSeed = (key: SeedOptionKey) =>
+    setUntickedSeed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const [multiInventory, setMultiInventory] = useState(true);
   const [multiCurrency, setMultiCurrency] = useState(true);
   const [multiLot, setMultiLot] = useState(true);
@@ -246,6 +268,7 @@ export const NewCustomerSystemView = () => {
       // Production consumes stock, so an assembly system always has inventory.
       inventory_enabled: isAssembly || inventoryEnabled,
       sample_data: sampleData !== false,
+      ...(sampleData !== false ? { seed_options: seedOptionsPayload(seedOptions, untickedSeed) } : {}),
       ...(isAssembly ? { product_variant: assemblyVariant } : {}),
       notes: notes.trim(),
       admin_username: adminUsername.trim() || 'admin',
@@ -378,6 +401,9 @@ export const NewCustomerSystemView = () => {
               )}
             </div>
             <SampleDataChoice value={sampleData} onChange={setSampleData} withDataDesc={TDATA.withDataSystemDesc} />
+            {sampleData === true && (
+              <SeedDataPicker options={seedOptions} unticked={untickedSeed} onToggle={toggleSeed} />
+            )}
           </div>
         )}
 
@@ -566,6 +592,12 @@ export const NewCustomerSystemView = () => {
               <div><span>{TSYS.customerType}</span><b>{systemBusinessLabel(businessType, isAssembly ? assemblyVariant : null)}</b></div>
               <div><span>{TSYS.businessName}</span><b>{businessName}</b></div>
               <div><span>{TDATA.question}</span><b>{sampleDataLabel(sampleData)}</b></div>
+              {sampleData === true && (
+                <div>
+                  <span>{TSEED.reviewLabel}</span>
+                  <b>{untickedLabels(seedOptions, untickedSeed) || TSEED.reviewNone}</b>
+                </div>
+              )}
               <div><span>{TSYS.subdomain}</span><b dir="ltr">{preview}</b></div>
               <div><span>{TSYS.currency}</span><b>{currency}</b></div>
               <div><span>{TSYS.adminUsername}</span><b dir="ltr">{adminUsername || 'admin'}</b></div>

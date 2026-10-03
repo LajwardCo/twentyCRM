@@ -13,25 +13,37 @@ export type SeedOptionKey =
   | 'restaurant_menu'
   | 'restaurant_floor'
   | 'restaurant_kitchen'
-  | 'restaurant_loyalty';
+  | 'restaurant_loyalty'
+  | 'import_purchases'
+  | 'goods_in_transit'
+  | 'export_sales';
 
 export type SeedOption = { key: SeedOptionKey; label: string; emoji: string };
 
 export type SeedScope = {
   restaurant: boolean;
+  // Import/export trading company: adds the cross-border trade documents.
+  trade?: boolean;
   // Products/opening stock exist only when the workspace keeps stock.
   inventory: boolean;
   // Only the generic demo catalog carries the construction projects.
   projects: boolean;
 };
 
-export const seedOptionsFor = ({ restaurant, inventory, projects }: SeedScope): SeedOption[] => [
+export const seedOptionsFor = ({ restaurant, trade = false, inventory, projects }: SeedScope): SeedOption[] => [
   ...(restaurant
     ? ([
         { key: 'restaurant_menu', label: TSEED.restaurantMenu, emoji: '🍽️' },
         { key: 'restaurant_floor', label: TSEED.restaurantFloor, emoji: '🪑' },
         { key: 'restaurant_kitchen', label: TSEED.restaurantKitchen, emoji: '👨‍🍳' },
         { key: 'restaurant_loyalty', label: TSEED.restaurantLoyalty, emoji: '⭐' },
+      ] as SeedOption[])
+    : []),
+  ...(trade
+    ? ([
+        { key: 'import_purchases', label: TSEED.importPurchases, emoji: '🚢' },
+        { key: 'goods_in_transit', label: TSEED.goodsInTransit, emoji: '🚛' },
+        { key: 'export_sales', label: TSEED.exportSales, emoji: '🌍' },
       ] as SeedOption[])
     : []),
   ...(inventory

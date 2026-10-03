@@ -15,6 +15,7 @@ export type SystemBusinessType =
   | 'oil_and_gas'
   | 'gas_station'
   | 'restaurant'
+  | 'import_export'
   | 'general';
 
 export type SystemUserRole =

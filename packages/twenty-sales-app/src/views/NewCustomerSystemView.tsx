@@ -27,7 +27,7 @@ import { navigate, useRoute } from '../lib/router';
 import { SampleDataChoice, sampleDataLabel } from '../components/SampleDataChoice';
 import { SeedDataPicker } from '../components/SeedDataPicker';
 import { seedOptionsFor, seedOptionsPayload, untickedLabels, type SeedOptionKey } from '../lib/seedOptions';
-import { TASM, TDATA, TFUEL, TREST, TSEED, TSYS } from '../lib/strings';
+import { TASM, TDATA, TFUEL, TREST, TSEED, TSYS, TTRADE } from '../lib/strings';
 
 type TypeOption = { key: SystemBusinessType; label: string; desc: string; emoji: string };
 
@@ -39,6 +39,7 @@ const TYPE_OPTIONS: TypeOption[] = [
   { key: 'oil_and_gas', label: TFUEL.oilGas, desc: TFUEL.oilGasDesc, emoji: '🛢️' },
   { key: 'gas_station', label: TFUEL.station, desc: TFUEL.stationDesc, emoji: '⛽' },
   { key: 'restaurant', label: TREST.restaurant, desc: TREST.restaurantSystemDesc, emoji: '🍽️' },
+  { key: 'import_export', label: TTRADE.importExport, desc: TTRADE.importExportSystemDesc, emoji: '🚢' },
   { key: 'general', label: TSYS.typeGeneral, desc: TSYS.typeGeneralDesc, emoji: '🏢' },
 ];
 
@@ -117,6 +118,7 @@ export const NewCustomerSystemView = () => {
     () =>
       seedOptionsFor({
         restaurant: businessType === 'restaurant',
+        trade: businessType === 'import_export',
         inventory: (isAssembly || inventoryEnabled) && businessType !== 'services' && businessType !== 'booking',
         projects: true,
       }),

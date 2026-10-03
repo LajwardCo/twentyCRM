@@ -19,6 +19,7 @@ export type DemoBusinessType =
   | 'oil_and_gas'
   | 'gas_station'
   | 'restaurant'
+  | 'import_export'
   | 'other';
 
 export type DemoStatus = {

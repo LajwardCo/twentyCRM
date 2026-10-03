@@ -1273,6 +1273,12 @@ export const TREST = {
   optTodaysService: 'سفارش‌های امروز و میزهای در حال سرویس',
 };
 
+export const TTRADE = {
+  importExport: 'شرکت واردات و صادرات',
+  importExportDemoDesc: 'خرید از خارج با کرایه، گمرک و ترخیص، اجناس در راه و فروش صادراتی',
+  importExportSystemDesc: 'واردات و صادرات: هزینه‌های رسیدن جنس، اجناس در راه، فروش به خریداران خارجی',
+};
+
 // With sample data on, which kinds of it go into the system — asked per kind,
 // every box ticked by default.
 export const TSEED = {
@@ -1289,6 +1295,9 @@ export const TSEED = {
   restaurantFloor: 'نقشه سالون و میزها',
   restaurantKitchen: 'ایستگاه‌های آشپزخانه (صفحه آشپزخانه)',
   restaurantLoyalty: 'باشگاه مشتریان (سطوح امتیاز)',
+  importPurchases: 'خریدهای وارداتی با کرایه، گمرک و هزینه ترخیص',
+  goodsInTransit: 'اجناس در راه (هنوز نرسیده)',
+  exportSales: 'فروش صادراتی به خریداران خارجی',
   reviewLabel: 'اطلاعات نمونه حذف‌شده',
   reviewNone: 'هیچ — همه اضافه می‌شوند',
 };

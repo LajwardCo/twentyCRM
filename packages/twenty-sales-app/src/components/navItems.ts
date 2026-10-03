@@ -1,11 +1,13 @@
 import { type CurrentUser } from '../api/auth';
 import { canSeeNavKey } from '../lib/access';
+import { TAI } from '../lib/assistantStrings';
 import { TAUDIT } from '../lib/auditStrings';
 import { TFILES } from '../lib/fileStrings';
 import { T, T2, T3, T4, T7, T13, TDEMO, TSYS } from '../lib/strings';
 import { TSV } from '../lib/forms/surveyStrings';
 import { TTAG } from '../lib/tagStrings';
 import {
+  IconAI,
   IconCalendar,
   IconChart,
   IconContacts,
@@ -53,12 +55,19 @@ export const NAV: readonly NavItem[] = [
   { key: 'partners', label: T13.partners, icon: IconContacts },
   { key: 'admin', label: 'کاربران', icon: IconLeads },
   { key: 'audit', label: TAUDIT.auditNav, icon: IconShield },
+  // Last, so it is the final tile of the mobile menu; the desktop sidebar
+  // pins it to the bottom (SIDEBAR_PINNED_KEYS).
+  { key: 'assistant', label: TAI.nav, icon: IconAI },
 ];
 
 // The sidebar and the mobile menu both render this, filtered to what the
 // current account is allowed to open. See lib/access.ts.
 export const navItemsFor = (user: CurrentUser): readonly NavItem[] =>
   NAV.filter((item) => canSeeNavKey(user, item.key));
+
+// Shown at the foot of the desktop sidebar instead of in its scrolling list,
+// so they are always one click away however long the menu gets.
+export const SIDEBAR_PINNED_KEYS: ReadonlySet<string> = new Set(['assistant']);
 
 // The three screens a seller touches all day long. Every one of them is also
 // open to external marketers and partners, so the bottom bar needs no filter.

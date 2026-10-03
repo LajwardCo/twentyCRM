@@ -383,6 +383,8 @@ const WATERMARKED_SECTIONS = new Set([
   'audit',
   'search',
   'files',
+  // Answers quote the attached leads, contacts and survey responses.
+  'assistant',
 ]);
 
 export const isWatermarkedSection = (section: string | undefined): boolean =>

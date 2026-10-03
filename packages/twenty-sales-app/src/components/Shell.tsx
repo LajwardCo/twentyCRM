@@ -30,7 +30,7 @@ import {
 } from './icons';
 import { MobileMenu } from './MobileMenu';
 import { MobileNav } from './MobileNav';
-import { activeNavKey, navItemsFor } from './navItems';
+import { activeNavKey, navItemsFor, SIDEBAR_PINNED_KEYS } from './navItems';
 import { RemindersSheet } from './RemindersSheet';
 
 // fallback dock labels when a view hasn't announced one yet
@@ -127,8 +127,41 @@ export const AppShell = ({
         </div>
         <nav className="nav">
           <div className="nav-lbl">منو</div>
-          {navItemsFor(user).map(({ key, label, icon: Icon }) => (
-            <div key={key}>
+          {navItemsFor(user)
+            .filter(({ key }) => !SIDEBAR_PINNED_KEYS.has(key))
+            .map(({ key, label, icon: Icon }) => (
+              <div key={key}>
+                <button
+                  className={`nav-item ${active === key ? 'on' : ''}`}
+                  onClick={() => navigate(`/${key}`)}
+                >
+                  <Icon size={18} />
+                  {label}
+                </button>
+                {/* Reports is a section rather than a screen, so its entries are
+                    listed here once you are inside it. */}
+                {key === 'reports' && active === 'reports' && (
+                  <div className="nav-sub">
+                    {reportNavItems().map((item) => (
+                      <button
+                        key={item.route}
+                        className={
+                          `/${route.path}` === item.route ? 'on' : undefined
+                        }
+                        onClick={() => navigate(item.route)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+        </nav>
+        {navItemsFor(user)
+          .filter(({ key }) => SIDEBAR_PINNED_KEYS.has(key))
+          .map(({ key, label, icon: Icon }) => (
+            <div key={key} className="side-pinned">
               <button
                 className={`nav-item ${active === key ? 'on' : ''}`}
                 onClick={() => navigate(`/${key}`)}
@@ -136,26 +169,8 @@ export const AppShell = ({
                 <Icon size={18} />
                 {label}
               </button>
-              {/* Reports is a section rather than a screen, so its entries are
-                  listed here once you are inside it. */}
-              {key === 'reports' && active === 'reports' && (
-                <div className="nav-sub">
-                  {reportNavItems().map((item) => (
-                    <button
-                      key={item.route}
-                      className={
-                        `/${route.path}` === item.route ? 'on' : undefined
-                      }
-                      onClick={() => navigate(item.route)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
-        </nav>
         <div className="side-user">
           <span className="avatar">{user.firstName.charAt(0) || 'ک'}</span>
           <div className="u-info">

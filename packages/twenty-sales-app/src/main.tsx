@@ -12,6 +12,7 @@ import './styles/surveys-collect.css';
 import './styles/surveys-responses.css';
 import './styles/surveys-campaigns.css';
 import './styles/tags.css';
+import './styles/assistant.css';
 
 registerServiceWorker();
 

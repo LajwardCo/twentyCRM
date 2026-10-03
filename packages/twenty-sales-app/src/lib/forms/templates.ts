@@ -308,11 +308,29 @@ const demoRequest = (): FormDefinition =>
                   choice('c_pharmacy', 'سیستم دواخانه', 'Pharmacy system'),
                   choice('c_retail', 'سیستم فروشگاه', 'Retail system'),
                   choice('c_clinic', 'سیستم شفاخانه', 'Clinic system'),
+                  choice('c_restaurant', 'سیستم رستورانت / کافه', 'Restaurant / café system'),
                 ],
                 allowOther: true,
               },
             }),
             label: { fa: 'به کدام محصول علاقه دارید؟', en: 'Which product interests you?' },
+          },
+          {
+            // Tells the seller which kinds of sample data to tick when creating
+            // the demo (CRM → New demo → "which sample data?").
+            ...q('q_demo_data', 'multi_choice', 'دمو با کدام اطلاعات نمونه ساخته شود؟', {
+              config: {
+                choices: [
+                  choice('c_data_products', 'محصولات و موجودی', 'Products and stock'),
+                  choice('c_data_sales', 'فروش‌ها و اسناد نمونه', 'Sample sales and documents'),
+                  choice('c_data_menu', 'منو و میزها (رستورانت)', 'Menu and tables (restaurant)'),
+                  choice('c_data_hr', 'کارمندان و استخدام', 'Staff and hiring'),
+                  choice('c_data_none', 'سیستم خالی، بدون اطلاعات نمونه', 'Empty system, no sample data'),
+                ],
+                allowOther: false,
+              },
+            }),
+            label: { fa: 'دمو با کدام اطلاعات نمونه ساخته شود؟', en: 'Which sample data should the demo include?' },
           },
           {
             ...q('q_consent', 'consent', 'اجازهٔ تماس', {

@@ -1266,6 +1266,33 @@ export const TFUEL = {
   stationDesc: 'صندوق فروش سریع پترول، دیزل، گاز و روغنیات',
 };
 
+export const TREST = {
+  restaurant: 'رستورانت / کافه',
+  restaurantDemoDesc: 'صندوق فروش با منو، میزها، صفحه آشپزخانه و باشگاه مشتریان',
+  restaurantSystemDesc: 'صندوق فروش رستورانت، میزها، آشپزخانه، باشگاه مشتریان و شعبه‌ها',
+  optTodaysService: 'سفارش‌های امروز و میزهای در حال سرویس',
+};
+
+// With sample data on, which kinds of it go into the system — asked per kind,
+// every box ticked by default.
+export const TSEED = {
+  title: 'کدام اطلاعات نمونه اضافه شود؟',
+  hint: 'هر مورد که لازم نیست را بردارید.',
+  products: 'محصولات و موجودی اول دوره',
+  restaurantProducts: 'مواد خام (مواد اولیه) و موجودی',
+  services: 'خدمات',
+  fixedAssets: 'دارایی‌های ثابت',
+  shareholders: 'سهامداران و سرمایه',
+  recruitment: 'آگهی‌های استخدام و متقاضیان',
+  projects: 'پروژه‌ها',
+  restaurantMenu: 'منو، غذاها و افزودنی‌ها',
+  restaurantFloor: 'نقشه سالون و میزها',
+  restaurantKitchen: 'ایستگاه‌های آشپزخانه (صفحه آشپزخانه)',
+  restaurantLoyalty: 'باشگاه مشتریان (سطوح امتیاز)',
+  reviewLabel: 'اطلاعات نمونه حذف‌شده',
+  reviewNone: 'هیچ — همه اضافه می‌شوند',
+};
+
 // "Should the system be created with sample data?" — asked in both wizards,
 // with no default: the agent must answer.
 export const TDATA = {

@@ -1,4 +1,5 @@
 import type { AssemblyVariant } from '../lib/businessTypes';
+import type { SeedOptionKey } from '../lib/seedOptions';
 import { loadTokens } from './client';
 
 // Talks to the twenty-server proxy (/rest/sales/customer-systems/*), which
@@ -13,6 +14,7 @@ export type SystemBusinessType =
   | 'assembly'
   | 'oil_and_gas'
   | 'gas_station'
+  | 'restaurant'
   | 'general';
 
 export type SystemUserRole =
@@ -104,6 +106,8 @@ export type CreateSystemInput = {
   // The agent's answer to "create with sample data?". false => setup only: no
   // starter catalog or posted sample documents.
   sample_data: boolean;
+  // With sample data: the kinds of it the agent kept (true) or left out (false).
+  seed_options?: Partial<Record<SeedOptionKey, boolean>>;
   notes: string;
   admin_username: string;
   // Capability settings.

@@ -9,6 +9,7 @@ import {
 } from '../api/demoSystems';
 import { JalaliDatePicker } from '../components/JalaliDatePicker';
 import { SampleDataChoice, sampleDataLabel } from '../components/SampleDataChoice';
+import { SeedDataPicker } from '../components/SeedDataPicker';
 import {
   ASSEMBLY_INDUSTRIES,
   ASSEMBLY_VARIANTS,
@@ -23,7 +24,8 @@ import {
 import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
-import { TASM, TDATA, TDEMO, TFUEL } from '../lib/strings';
+import { seedOptionsFor, seedOptionsPayload, untickedLabels, type SeedOptionKey } from '../lib/seedOptions';
+import { TASM, TDATA, TDEMO, TFUEL, TREST, TSEED } from '../lib/strings';
 
 // The assembly card stands for the three assembly industries, picked below it.
 const ASSEMBLY_CARD = 'assembly';
@@ -45,6 +47,7 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: ASSEMBLY_CARD, label: TASM.assembly, desc: TASM.assemblyDesc, emoji: '🏭' },
   { key: 'oil_and_gas', label: TFUEL.oilGas, desc: TFUEL.oilGasDesc, emoji: '🛢️' },
   { key: 'gas_station', label: TFUEL.station, desc: TFUEL.stationDesc, emoji: '⛽' },
+  { key: 'restaurant', label: TREST.restaurant, desc: TREST.restaurantDemoDesc, emoji: '🍽️' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
 
@@ -54,10 +57,12 @@ const CURRENCIES = ['AFN', 'USD'];
 // storefront, branding, documents) whose pieces the agent can toggle.
 const RICH_DEMO_TYPES: DemoBusinessType[] = [
   'mobile_store', 'home_appliances', 'snooker_club', 'car_rental', 'booking', 'opd',
-  'assembly_furniture', 'assembly_carton', 'assembly_doors', 'oil_and_gas', 'gas_station',
+  'assembly_furniture', 'assembly_carton', 'assembly_doors', 'oil_and_gas', 'gas_station', 'restaurant',
 ];
 // A clinic has no online store, and its sample "documents" are patient visits.
 const CLINIC_DEMO_TYPES: DemoBusinessType[] = ['opd'];
+// Types whose workspace keeps no stock (Core provisions them without inventory).
+const STOCKLESS_DEMO_TYPES: DemoBusinessType[] = ['opd', 'snooker_club', 'booking'];
 const LANGUAGES: { code: string; label: string }[] = [
   { code: 'fa', label: TDEMO.langFa },
   { code: 'en', label: TDEMO.langEn },
@@ -104,6 +109,7 @@ export const NewDemoView = () => {
   const [businessType, setBusinessType] = useState<DemoBusinessType>('mobile_store');
   const isClinic = CLINIC_DEMO_TYPES.includes(businessType);
   const isAssembly = isAssemblyDemoType(businessType);
+  const isRestaurant = businessType === 'restaurant';
   const [assemblyIndustry, setAssemblyIndustry] = useState<AssemblyIndustry>('furniture');
   const [assemblyVariant, setAssemblyVariant] = useState<AssemblyVariant>(DEFAULT_ASSEMBLY_VARIANT);
   const [businessName, setBusinessName] = useState('');
@@ -114,6 +120,8 @@ export const NewDemoView = () => {
   const [inventoryEnabled, setInventoryEnabled] = useState(true);
   // No default: the agent must say whether the demo gets sample data.
   const [sampleData, setSampleData] = useState<boolean | null>(null);
+  // With sample data: the kinds of it the agent unticked.
+  const [untickedSeed, setUntickedSeed] = useState<Set<SeedOptionKey>>(new Set());
   const [enableStorefront, setEnableStorefront] = useState(true);
   const [enableLogo, setEnableLogo] = useState(true);
   const [enableBackground, setEnableBackground] = useState(true);
@@ -138,6 +146,22 @@ export const NewDemoView = () => {
   }, []);
 
   const preview = useMemo(() => previewSubdomain(subdomain), [subdomain]);
+  const seedOptions = useMemo(
+    () =>
+      seedOptionsFor({
+        restaurant: isRestaurant,
+        inventory: (isAssembly || inventoryEnabled) && !STOCKLESS_DEMO_TYPES.includes(businessType),
+        projects: businessType === 'other',
+      }),
+    [isRestaurant, isAssembly, inventoryEnabled, businessType],
+  );
+  const toggleSeed = (key: SeedOptionKey) =>
+    setUntickedSeed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const pickBusiness = (key: BusinessOption['key']) =>
     setBusinessType(key === ASSEMBLY_CARD ? assemblyDemoType(assemblyIndustry) : key);
@@ -226,7 +250,9 @@ export const NewDemoView = () => {
       duration_days: durationDays,
       agreement_accepted: agreementAccepted,
       sample_data: sampleData !== false,
-      enable_storefront: enableStorefront,
+      ...(sampleData !== false ? { seed_options: seedOptionsPayload(seedOptions, untickedSeed) } : {}),
+      // A restaurant sells its menu at the till, not its ingredients online.
+      enable_storefront: enableStorefront && !isRestaurant,
       enable_logo: enableLogo,
       enable_background: enableBackground,
       seed_documents: seedDocuments,
@@ -343,6 +369,9 @@ export const NewDemoView = () => {
               />
             </div>
             <SampleDataChoice value={sampleData} onChange={setSampleData} withDataDesc={TDATA.withDataDemoDesc} />
+            {sampleData === true && (
+              <SeedDataPicker options={seedOptions} unticked={untickedSeed} onToggle={toggleSeed} />
+            )}
           </div>
         )}
 
@@ -441,7 +470,7 @@ export const NewDemoView = () => {
             {sampleData !== false && RICH_DEMO_TYPES.includes(businessType) && (
               <div className="demo-content-toggles">
                 <div className="demo-toggles-title">{TDEMO.demoContentTitle}</div>
-                {!isClinic && (
+                {!isClinic && !isRestaurant && (
                   <label className="demo-check-row demo-toggle">
                     <input type="checkbox" checked={enableStorefront} onChange={(e) => setEnableStorefront(e.target.checked)} />
                     <span>{TDEMO.optStorefront}</span>
@@ -458,7 +487,13 @@ export const NewDemoView = () => {
                 <label className="demo-check-row demo-toggle" style={{ marginBottom: 0 }}>
                   <input type="checkbox" checked={seedDocuments} onChange={(e) => setSeedDocuments(e.target.checked)} />
                   <span>
-                    {isClinic ? TDEMO.optClinicVisits : isAssembly ? TASM.optDocuments : TDEMO.optDocuments}
+                    {isClinic
+                      ? TDEMO.optClinicVisits
+                      : isAssembly
+                        ? TASM.optDocuments
+                        : isRestaurant
+                          ? TREST.optTodaysService
+                          : TDEMO.optDocuments}
                   </span>
                 </label>
               </div>
@@ -530,6 +565,12 @@ export const NewDemoView = () => {
               <div><span>{TDEMO.businessType}</span><b>{demoBusinessLabel(businessType, isAssembly ? assemblyVariant : null)}</b></div>
               <div><span>{TDEMO.businessName}</span><b>{businessName}</b></div>
               <div><span>{TDATA.question}</span><b>{sampleDataLabel(sampleData)}</b></div>
+              {sampleData === true && (
+                <div>
+                  <span>{TSEED.reviewLabel}</span>
+                  <b>{untickedLabels(seedOptions, untickedSeed) || TSEED.reviewNone}</b>
+                </div>
+              )}
               <div><span>{TDEMO.subdomain}</span><b dir="ltr">{preview}</b></div>
               <div><span>{TDEMO.duration}</span><b>{toPersianDigits(String(durationDays))} {TDEMO.daysLeft}</b></div>
               <div><span>{TDEMO.currency}</span><b>{currency}</b></div>

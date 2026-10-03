@@ -1,4 +1,5 @@
 import type { AssemblyVariant } from '../lib/businessTypes';
+import type { SeedOptionKey } from '../lib/seedOptions';
 import { loadTokens } from './client';
 
 // Talks to the twenty-server proxy (/rest/sales/demo-systems/*), which forwards
@@ -17,6 +18,7 @@ export type DemoBusinessType =
   | 'assembly_doors'
   | 'oil_and_gas'
   | 'gas_station'
+  | 'restaurant'
   | 'other';
 
 export type DemoStatus = {
@@ -68,6 +70,8 @@ export type CreateDemoInput = {
   // The agent's answer to "create with sample data?". false => setup only: no
   // catalog, documents or demo extras.
   sample_data: boolean;
+  // With sample data: the kinds of it the agent kept (true) or left out (false).
+  seed_options?: Partial<Record<SeedOptionKey, boolean>>;
   // Demo-content toggles (rich business types only, e.g. mobile store).
   enable_storefront?: boolean;
   enable_logo?: boolean;

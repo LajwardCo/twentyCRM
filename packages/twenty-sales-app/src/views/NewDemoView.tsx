@@ -25,7 +25,7 @@ import { announceDockablePage, clearDockablePage } from '../lib/workbench';
 import { toPersianDigits } from '../lib/jalali';
 import { navigate } from '../lib/router';
 import { seedOptionsFor, seedOptionsPayload, untickedLabels, type SeedOptionKey } from '../lib/seedOptions';
-import { TASM, TDATA, TDEMO, TFUEL, TREST, TSEED } from '../lib/strings';
+import { TASM, TDATA, TDEMO, TFUEL, TREST, TSEED, TTRADE } from '../lib/strings';
 
 // The assembly card stands for the three assembly industries, picked below it.
 const ASSEMBLY_CARD = 'assembly';
@@ -48,6 +48,7 @@ const BUSINESS_OPTIONS: BusinessOption[] = [
   { key: 'oil_and_gas', label: TFUEL.oilGas, desc: TFUEL.oilGasDesc, emoji: '🛢️' },
   { key: 'gas_station', label: TFUEL.station, desc: TFUEL.stationDesc, emoji: '⛽' },
   { key: 'restaurant', label: TREST.restaurant, desc: TREST.restaurantDemoDesc, emoji: '🍽️' },
+  { key: 'import_export', label: TTRADE.importExport, desc: TTRADE.importExportDemoDesc, emoji: '🚢' },
   { key: 'other', label: TDEMO.bizOther, desc: TDEMO.bizOtherDesc, emoji: '🏪' },
 ];
 
@@ -150,6 +151,7 @@ export const NewDemoView = () => {
     () =>
       seedOptionsFor({
         restaurant: isRestaurant,
+        trade: businessType === 'import_export',
         inventory: (isAssembly || inventoryEnabled) && !STOCKLESS_DEMO_TYPES.includes(businessType),
         projects: businessType === 'other',
       }),

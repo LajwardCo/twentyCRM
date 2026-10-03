@@ -21,6 +21,19 @@ describe('seedOptionsFor', () => {
   });
 });
 
+describe('seedOptionsFor trade', () => {
+  it('offers import/export data only to a trading company', () => {
+    const tradeKeys = ['import_purchases', 'goods_in_transit', 'export_sales'];
+    const trade = keys(seedOptionsFor({ restaurant: false, trade: true, inventory: true, projects: false }));
+    expect(trade).toEqual(expect.arrayContaining([...tradeKeys, 'products']));
+    expect(trade.some((key) => key.startsWith('restaurant_'))).toBe(false);
+    const other = keys(seedOptionsFor({ restaurant: false, inventory: true, projects: true }));
+    expect(other.some((key) => tradeKeys.includes(key))).toBe(false);
+    const rest = keys(seedOptionsFor({ restaurant: true, inventory: true, projects: false }));
+    expect(rest.some((key) => tradeKeys.includes(key))).toBe(false);
+  });
+});
+
 describe('seedOptionsPayload', () => {
   it('sends every shown option, false for the unticked ones', () => {
     const options = seedOptionsFor({ restaurant: true, inventory: false, projects: false });
